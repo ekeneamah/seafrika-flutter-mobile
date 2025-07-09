@@ -1,0 +1,40 @@
+vendors/
+  {vendorId}/
+    products/
+      {productId}/
+        external_listings/
+          {listingId}/
+            storeId: string
+            storeName: string
+            storeIcon: string
+            productUrl: string
+            createdAt: timestamp
+            lastUpdated: timestamp
+            storeSpecificData: map
+        analytics/
+          current/
+            views: number
+            favorites: number
+            shares: number
+            sales: number
+            rating: number
+            reviewCount: number
+            viewsByDay: map
+            salesByDay: map
+        reviews/
+          {reviewId}/
+            rating: number
+            title: string
+            comment: string
+            createdAt: timestamp
+        complaints/
+          {complaintId}/
+            title: string
+            description: string
+            createdAt: timestamp
+        tasks/
+          {taskId}/
+            title: string
+            description: string
+            dueDate: timestamp
+            completed: boolean

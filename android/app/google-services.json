@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "229268356345",
+    "project_id": "sme-afrika",
+    "storage_bucket": "sme-afrika.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:229268356345:android:5fb7d1803cca126609f628",
+        "android_client_info": {
+          "package_name": "com.smeafrika.vendor_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCLdlndZC5sRog6d2dGSfjdoUZwSjxslq0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

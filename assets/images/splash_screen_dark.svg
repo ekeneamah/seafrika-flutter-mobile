@@ -1,0 +1,128 @@
+<svg width="375" height="812" viewBox="0 0 375 812" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Dark Theme Background Gradient -->
+  <defs>
+    <linearGradient id="darkBackgroundGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#121212;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#1A1A1A;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0F1419;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Dark Logo Gradient -->
+    <linearGradient id="darkLogoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#90EE90;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#549244;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#6B8E23;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Dark Accent Gradient -->
+    <linearGradient id="darkAccentGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#549244;stop-opacity:0.2" />
+      <stop offset="100%" style="stop-color:#2E8B57;stop-opacity:0.1" />
+    </linearGradient>
+    
+    <!-- Dark Glow Effect -->
+    <filter id="darkGlow">
+      <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Dark Drop Shadow -->
+    <filter id="darkDropshadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#90EE90" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="375" height="812" fill="url(#darkBackgroundGradient)"/>
+  
+  <!-- Decorative Background Elements -->
+  <!-- Top Left Accent -->
+  <circle cx="50" cy="100" r="80" fill="url(#darkAccentGradient)" opacity="0.3"/>
+  <circle cx="80" cy="120" r="40" fill="#549244" opacity="0.15"/>
+  
+  <!-- Bottom Right Accent -->
+  <circle cx="325" cy="700" r="100" fill="url(#darkAccentGradient)" opacity="0.2"/>
+  <circle cx="300" cy="720" r="50" fill="#2E8B57" opacity="0.2"/>
+  
+  <!-- Floating Elements -->
+  <circle cx="320" cy="200" r="15" fill="#549244" opacity="0.3"/>
+  <circle cx="60" cy="600" r="20" fill="#6B8E23" opacity="0.25"/>
+  <circle cx="150" cy="150" r="8" fill="#90EE90" opacity="0.4"/>
+  
+  <!-- Main Logo Container -->
+  <g transform="translate(187.5, 300)">
+    <!-- Logo Background Circle -->
+    <circle cx="0" cy="0" r="80" fill="#1A1A1A" filter="url(#darkDropshadow)" opacity="0.9"/>
+    <circle cx="0" cy="0" r="75" fill="url(#darkLogoGradient)" opacity="0.1"/>
+    
+    <!-- Main Logo Icon -->
+    <g transform="translate(0, 0)" filter="url(#darkGlow)">
+      <!-- Store/Building Icon -->
+      <path d="M-30 -20 L-30 -35 L-15 -45 L0 -50 L15 -45 L30 -35 L30 -20 Z" fill="url(#darkLogoGradient)"/>
+      <rect x="-25" y="-20" width="50" height="35" fill="url(#darkLogoGradient)" opacity="0.9"/>
+      
+      <!-- Store Front Details -->
+      <rect x="-20" y="-15" width="15" height="20" fill="#F0F1C5" opacity="0.9" rx="2"/>
+      <rect x="5" y="-15" width="15" height="20" fill="#F0F1C5" opacity="0.9" rx="2"/>
+      <rect x="-8" y="-5" width="16" height="15" fill="#F0F1C5" opacity="0.9" rx="2"/>
+      
+      <!-- Multiple Store Indicators -->
+      <circle cx="-35" cy="-10" r="8" fill="#90EE90" opacity="0.8"/>
+      <circle cx="35" cy="-10" r="8" fill="#90EE90" opacity="0.8"/>
+      <circle cx="-25" cy="25" r="6" fill="#6B8E23" opacity="0.8"/>
+      <circle cx="25" cy="25" r="6" fill="#6B8E23" opacity="0.8"/>
+      
+      <!-- Connection Lines -->
+      <line x1="-27" y1="-10" x2="-25" y2="-5" stroke="#90EE90" stroke-width="2" opacity="0.6"/>
+      <line x1="27" y1="-10" x2="25" y2="-5" stroke="#90EE90" stroke-width="2" opacity="0.6"/>
+      <line x1="-19" y1="25" x2="-15" y2="15" stroke="#90EE90" stroke-width="2" opacity="0.6"/>
+      <line x1="19" y1="25" x2="15" y2="15" stroke="#90EE90" stroke-width="2" opacity="0.6"/>
+    </g>
+  </g>
+  
+  <!-- App Name -->
+  <g transform="translate(187.5, 450)">
+    <text x="0" y="0" text-anchor="middle" font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif" 
+          font-size="32" font-weight="700" fill="#F0F1C5" letter-spacing="-0.5px">
+      VendorHub
+    </text>
+    <text x="0" y="35" text-anchor="middle" font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif" 
+          font-size="16" font-weight="500" fill="#90EE90" letter-spacing="0.2px">
+      Multi-Vendor Marketplace
+    </text>
+  </g>
+  
+  <!-- Tagline -->
+  <g transform="translate(187.5, 520)">
+    <text x="0" y="0" text-anchor="middle" font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif" 
+          font-size="14" font-weight="400" fill="#C7C7A6" opacity="0.8">
+      Connecting Vendors, Empowering Commerce
+    </text>
+  </g>
+  
+  <!-- Loading Indicator -->
+  <g transform="translate(187.5, 650)">
+    <!-- Loading Dots -->
+    <circle cx="-20" cy="0" r="4" fill="#90EE90" opacity="0.8">
+      <animate attributeName="opacity" values="0.3;1;0.3" dur="1.5s" repeatCount="indefinite" begin="0s"/>
+    </circle>
+    <circle cx="0" cy="0" r="4" fill="#549244" opacity="0.8">
+      <animate attributeName="opacity" values="0.3;1;0.3" dur="1.5s" repeatCount="indefinite" begin="0.5s"/>
+    </circle>
+    <circle cx="20" cy="0" r="4" fill="#6B8E23" opacity="0.8">
+      <animate attributeName="opacity" values="0.3;1;0.3" dur="1.5s" repeatCount="indefinite" begin="1s"/>
+    </circle>
+  </g>
+  
+  <!-- Bottom Decorative Elements -->
+  <g transform="translate(187.5, 750)">
+    <!-- Subtle leaf/nature elements -->
+    <path d="M-15 0 Q-10 -8 0 -5 Q10 -8 15 0 Q10 8 0 5 Q-10 8 -15 0 Z" 
+          fill="#549244" opacity="0.4"/>
+    <path d="M-8 0 Q-4 -4 0 -2 Q4 -4 8 0 Q4 4 0 2 Q-4 4 -8 0 Z" 
+          fill="#90EE90" opacity="0.6"/>
+  </g>
+</svg>

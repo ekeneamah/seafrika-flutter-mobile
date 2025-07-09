@@ -1,0 +1,28 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isVendor() {
+      return isAuthenticated() && 
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.roles.hasAny(['vendor']);
+    }
+
+    // Media files
+    match /media/{userId}/{fileName} {
+      allow read: if true; // Public read access
+      allow write: if isVendor() && request.auth.uid == userId;
+      allow delete: if isVendor() && request.auth.uid == userId;
+    }
+
+    // Profile images
+    match /profiles/{userId}/{fileName} {
+      allow read: if true; // Public read access
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+      allow delete: if isAuthenticated() && request.auth.uid == userId;
+    }
+  }
+} 
