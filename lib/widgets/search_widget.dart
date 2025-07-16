@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:dio/dio.dart';
+import 'package:vendor_app/config/shared_preferences_keys.dart';
 
 // Search criteria enum for type safety
 enum SearchCriteria {
@@ -184,7 +184,7 @@ class _VendorSearchWidgetState extends ConsumerState<VendorSearchWidget>
   Future<void> _loadLastSelectedCriteria() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final savedCriteria = prefs.getString('last_search_criteria');
+      final savedCriteria = prefs.getString(SharedPreferencesKeys.lastSearchCriteria);
       if (savedCriteria != null) {
         final criteria = SearchCriteria.values.firstWhere(
           (e) => e.name == savedCriteria,
@@ -201,7 +201,7 @@ class _VendorSearchWidgetState extends ConsumerState<VendorSearchWidget>
   Future<void> _saveSelectedCriteria(SearchCriteria criteria) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('last_search_criteria', criteria.name);
+      await prefs.setString(SharedPreferencesKeys.lastSearchCriteria, criteria.name);
     } catch (e) {
       debugPrint('Error saving search criteria: $e');
     }

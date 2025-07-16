@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:vendor_app/config/theme.dart';
-import 'package:vendor_app/config/routes.dart';
 import 'package:vendor_app/providers/service_providers.dart';
-import 'package:vendor_app/widgets/business_id_modal.dart';
 import 'package:vendor_app/widgets/staff_credentials_modal.dart';
 import 'package:vendor_app/widgets/custom_text_field.dart';
-import 'package:vendor_app/models/user.dart';
+import 'package:vendor_app/models/user.dart' as app_models;
 
 class CreateEditUserScreen extends ConsumerStatefulWidget {
-  final User? user;
+  final app_models.User? user;
   const CreateEditUserScreen({super.key, this.user});
 
   @override
@@ -23,9 +23,13 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
   final _defaultPasswordController = TextEditingController();
+  
+  // Focus nodes for managing keyboard navigation
+  final _firstNameFocusNode = FocusNode();
+  final _lastNameFocusNode = FocusNode();
+  final _emailFocusNode = FocusNode();
+  final _defaultPasswordFocusNode = FocusNode();
   
   late AnimationController _fadeController;
   late AnimationController _slideController;
@@ -34,18 +38,14 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
   late Animation<Offset> _slideAnimation;
   late Animation<double> _validationAnimation;
   
-  final Set<UserRole> _selectedRoles = {UserRole.staff}; // Default role
+  final Set<app_models.UserRole> _selectedRoles = {app_models.UserRole.staff}; // Default role
   bool _isLoading = false;
-  bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
   bool _obscureDefaultPassword = true;
 
   // Real-time validation states
   bool _isFirstNameValid = false;
   bool _isLastNameValid = false;
   bool _isEmailValid = false;
-  bool _isPasswordValid = false;
-  bool _isConfirmPasswordValid = false;
   bool _isDefaultPasswordValid = false;
   bool _isFormValid = false;
 
@@ -54,6 +54,7 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
     super.initState();
     _initializeAnimations();
     _addValidationListeners();
+    _populateFormForEdit();
   }
 
   void _initializeAnimations() {
@@ -95,8 +96,6 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
     _lastNameController.addListener(_validateLastNameRealTime);
     _emailController.addListener(_validateEmailRealTime);
     _defaultPasswordController.addListener(_validateDefaultPasswordRealTime);
-    _passwordController.addListener(_validatePasswordRealTime);
-    _confirmPasswordController.addListener(_validateConfirmPasswordRealTime);
   }
 
   void _validateFirstNameRealTime() {
@@ -144,36 +143,13 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
     }
   }
 
-  void _validatePasswordRealTime() {
-    final value = _passwordController.text;
-    final isValid = value.isNotEmpty && value.length >= 6;
-    
-    if (_isPasswordValid != isValid) {
-      setState(() => _isPasswordValid = isValid);
-      _checkFormValidity();
-    }
-    
-    _validateConfirmPasswordRealTime(); // Re-validate confirm password when password changes
-  }
-
-  void _validateConfirmPasswordRealTime() {
-    final value = _confirmPasswordController.text;
-    final isValid = value.isNotEmpty && 
-        value == _passwordController.text;
-    
-    if (_isConfirmPasswordValid != isValid) {
-      setState(() => _isConfirmPasswordValid = isValid);
-      _checkFormValidity();
-    }
-  }
+  // Removed password validation methods
 
   void _checkFormValidity() {
     final isValid = _isFirstNameValid && 
                    _isLastNameValid && 
                    _isEmailValid && 
-                   _isDefaultPasswordValid &&
-                   _isPasswordValid &&
-                   _isConfirmPasswordValid;
+                   (widget.user != null || _isDefaultPasswordValid); // Password optional in edit mode
     
     if (_isFormValid != isValid) {
       setState(() => _isFormValid = isValid);
@@ -185,17 +161,41 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
     }
   }
 
+  void _populateFormForEdit() {
+    if (widget.user != null) {
+      final user = widget.user!;
+      _firstNameController.text = user.firstName;
+      _lastNameController.text = user.lastName;
+      _emailController.text = user.email;
+      
+      // Set the selected roles
+      _selectedRoles.clear();
+      _selectedRoles.addAll(user.roles);
+      
+      // Validate the pre-populated fields
+      _validateFirstNameRealTime();
+      _validateLastNameRealTime();
+      _validateEmailRealTime();
+      
+      // For edit mode, we don't require password validation
+      _isDefaultPasswordValid = true;
+      _checkFormValidity();
+    }
+  }
+
   @override
   void dispose() {
     _firstNameController.dispose();
     _lastNameController.dispose();
     _emailController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
     _defaultPasswordController.dispose();
     _fadeController.dispose();
     _slideController.dispose();
     _validationController.dispose();
+    _firstNameFocusNode.dispose();
+    _lastNameFocusNode.dispose();
+    _emailFocusNode.dispose();
+    _defaultPasswordFocusNode.dispose();
     super.dispose();
   }
 
@@ -212,89 +212,148 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
     setState(() => _isLoading = true);
 
     try {
-      await Future.delayed(const Duration(seconds: 2));
-
-      // Generate Business ID
-      final businessId = _generateBusinessId();
-      final businessName =
-          ref.read(authServiceProvider).currentUser?.businessName ??
-              'Business Name';
-      final businessAddress =
-          ref.read(authServiceProvider).currentUser?.businessAddress ?? '';
-      final country = ref.read(authServiceProvider).currentUser?.country ?? '';
-      final state = ref.read(authServiceProvider).currentUser?.state ?? '';
-      final vendorId =
-          ref.read(authServiceProvider).currentUser?.vendorId ?? '';
-      final userId = DateTime.now().millisecondsSinceEpoch.toString();
-      final password = _defaultPasswordController.text;
+      final userService = ref.read(userServiceProvider);
       
-      final user = User(
-        id: userId,
-        businessId: businessId,
-        vendorId: vendorId,
-        email: _emailController.text.trim(),
-        firstName: _firstNameController.text.trim(),
-        lastName: _lastNameController.text.trim(),
-        businessName: businessName,
-        businessAddress: businessAddress,
-        country: country,
-        state: state,
-        phone: null,
-        profileImage: null,
-        teamIds: [],
-        roles: _selectedRoles
-            .map((role) => UserRole.values.firstWhere(
-                (e) => e.toString() == 'UserRole.${role.name}',
-                orElse: () => UserRole.viewer))
-            .toList(),
-        isActive: true,
-        createdAt: DateTime.now(),
-        lastLoginAt: null,
-        permissions: [],
-        storeRoles: {},
-        defaultPasswordChanged: false,
-      );
+      if (widget.user != null) {
+        // Edit mode - update existing user
+        await userService.updateUser(
+          userId: widget.user!.id,
+          firstName: _firstNameController.text.trim(),
+          lastName: _lastNameController.text.trim(),
+          email: _emailController.text.trim(),
+          roles: _selectedRoles.toList(),
+        );
 
-      if (!mounted) return;
+        if (!mounted) return;
 
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.white, size: 20),
-              const SizedBox(width: 8),
-              const Text('User created successfully!'),
-            ],
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.check_circle, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    'User updated successfully!',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: AppTheme.accent,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 2),
           ),
-          backgroundColor: AppTheme.accent,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          margin: const EdgeInsets.all(16),
-          duration: const Duration(seconds: 2),
-        ),
-      );
+        );
 
-      // Show Staff Credentials Modal
-      showStaffCredentialsModal(
-        context: context,
-        staffEmail: user.email,
-        staffPassword: password,
-        staffName: '${user.firstName} ${user.lastName}',
-        businessName: businessName,
-        onClose: () {
-          // Navigate back or reset form
-          Navigator.pop(context);
-        },
-      );
+        // Navigate back
+        Navigator.pop(context);
+
+      } else {
+        // Create mode - create new user
+        final auth = FirebaseAuth.instance;  // Get FirebaseAuth instance
+        
+        // Create the user using the new method
+        final user = await userService.addBusinessUser(
+          email: _emailController.text.trim(),
+          firstName: _firstNameController.text.trim(),
+          lastName: _lastNameController.text.trim(),
+          defaultPassword: _defaultPasswordController.text,
+          roles: _selectedRoles.toList(),
+          teamIds: [], // Empty array for now, can be populated later
+          phone: null, // Can be added later
+          profileImage: null, // Can be added later
+          auth: auth,
+        );
+
+        if (!mounted) return;
+
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.check_circle, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    'User created successfully!',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: AppTheme.accent,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+
+        // Show Staff Credentials Modal
+        showStaffCredentialsModal(
+          context: context,
+          staffEmail: user.email,
+          staffPassword: _defaultPasswordController.text,
+          staffName: '${user.firstName} ${user.lastName}',
+          businessName: user.businessName ?? 'Your Business',
+          onClose: () {
+            // Navigate back or reset form
+            Navigator.pop(context);
+          },
+        );
+      }
 
     } catch (e) {
       if (!mounted) return;
       
+      String errorMessage = 'Failed to create user';
+      
+      // Extract user-friendly message from exception
+      if (e.toString().contains('permission-denied')) {
+        errorMessage = 'Permission denied. Check your Firestore security rules and ensure you have proper permissions.';
+      } else if (e.toString().contains('email already exists')) {
+        errorMessage = 'A user with this email already exists in this business.';
+      } else if (e.toString().contains('network')) {
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+      } else {
+        // Get the error message without the Exception prefix
+        final message = e.toString().replaceAll('Exception: ', '');
+        errorMessage = message;
+      }
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to create user: $e'),
+          content: Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.white),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  errorMessage,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
+                ),
+              ),
+            ],
+          ),
           backgroundColor: AppTheme.secondary,
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 4),
+          action: SnackBarAction(
+            label: 'DISMISS',
+            textColor: Colors.white,
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            },
+          ),
         ),
       );
     } finally {
@@ -304,79 +363,122 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
     }
   }
 
+  // Responsive helper methods
+  double _getHorizontalPadding(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (screenWidth > 1200) return 32.0; // Desktop
+    if (screenWidth > 800) return 24.0;  // Tablet
+    return 16.0; // Mobile
+  }
+
+  double _getCardPadding(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (screenWidth > 800) return 24.0;  // Tablet/Desktop
+    return 16.0; // Mobile
+  }
+
+  bool _shouldStackFields(BuildContext context) {
+    return MediaQuery.of(context).size.width < 600;
+  }
+
+  double _getIconSize(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (screenWidth < 600) return 16.0; // Mobile
+    return 20.0; // Tablet/Desktop
+  }
+
+  double _getFontSize(BuildContext context, double baseSize) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (screenWidth < 600) return baseSize - 2; // Mobile
+    return baseSize; // Tablet/Desktop
+  }
+
   Widget _buildModernCard({
     required Widget child,
     EdgeInsets? padding,
     EdgeInsets? margin,
   }) {
-    return Container(
-      width: double.infinity, // Full width
-      margin: margin ?? const EdgeInsets.symmetric(horizontal: 0, vertical: 8), // No horizontal margin for full width
-      decoration: BoxDecoration(
-        color: AppTheme.glass,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppTheme.earthLight.withOpacity(0.1),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primary.withOpacity(0.06),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
-          ),
-          BoxShadow(
-            color: AppTheme.earth.withOpacity(0.03),
-            blurRadius: 30,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: padding ?? const EdgeInsets.all(20),
-        child: child,
-      ),
-    );
-  }
-
-  Widget _buildValidationTick(bool isValid) {
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 250),
-      transitionBuilder: (Widget child, Animation<double> animation) {
-        return ScaleTransition(
-          scale: Tween<double>(begin: 0.0, end: 1.0).animate(
-            CurvedAnimation(
-              parent: animation,
-              curve: Curves.elasticOut,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // We only need cardPadding here
+        final cardPadding = _getCardPadding(context);
+        
+        return Container(
+          width: double.infinity,
+          margin: margin ?? EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+          decoration: BoxDecoration(
+            color: AppTheme.glass,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: AppTheme.earthLight.withOpacity(0.1),
+              width: 1,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.primary.withOpacity(0.06),
+                blurRadius: 20,
+                offset: const Offset(0, 4),
+              ),
+              BoxShadow(
+                color: AppTheme.earth.withOpacity(0.03),
+                blurRadius: 30,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
-          child: FadeTransition(
-            opacity: animation,
+          child: Padding(
+            padding: padding ?? EdgeInsets.all(cardPadding),
             child: child,
           ),
         );
       },
-      child: isValid
-          ? Container(
-              key: const ValueKey('valid_tick'),
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppTheme.accent.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: AppTheme.accent.withOpacity(0.3),
-                  width: 1,
+    );
+  }
+
+  Widget _buildValidationTick(bool isValid) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final iconSize = _getIconSize(context);
+        
+        return AnimatedSwitcher(
+          duration: const Duration(milliseconds: 250),
+          transitionBuilder: (Widget child, Animation<double> animation) {
+            return ScaleTransition(
+              scale: Tween<double>(begin: 0.0, end: 1.0).animate(
+                CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.elasticOut,
                 ),
               ),
-              child: Icon(
-                Icons.check_rounded,
-                color: AppTheme.accent,
-                size: 18,
+              child: FadeTransition(
+                opacity: animation,
+                child: child,
               ),
-            )
-          : const SizedBox.shrink(
-              key: ValueKey('no_tick'),
-            ),
+            );
+          },
+          child: isValid
+              ? Container(
+                  key: const ValueKey('valid_tick'),
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: AppTheme.accent.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: AppTheme.accent.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.check_rounded,
+                    color: AppTheme.accent,
+                    size: iconSize,
+                  ),
+                )
+              : const SizedBox.shrink(
+                  key: ValueKey('no_tick'),
+                ),
+        );
+      },
     );
   }
 
@@ -385,15 +487,17 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
     Widget? actionButton,
   }) {
     if (actionButton != null) {
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (isValid) ...[
-            _buildValidationTick(isValid),
-            const SizedBox(width: 8),
+      return IntrinsicWidth(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isValid) ...[
+              _buildValidationTick(isValid),
+              const SizedBox(width: 6),
+            ],
+            actionButton,
           ],
-          actionButton,
-        ],
+        ),
       );
     } else {
       return _buildValidationTick(isValid);
@@ -401,500 +505,654 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
   }
 
   Widget _buildUserForm() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16), // Add padding around the card
-      child: _buildModernCard(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final horizontalPadding = _getHorizontalPadding(context);
+        final shouldStack = _shouldStackFields(context);
+        final iconSize = _getIconSize(context);
+        final fontSize = _getFontSize(context, 18);
+        
+        return Padding(
+          padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+          child: _buildModernCard(
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
+                  // Header - Responsive layout
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: constraints.maxWidth,
                     ),
-                    child: Icon(
-                      Icons.person_add_outlined,
-                      color: AppTheme.primary,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    'User Information',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textPrimary,
-                    ),
-                  ),
-                  const Spacer(),
-                  // Form Progress Indicator
-                  AnimatedBuilder(
-                    animation: _validationAnimation,
-                    builder: (context, child) {
-                      return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: _isFormValid 
-                              ? AppTheme.accent.withOpacity(0.1)
-                              : AppTheme.earth.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: _isFormValid 
-                                ? AppTheme.accent.withOpacity(0.3)
-                                : AppTheme.earth.withOpacity(0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              _isFormValid ? Icons.check_circle : Icons.edit_outlined,
-                              color: _isFormValid ? AppTheme.accent : AppTheme.earth,
-                              size: 16,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              _isFormValid ? 'Ready' : 'Fill form',
-                              style: TextStyle(
-                                color: _isFormValid ? AppTheme.accent : AppTheme.earth,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
+                    child: shouldStack
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.primary.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Icon(
+                                      Icons.person_add_outlined,
+                                      color: AppTheme.primary,
+                                      size: iconSize,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: Text(
+                                      'User Information',
+                                      style: TextStyle(
+                                        fontSize: fontSize,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppTheme.textPrimary,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
                               ),
+                              const SizedBox(height: 12),
+                              // Form Progress Indicator
+                              _buildFormProgressIndicator(),
+                            ],
+                          )
+                        : Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primary.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Icon(
+                                  Icons.person_add_outlined,
+                                  color: AppTheme.primary,
+                                  size: iconSize,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Flexible(
+                                child: Text(
+                                  'User Information',
+                                  style: TextStyle(
+                                    fontSize: fontSize,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.textPrimary,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const Spacer(),
+                              // Form Progress Indicator
+                              _buildFormProgressIndicator(),
+                            ],
+                          ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Name Fields - Responsive layout
+                  shouldStack
+                      ? Column(
+                          children: [
+                            CustomTextField(
+                              controller: _firstNameController,
+                              label: 'First Name',
+                              keyboardType: TextInputType.name,
+                              textCapitalization: TextCapitalization.words,
+                              textInputAction: TextInputAction.next,
+                              prefixIcon: Icon(Icons.person_outline, color: AppTheme.primary),
+                              suffixIcon: _buildValidationTick(_isFirstNameValid),
+                              inputFormatters: [
+                                FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
+                              ],
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Required';
+                                }
+                                if (value.trim().length < 2) {
+                                  return 'Min 2 chars';
+                                }
+                                if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value.trim())) {
+                                  return 'Letters only';
+                                }
+                                return null;
+                              },
+                              focusNode: _firstNameFocusNode,
+                              onSubmitted: (_) => FocusScope.of(context).requestFocus(_lastNameFocusNode),
+                            ),
+                            const SizedBox(height: 16),
+                            CustomTextField(
+                              controller: _lastNameController,
+                              label: 'Last Name',
+                              keyboardType: TextInputType.name,
+                              textCapitalization: TextCapitalization.words,
+                              textInputAction: TextInputAction.next,
+                              prefixIcon: Icon(Icons.person_outline, color: AppTheme.primary),
+                              suffixIcon: _buildValidationTick(_isLastNameValid),
+                              inputFormatters: [
+                                FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
+                              ],
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Required';
+                                }
+                                if (value.trim().length < 2) {
+                                  return 'Min 2 chars';
+                                }
+                                if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value.trim())) {
+                                  return 'Letters only';
+                                }
+                                return null;
+                              },
+                              focusNode: _lastNameFocusNode,
+                              onSubmitted: (_) => FocusScope.of(context).requestFocus(_emailFocusNode),
                             ),
                           ],
+                        )
+                      : IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: CustomTextField(
+                                  controller: _firstNameController,
+                                  label: 'First Name',
+                                  keyboardType: TextInputType.name,
+                                  textCapitalization: TextCapitalization.words,
+                                  textInputAction: TextInputAction.next,
+                                  prefixIcon: Icon(Icons.person_outline, color: AppTheme.primary),
+                                  suffixIcon: _buildValidationTick(_isFirstNameValid),
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
+                                  ],
+                                  validator: (value) {
+                                    if (value == null || value.trim().isEmpty) {
+                                      return 'Required';
+                                    }
+                                    if (value.trim().length < 2) {
+                                      return 'Min 2 chars';
+                                    }
+                                    if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value.trim())) {
+                                      return 'Letters only';
+                                    }
+                                    return null;
+                                  },
+                                  focusNode: _firstNameFocusNode,
+                                  onSubmitted: (_) => FocusScope.of(context).requestFocus(_lastNameFocusNode),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: CustomTextField(
+                                  controller: _lastNameController,
+                                  label: 'Last Name',
+                                  keyboardType: TextInputType.name,
+                                  textCapitalization: TextCapitalization.words,
+                                  textInputAction: TextInputAction.next,
+                                  prefixIcon: Icon(Icons.person_outline, color: AppTheme.primary),
+                                  suffixIcon: _buildValidationTick(_isLastNameValid),
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
+                                  ],
+                                  validator: (value) {
+                                    if (value == null || value.trim().isEmpty) {
+                                      return 'Required';
+                                    }
+                                    if (value.trim().length < 2) {
+                                      return 'Min 2 chars';
+                                    }
+                                    if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value.trim())) {
+                                      return 'Letters only';
+                                    }
+                                    return null;
+                                  },
+                                  focusNode: _lastNameFocusNode,
+                                  onSubmitted: (_) => FocusScope.of(context).requestFocus(_emailFocusNode),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
-              // Name Fields Row
-              Row(
-                children: [
-                  Expanded(
+                  // Email Field - Full Width
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: constraints.maxWidth,
+                    ),
                     child: CustomTextField(
-                      controller: _firstNameController,
-                      label: 'First Name',
-                      keyboardType: TextInputType.name,
-                      prefixIcon: Icon(Icons.person_outline, color: AppTheme.primary),
-                      suffixIcon: _buildValidationTick(_isFirstNameValid),
+                      controller: _emailController,
+                      label: 'Email Address',
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                      textCapitalization: TextCapitalization.none,
+                      prefixIcon: Icon(Icons.email_outlined, color: AppTheme.primary),
+                      suffixIcon: _buildValidationTick(_isEmailValid),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.deny(RegExp(r'\s')), // No spaces in email
+                      ],
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
-                          return 'Required';
+                          return 'Please enter email address';
                         }
-                        if (value.trim().length < 2) {
-                          return 'Min 2 chars';
-                        }
-                        if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value.trim())) {
-                          return 'Letters only';
+                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                          return 'Please enter a valid email';
                         }
                         return null;
                       },
+                      focusNode: _emailFocusNode,
+                      onSubmitted: (_) => FocusScope.of(context).requestFocus(_defaultPasswordFocusNode),
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
+                  const SizedBox(height: 20),
+
+                  // Default Password Field - Full Width
+                   ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: constraints.maxWidth,
+                    ),
                     child: CustomTextField(
-                      controller: _lastNameController,
-                      label: 'Last Name',
-                      keyboardType: TextInputType.name,
-                      prefixIcon: Icon(Icons.person_outline, color: AppTheme.primary),
-                      suffixIcon: _buildValidationTick(_isLastNameValid),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Required';
-                        }
-                        if (value.trim().length < 2) {
-                          return 'Min 2 chars';
-                        }
-                        if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value.trim())) {
-                          return 'Letters only';
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              // Email Field - Full Width
-              SizedBox(
-                width: double.infinity,
-                child: CustomTextField(
-                  controller: _emailController,
-                  label: 'Email Address',
-                  keyboardType: TextInputType.emailAddress,
-                  prefixIcon: Icon(Icons.email_outlined, color: AppTheme.primary),
-                  suffixIcon: _buildValidationTick(_isEmailValid),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please enter email address';
-                    }
-                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                      return 'Please enter a valid email';
-                    }
-                    return null;
-                  },
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Default Password Field - Full Width
-              SizedBox(
-                width: double.infinity,
-                child: CustomTextField(
-                  controller: _defaultPasswordController,
-                  label: 'Default Password',
-                  obscureText: _obscureDefaultPassword,
-                  prefixIcon: Icon(Icons.lock_outline, color: AppTheme.secondary),
-                  suffixIcon: _buildSuffixIcon(
-                    isValid: _isDefaultPasswordValid,
-                    actionButton: IconButton(
-                      icon: Icon(
-                        _obscureDefaultPassword ? Icons.visibility_off : Icons.visibility,
-                        color: AppTheme.earth,
-                      ),
-                      onPressed: () {
-                        setState(() => _obscureDefaultPassword = !_obscureDefaultPassword);
-                      },
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a default password';
-                    }
-                    if (value.length < 6) {
-                      return 'Min 6 chars';
-                    }
-                    return null;
-                  },
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Password Fields Row
-              Row(
-                children: [
-                  Expanded(
-                    child: CustomTextField(
-                      controller: _passwordController,
-                      label: 'Password',
-                      obscureText: _obscurePassword,
-                      prefixIcon: Icon(Icons.lock_outline, color: AppTheme.accent),
+                      controller: _defaultPasswordController,
+                      label: 'Default Password',
+                      obscureText: _obscureDefaultPassword,
+                      keyboardType: TextInputType.visiblePassword,
+                      textInputAction: TextInputAction.done, // Changed to done as it's now the last field
+                      textCapitalization: TextCapitalization.none,
+                      prefixIcon: Icon(Icons.lock_outline, color: AppTheme.secondary),
+                      onSubmitted: (_) => _saveUser(), // Submit the form when done is pressed
                       suffixIcon: _buildSuffixIcon(
-                        isValid: _isPasswordValid,
+                        isValid: _isDefaultPasswordValid,
                         actionButton: IconButton(
                           icon: Icon(
-                            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                            _obscureDefaultPassword ? Icons.visibility_off : Icons.visibility,
                             color: AppTheme.earth,
+                            size: iconSize,
                           ),
                           onPressed: () {
-                            setState(() => _obscurePassword = !_obscurePassword);
+                            setState(() => _obscureDefaultPassword = !_obscureDefaultPassword);
                           },
                         ),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Required';
+                          return 'Please enter a default password';
                         }
                         if (value.length < 6) {
                           return 'Min 6 chars';
                         }
                         return null;
                       },
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: CustomTextField(
-                      controller: _confirmPasswordController,
-                      label: 'Confirm Password',
-                      obscureText: _obscureConfirmPassword,
-                      prefixIcon: Icon(Icons.lock_outline, color: AppTheme.accent),
-                      suffixIcon: _buildSuffixIcon(
-                        isValid: _isConfirmPasswordValid,
-                        actionButton: IconButton(
-                          icon: Icon(
-                            _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
-                            color: AppTheme.earth,
-                          ),
-                          onPressed: () {
-                            setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
-                          },
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Required';
-                        }
-                        if (value != _passwordController.text) {
-                          return 'Passwords don\'t match';
-                        }
-                        return null;
-                      },
+                      focusNode: _defaultPasswordFocusNode,
                     ),
                   ),
                 ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
+    );
+  }
+
+  Widget _buildFormProgressIndicator() {
+    return AnimatedBuilder(
+      animation: _validationAnimation,
+      builder: (context, child) {
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final fontSize = _getFontSize(context, 12);
+            final iconSize = _getIconSize(context) - 4;
+            
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: _isFormValid 
+                    ? AppTheme.accent.withOpacity(0.1)
+                    : AppTheme.earth.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: _isFormValid 
+                      ? AppTheme.accent.withOpacity(0.3)
+                      : AppTheme.earth.withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+              child: IntrinsicWidth(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _isFormValid ? Icons.check_circle : Icons.edit_outlined,
+                      color: _isFormValid ? AppTheme.accent : AppTheme.earth,
+                      size: iconSize,
+                    ),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        _isFormValid ? 'Ready' : 'Fill form',
+                        style: TextStyle(
+                          color: _isFormValid ? AppTheme.accent : AppTheme.earth,
+                          fontSize: fontSize,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
   Widget _buildUserRoles() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16), // Add padding around the card
-      child: _buildModernCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final horizontalPadding = _getHorizontalPadding(context);
+        final iconSize = _getIconSize(context);
+        final fontSize = _getFontSize(context, 18);
+        
+        return Padding(
+          padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+          child: _buildModernCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppTheme.secondary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.admin_panel_settings_outlined,
-                    color: AppTheme.secondary,
-                    size: 20,
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.secondary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.admin_panel_settings_outlined,
+                        color: AppTheme.secondary,
+                        size: iconSize,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Flexible(
+                      child: Text(
+                        'User Roles',
+                        style: TextStyle(
+                          fontSize: fontSize,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textPrimary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Select the roles this user will have',
+                  style: TextStyle(
+                    fontSize: _getFontSize(context, 14),
+                    color: AppTheme.earth,
+                    fontWeight: FontWeight.w400,
+                    height: 1.4,
                   ),
                 ),
-                const SizedBox(width: 12),
-                Text(
-                  'User Roles',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimary,
+                const SizedBox(height: 20),
+                // Roles Grid - Responsive
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: constraints.maxWidth,
+                  ),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: app_models.UserRole.values.map((role) {
+                      final isSelected = _selectedRoles.contains(role);
+                      final roleColor = _getRoleColor(role);
+                      final isStaff = role == app_models.UserRole.staff;
+                      
+                      return ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: constraints.maxWidth,
+                          minWidth: 0,
+                        ),
+                        child: IntrinsicWidth(
+                          child: GestureDetector(
+                            onTap: isStaff
+                                ? null // Staff role cannot be deselected
+                                : () {
+                                    setState(() {
+                                      if (isSelected) {
+                                        _selectedRoles.remove(role);
+                                      } else {
+                                        _selectedRoles.add(role);
+                                      }
+                                    });
+                                  },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? roleColor.withOpacity(0.1)
+                                    : AppTheme.softGreen,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? roleColor.withOpacity(0.3)
+                                      : AppTheme.earthLight.withOpacity(0.3),
+                                  width: 1.5,
+                                ),
+                                boxShadow: isSelected
+                                    ? [
+                                        BoxShadow(
+                                          color: roleColor.withOpacity(0.2),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    isSelected
+                                        ? Icons.check_circle
+                                        : Icons.radio_button_unchecked,
+                                    color: isSelected ? roleColor : AppTheme.earth,
+                                    size: iconSize - 2,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Flexible(
+                                    child: Text(
+                                      _formatRoleName(role),
+                                      style: TextStyle(
+                                        color: isSelected ? roleColor : AppTheme.earth,
+                                        fontWeight:
+                                            isSelected ? FontWeight.w600 : FontWeight.w500,
+                                        fontSize: _getFontSize(context, 14),
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (isStaff)
+                                    Flexible(
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(left: 4),
+                                        child: Text(
+                                          '(default)',
+                                          style: TextStyle(
+                                            fontSize: _getFontSize(context, 12),
+                                            color: Colors.grey,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Select the roles this user will have',
-              style: TextStyle(
-                fontSize: 14,
-                color: AppTheme.earth,
-                fontWeight: FontWeight.w400,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 20),
-            // Roles Grid - Full Width
-            SizedBox(
-              width: double.infinity,
-              child: Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: UserRole.values.map((role) {
-                  final isSelected = _selectedRoles.contains(role);
-                  final roleColor = _getRoleColor(role);
-                  final isStaff = role == UserRole.staff;
-                  return GestureDetector(
-                    onTap: isStaff
-                        ? null // Staff role cannot be deselected
-                        : () {
-                            setState(() {
-                              if (isSelected) {
-                                _selectedRoles.remove(role);
-                              } else {
-                                _selectedRoles.add(role);
-                              }
-                            });
-                          },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? roleColor.withOpacity(0.1)
-                            : AppTheme.softGreen,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isSelected
-                              ? roleColor.withOpacity(0.3)
-                              : AppTheme.earthLight.withOpacity(0.3),
-                          width: 1.5,
-                        ),
-                        boxShadow: isSelected
-                            ? [
-                                BoxShadow(
-                                  color: roleColor.withOpacity(0.2),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ]
-                            : null,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            isSelected
-                                ? Icons.check_circle
-                                : Icons.radio_button_unchecked,
-                            color: isSelected ? roleColor : AppTheme.earth,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            _formatRoleName(role),
-                            style: TextStyle(
-                              color: isSelected ? roleColor : AppTheme.earth,
-                              fontWeight:
-                                  isSelected ? FontWeight.w600 : FontWeight.w500,
-                              fontSize: 14,
-                            ),
-                          ),
-                          if (isStaff)
-                            const Padding(
-                              padding: EdgeInsets.only(left: 4),
-                              child: Text('(default)',
-                                  style:
-                                      TextStyle(fontSize: 12, color: Colors.grey)),
-                            ),
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
   Widget _buildSaveButton() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16), // Add padding around the card
-      child: _buildModernCard(
-        child: Column(
-          children: [
-            AnimatedBuilder(
-              animation: _validationAnimation,
-              builder: (context, child) {
-                return Container(
-                  width: double.infinity, // Full width button
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: _isFormValid
-                        ? [
-                            BoxShadow(
-                              color: AppTheme.primary.withOpacity(0.3),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
-                          ]
-                        : [],
-                  ),
-                  child: ElevatedButton(
-                    onPressed: (_isLoading || !_isFormValid) ? null : _saveUser,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _isFormValid 
-                          ? AppTheme.primary 
-                          : AppTheme.earth.withOpacity(0.5),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final horizontalPadding = _getHorizontalPadding(context);
+        final iconSize = _getIconSize(context);
+        final fontSize = _getFontSize(context, 16);
+        
+        return Padding(
+          padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+          child: _buildModernCard(
+            child: Column(
+              children: [
+                AnimatedBuilder(
+                  animation: _validationAnimation,
+                  builder: (context, child) {
+                    return ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: constraints.maxWidth,
                       ),
-                      elevation: 0,
-                    ),
-                    child: _isLoading
-                        ? SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
+                      child: Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: _isFormValid
+                              ? [
+                                  BoxShadow(
+                                    color: AppTheme.primary.withOpacity(0.3),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ]
+                              : [],
+                        ),
+                        child: ElevatedButton(
+                          onPressed: (_isLoading || !_isFormValid) ? null : _saveUser,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _isFormValid 
+                                ? AppTheme.primary 
+                                : AppTheme.earth.withOpacity(0.5),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
                             ),
-                          )
-                        : Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                _isFormValid ? Icons.save_outlined : Icons.edit_outlined,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                _isFormValid ? 'Create User' : 'Complete Form First',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ],
+                            elevation: 0,
                           ),
-                  ),
-                );
-              },
-            ),
-            if (!_isFormValid) ...[
-              const SizedBox(height: 12),
-              Text(
-                'Please fill all required fields correctly',
-                style: TextStyle(
-                  color: AppTheme.earth,
-                  fontSize: 12,
-                  fontStyle: FontStyle.italic,
+                          child: _isLoading
+                              ? SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      _isFormValid ? Icons.save_outlined : Icons.edit_outlined,
+                                      size: iconSize,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: Text(
+                                        _isFormValid ? 'Create User' : 'Complete Form First',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: fontSize,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ],
-        ),
-      ),
+                if (!_isFormValid) ...[
+                  const SizedBox(height: 12),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: constraints.maxWidth,
+                    ),
+                    child: Text(
+                      'Please fill all required fields correctly',
+                      style: TextStyle(
+                        color: AppTheme.earth,
+                        fontSize: _getFontSize(context, 12),
+                        fontStyle: FontStyle.italic,
+                      ),
+                      textAlign: TextAlign.center,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
-  Color _getRoleColor(UserRole role) {
+  Color _getRoleColor(app_models.UserRole role) {
     switch (role) {
-      case UserRole.staff:
+      case app_models.UserRole.staff:
         return AppTheme.primary;
-      case UserRole.manager:
+      case app_models.UserRole.manager:
         return AppTheme.accent;
-      case UserRole.viewer:
+      case app_models.UserRole.viewer:
         return AppTheme.earth;
-      case UserRole.business_owner:
+      case app_models.UserRole.business_owner:
         return AppTheme.secondary;
-      case UserRole.admin:
-        return Colors.redAccent; // Choose an appropriate color for admin
+      case app_models.UserRole.admin:
+        return Colors.redAccent;
+      default:
+        return AppTheme.earth;
     }
   }
 
-  String _formatRoleName(UserRole role) {
+  String _formatRoleName(app_models.UserRole role) {
     switch (role) {
-      case UserRole.staff:
+      case app_models.UserRole.staff:
         return 'Staff Member';
-      case UserRole.manager:
+      case app_models.UserRole.manager:
         return 'Manager';
-      case UserRole.viewer:
+      case app_models.UserRole.viewer:
         return 'Viewer';
-      case UserRole.business_owner:
+      case app_models.UserRole.business_owner:
         return 'Business Owner';
-      case UserRole.admin:
+      case app_models.UserRole.admin:
         return 'Admin';
+      default:
+        return 'Unknown Role';
     }
   }
 
@@ -905,16 +1163,25 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: Text(
-          'Add New User',
-          style: TextStyle(
-            color: AppTheme.textPrimary,
-            fontWeight: FontWeight.w600,
-            fontSize: 20,
-          ),
+        title: LayoutBuilder(
+          builder: (context, constraints) {
+            return Text(
+              'Add New User',
+              style: TextStyle(
+                color: AppTheme.textPrimary,
+                fontWeight: FontWeight.w600,
+                fontSize: _getFontSize(context, 20),
+              ),
+              overflow: TextOverflow.ellipsis,
+            );
+          },
         ),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios, color: AppTheme.textPrimary),
+          icon: Icon(
+            Icons.arrow_back_ios, 
+            color: AppTheme.textPrimary,
+            size: _getIconSize(context),
+          ),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -922,16 +1189,25 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
         opacity: _fadeAnimation,
         child: SlideTransition(
           position: _slideAnimation,
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                const SizedBox(height: 8),
-                _buildUserForm(),
-                _buildUserRoles(),
-                _buildSaveButton(),
-                const SizedBox(height: 32),
-              ],
-            ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: constraints.maxHeight,
+                  ),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 8),
+                      _buildUserForm(),
+                      _buildUserRoles(),
+                      _buildSaveButton(),
+                      SizedBox(height: MediaQuery.of(context).viewInsets.bottom + 32),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ),
       ),

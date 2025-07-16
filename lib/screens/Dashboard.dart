@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vendor_app/config/theme.dart';
 import 'package:vendor_app/models/store.dart';
-import 'package:vendor_app/models/booking.dart';
 import 'package:vendor_app/providers/service_providers.dart' as providers;
 import 'package:vendor_app/providers/service_providers.dart';
-import 'package:vendor_app/services/auth_service.dart';
-import 'package:vendor_app/services/store_service.dart';
+import 'package:vendor_app/utils/business_preferences_helper.dart';
 import 'package:vendor_app/widgets/search_widget.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
@@ -27,6 +25,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   
   Store? _selectedStore;
   String _greeting = '';
+  String _businessName = '';
+  String _businessPhone = '';
+  String _businessAddress = '';
 
   @override
   void initState() {
@@ -34,6 +35,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     _initializeAnimations();
     _setGreeting();
     _loadInitialData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh business details when returning to dashboard
+    _loadSelectedBusinessDetails();
   }
 
   void _initializeAnimations() {
@@ -81,6 +89,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       setState(() {
         _selectedStore = stores.first;
       });
+    }
+    
+    // Load selected business details from SharedPreferences
+    await _loadSelectedBusinessDetails();
+  }
+
+  Future<void> _loadSelectedBusinessDetails() async {
+    try {
+      final businessDetails = await BusinessPreferencesHelper.getSelectedBusinessDetails();
+      setState(() {
+        _businessName = businessDetails['name'] ?? '';
+        _businessPhone = businessDetails['phone'] ?? '';
+        _businessAddress = businessDetails['address'] ?? '';
+      });
+    } catch (e) {
+      debugPrint('Error loading business details: $e');
     }
   }
 
@@ -247,8 +271,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   Widget _buildWelcomeHeader() {
     final authService = ref.watch(authServiceProvider);
     final user = authService.currentUser;
-    final storeService = ref.watch(providers.storeServiceProvider);
-    final stores = storeService.stores;
 
     return _buildModernCard(
       gradientColors: [
@@ -384,58 +406,107 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             ],
           ),
           
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
           
-          // Third Row: Welcome message
-          Text(
-            'Welcome back to your dashboard',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppTheme.earth,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          
-          // Store Switcher (if multiple stores)
-          if (stores.length > 1) ...[
-            const SizedBox(height: 20),
+          // Business Details Section
+          if (_businessName.isNotEmpty) ...[
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.8),
+                color: AppTheme.softGreen,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: AppTheme.earthLight.withOpacity(0.3),
                   width: 1,
                 ),
               ),
-              child: DropdownButton<Store>(
-                value: _selectedStore,
-                isExpanded: true,
-                underline: const SizedBox.shrink(),
-                icon: Icon(Icons.keyboard_arrow_down, color: AppTheme.primary),
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary,
-                ),
-                items: stores.map((store) => DropdownMenuItem<Store>(
-                  value: store,
-                  child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.business_outlined,
+                        color: AppTheme.primary,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Business Details',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
                     children: [
                       Icon(
                         Icons.store_outlined,
-                        color: AppTheme.primary,
-                        size: 18,
+                        color: AppTheme.earth,
+                        size: 16,
                       ),
                       const SizedBox(width: 8),
-                      Text(store.name),
+                      Expanded(
+                        child: Text(
+                          _businessName,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
-                )).toList(),
-                onChanged: (store) {
-                  setState(() => _selectedStore = store);
-                },
+                  if (_businessPhone.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.phone_outlined,
+                          color: AppTheme.earth,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _businessPhone,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppTheme.earth,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  if (_businessAddress.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.location_on_outlined,
+                          color: AppTheme.earth,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _businessAddress,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppTheme.earth,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
               ),
             ),
           ],
@@ -557,40 +628,41 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: color.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(icon, color: color, size: 18),
+                  child: Icon(icon, color: color, size: 16),
                 ),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                   decoration: BoxDecoration(
                     color: (isPositive ? AppTheme.accent : AppTheme.secondary).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     trend,
                     style: TextStyle(
                       color: isPositive ? AppTheme.accent : AppTheme.secondary,
-                      fontSize: 10,
+                      fontSize: 9,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Text(
               value,
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.textPrimary,
               ),
@@ -598,7 +670,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             Text(
               title,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 11,
                 color: AppTheme.earth,
                 fontWeight: FontWeight.w500,
               ),
@@ -684,7 +756,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3,
-              childAspectRatio: 1.0,
+              childAspectRatio: 1.1,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
             ),
@@ -711,28 +783,35 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: (shortcut['color'] as Color).withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
                           shortcut['icon'] as IconData,
                           color: shortcut['color'] as Color,
-                          size: 24,
+                          size: 20,
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        shortcut['title'] as String,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.textPrimary,
+                      const SizedBox(height: 4),
+                      Expanded(
+                        child: Center(
+                          child: Text(
+                            shortcut['title'] as String,
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.textPrimary,
+                            ),
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),

@@ -72,6 +72,9 @@ import 'package:vendor_app/screens/splash_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vendor_app/screens/admin/permissions_screen.dart';
 import 'package:vendor_app/screens/profile/user_profile_screen.dart';
+import 'package:vendor_app/screens/business/business_list_screen.dart';
+import 'package:vendor_app/screens/business/business_management_screen.dart';
+import 'package:vendor_app/screens/business/business_onboarding_screen.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -160,21 +163,24 @@ class AppRoutes {
   static const String staffNavigation = '/staff-navigation';
   static const String userProfile = '/user-profile';
   static const String staffRegistration = '/staff-registration';
-
-
+  static const String businessList = '/businesses';
+  static const String createBusiness = '/businesses/create';
+  static const String editBusiness = '/businesses/edit';
+  static const String businessManagement = '/businesses/management';
+  static const String businessOnboarding = '/businesses/onboarding';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
       case splash:
         return MaterialPageRoute(builder: (_) => const SplashScreen());
-        case staffRegistration:
-  final args = settings.arguments as Map<String, dynamic>?;
-  return MaterialPageRoute(
-    builder: (_) => StaffRegistrationScreen(
-      businessId: args?['businessId'],
-      email: args?['email'],
-    ),
-  );
+      case staffRegistration:
+        final args = settings.arguments as Map<String, dynamic>?;
+        return MaterialPageRoute(
+          builder: (_) => StaffRegistrationScreen(
+            businessId: args?['businessId'],
+            email: args?['email'],
+          ),
+        );
       case onboarding:
         return MaterialPageRoute(builder: (_) => const OnboardingScreen());
       case login:
@@ -560,6 +566,19 @@ class AppRoutes {
         final user = settings.arguments as User?;
         return MaterialPageRoute(
           builder: (_) => UserProfileScreen(user: user),
+        );
+      case businessList:
+        return MaterialPageRoute(builder: (_) => const BusinessListScreen());
+      case createBusiness:
+        return MaterialPageRoute(builder: (_) => const BusinessManagementScreen());
+      case businessManagement:
+        return MaterialPageRoute(builder: (_) => const BusinessManagementScreen());
+      case businessOnboarding:
+        return MaterialPageRoute(builder: (_) => const BusinessOnboardingScreen());
+      case editBusiness:
+        final businessId = settings.arguments as String?;
+        return MaterialPageRoute(
+          builder: (_) => BusinessManagementScreen(businessId: businessId),
         );
       default:
         return MaterialPageRoute(

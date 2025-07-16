@@ -9,10 +9,9 @@ import 'package:vendor_app/models/user.dart' as app_user;
 import 'package:vendor_app/models/user.dart';
 import 'package:vendor_app/services/firestore_service.dart';
 import 'package:vendor_app/services/analytics_service.dart';
+import 'package:vendor_app/config/collection_names.dart';
+import 'package:vendor_app/config/shared_preferences_keys.dart';
 import 'package:dio/dio.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:vendor_app/services/navigation_service.dart';
-import 'package:vendor_app/config/routes.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService extends StateNotifier<app_user.User?> {
@@ -20,8 +19,8 @@ class AuthService extends StateNotifier<app_user.User?> {
   final FirestoreService _firestore;
   final AnalyticsService _analytics;
   bool _isInitialized = false;
-  static const String _attemptsKeyPrefix = 'login_attempts_';
-  static const String _lastAttemptKeyPrefix = 'last_attempt_';
+  static const String _attemptsKeyPrefix = SharedPreferencesKeys.loginAttemptsPrefix;
+  static const String _lastAttemptKeyPrefix = SharedPreferencesKeys.lastAttemptPrefix;
 
   AuthService({
     firebase_auth.FirebaseAuth? auth,
@@ -156,18 +155,21 @@ class AuthService extends StateNotifier<app_user.User?> {
         password: password,
       );
 
+
       if (userCredential.user != null) {
         final uid = userCredential.user!.uid;
-
-        final userSnapshot = await _firestore.usersCollection.doc(uid).get();
-        final data = userSnapshot.data() as Map<String, dynamic>?;
-        final roles = List<String>.from(data?['roles'] ?? []);
 
         final userDoc = await _firestore.getDocument(
           'users',
           uid,
         );
-        state = app_user.User.fromMap(userDoc.data() as Map<String, dynamic>);
+        
+        final userData = userDoc.data();
+        if (userData == null) {
+          throw Exception('User data not found in database');
+        }
+        
+        state = app_user.User.fromMap(userData as Map<String, dynamic>);
 
         await _firestore.updateDocument(
           'users',
@@ -183,81 +185,62 @@ class AuthService extends StateNotifier<app_user.User?> {
     } on firebase_auth.FirebaseAuthException catch (e) {
       debugPrint('Login error: ${e.message}');
       throw _handleAuthException(e);
+    } catch (e) {
+      debugPrint('Login error: $e');
+      throw Exception('Login failed: ${e.toString()}');
     }
   }
 
   Future<bool> signup(
       String email,
       String password,
-      String name,
-      String businessName,
-      String businessAddress,
-      String country,
-      String c_state) async {
+      String firstName,
+      String lastName) async {
     try {
-      // Check for duplicate business name in the same country
-      final existing = await _firestore.usersCollection
-          .where('businessName', isEqualTo: businessName)
-          .where('country', isEqualTo: country)
-          .get();
-      if (existing.docs.isNotEmpty) {
-        throw Exception(
-            'A business with this name already exists in the selected country.');
-      }
-      final userCredential = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      debugPrint('userCredential: $userCredential');
-      debugPrint('userCredential.user: ${userCredential.user}');
-      if (userCredential.user != null) {
-        debugPrint('Inside user creation block');
-        final businessId =
-            'BIZ-${DateTime.now().microsecondsSinceEpoch}'; // Generate unique business ID
-        debugPrint('Generated businessId: $businessId');
-        final newUser = app_user.User(
-          id: userCredential.user!.uid,
-          vendorId: userCredential.user!.uid, // Set vendorId to user's ID
+      // Attempt to create a new user
+      try {
+        final userCredential = await _auth.createUserWithEmailAndPassword(
           email: email,
-          firstName: name,
-          lastName: '',
-          businessName: businessName,
-          businessAddress: businessAddress,
-          businessId: businessId,
-          country: country,
-          state: c_state,
-          phone: null,
-          profileImage: null,
-          teamIds: [],
-          roles: [UserRole.business_owner], // business_owner default
-          isActive: true,
-          createdAt: DateTime.now(),
-          lastLoginAt: null,
-          permissions: [],
-          storeRoles: {},
+          password: password,
         );
 
-        await _firestore.usersCollection.doc(newUser.id).set(newUser.toMap());
-        state = newUser;
+        if (userCredential.user != null) {
+          final newUser = app_user.User(
+            id: userCredential.user!.uid,
+            vendorId: userCredential.user!.uid,
+            email: email,
+            firstName: firstName,
+            lastName: lastName,
+            teamIds: [],
+            roles: [UserRole.business_owner],
+            isActive: true,
+            createdAt: DateTime.now(),
+            permissions: [],
+            storeRoles: {},
+          );
 
-        // Log analytics event
-        await _analytics.logSignUp(method: 'email');
+          await _firestore.usersCollection.doc(newUser.id).set(newUser.toMap());
+          state = newUser;
 
-        return true;
+          // Log analytics event
+          await _analytics.logSignUp(method: 'email');
+
+          return await login(email, password ); // Automatically log in after signup
+        }
+      } catch (e) {
+        if (e is firebase_auth.FirebaseAuthException &&
+            e.code == 'email-already-in-use') {
+          throw Exception('Email already exists. Try logging in with your password.');
+        }
+        rethrow; // Rethrow other exceptions
       }
-      return false;
-    } on firebase_auth.FirebaseAuthException catch (e) {
-      debugPrint('Signup error: ${e.message}');
-      throw _handleAuthException(e);
     } catch (e, stack) {
       debugPrint('Signup error: $e');
       debugPrint('Stack: $stack');
-      if (e is firebase_auth.FirebaseAuthException) {
-        throw _handleAuthException(e);
-      } else {
-        rethrow;
-      }
+      throw Exception(e.toString());
     }
+    // Ensure a bool is always returned or an exception is thrown
+    return false;
   }
 
   Future<bool> resetPassword(String email) async {
@@ -306,7 +289,12 @@ class AuthService extends StateNotifier<app_user.User?> {
       final user = _auth.currentUser;
       if (user != null) {
         final userDoc = await _firestore.getDocument('users', user.uid);
-        state = app_user.User.fromMap(userDoc.data() as Map<String, dynamic>);
+        final userData = userDoc.data();
+        if (userData == null) {
+          debugPrint('User data not found in database');
+          return false;
+        }
+        state = app_user.User.fromMap(userData as Map<String, dynamic>);
         return true;
       }
       return false;
@@ -363,7 +351,7 @@ class AuthService extends StateNotifier<app_user.User?> {
       final updatedUser = state!.copyWith(
         vendorId: state!.id,
       );
-      await _firestore.usersCollection
+      await _firestore.vendorsCollection
           .doc(state!.id)
           .update(updatedUser.toMap());
       state = updatedUser;
@@ -410,7 +398,7 @@ class AuthService extends StateNotifier<app_user.User?> {
 
     // 4. Save user to Firestore
     final userWithId = user.copyWith(id: userCredential.user!.uid);
-    await _firestore.usersCollection.doc(userWithId.id).set(userWithId.toMap());
+    await _firestore.vendorsCollection.doc(userWithId.id).set(userWithId.toMap());
 
     // 5. Return the password for next steps (if generated)
     return generatedPassword;

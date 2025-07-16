@@ -11,15 +11,15 @@ enum UserRole {
 
 class User {
   final String id;
-  final String businessId;
+  final String? businessId; // Made optional
   final String vendorId;
   final String email;
   final String firstName;
   final String lastName;
-  final String businessName;
-  final String businessAddress;
-  final String country;
-  final String state;
+  final String? businessName; // Made optional
+  final String? businessAddress; // Made optional
+  final String? country; // Made optional
+  final String? state; // Made optional
   final String? phone;
   final String? profileImage;
   final List<String> teamIds;
@@ -33,15 +33,15 @@ class User {
 
   User({
     required this.id,
-    required this.businessId,
+    this.businessId, // Made optional
     required this.vendorId,
     required this.email,
     required this.firstName,
     required this.lastName,
-    required this.businessName,
-    required this.businessAddress,
-    required this.country,
-    required this.state,
+    this.businessName, // Made optional
+    this.businessAddress, // Made optional
+    this.country, // Made optional
+    this.state, // Made optional
     this.phone,
     this.profileImage,
     required this.teamIds,
@@ -87,6 +87,27 @@ class User {
   }
 
   factory User.fromMap(Map<String, dynamic> map) {
+    // Handle timestamp or string for createdAt
+    DateTime createdAt;
+
+    if (map['createdAt'] is Timestamp) {
+      debugPrint("created at is Timestamp $map['createdAt']");
+      createdAt = (map['createdAt'] as Timestamp).toDate();
+    } else if (map['createdAt'] is String) {
+       debugPrint("created at is String $map['createdAt']");
+      createdAt = DateTime.parse(map['createdAt']);
+    } else {
+      createdAt = DateTime.now(); // Fallback
+    }
+    
+    // Handle timestamp or string for lastLoginAt
+    DateTime? lastLoginAt;
+    if (map['lastLoginAt'] is Timestamp) {
+      lastLoginAt = (map['lastLoginAt'] as Timestamp).toDate();
+    } else if (map['lastLoginAt'] is String) {
+      lastLoginAt = DateTime.parse(map['lastLoginAt']);
+    }
+    
     return User(
       id: map['id'] ?? '',
       businessId: map['businessId'] ?? '',
@@ -109,10 +130,8 @@ class User {
               .toList() ??
           [UserRole.viewer],
       isActive: map['isActive'] ?? true,
-      createdAt: DateTime.parse(map['createdAt']),
-      lastLoginAt: map['lastLoginAt'] != null
-          ? DateTime.parse(map['lastLoginAt'])
-          : null,
+      createdAt: createdAt,
+      lastLoginAt: lastLoginAt,
       permissions: List<String>.from(map['permissions'] ?? []),
       storeRoles: (map['storeRoles'] as Map<String, dynamic>?)?.map(
             (key, value) => MapEntry(
@@ -132,6 +151,25 @@ class User {
 
   factory User.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
+    
+    // Handle timestamp or string for createdAt
+    DateTime createdAt;
+    if (data['createdAt'] is Timestamp) {
+      createdAt = (data['createdAt'] as Timestamp).toDate();
+    } else if (data['createdAt'] is String) {
+      createdAt = DateTime.parse(data['createdAt']);
+    } else {
+      createdAt = DateTime.now(); // Fallback
+    }
+    
+    // Handle timestamp or string for lastLoginAt
+    DateTime? lastLoginAt;
+    if (data['lastLoginAt'] is Timestamp) {
+      lastLoginAt = (data['lastLoginAt'] as Timestamp).toDate();
+    } else if (data['lastLoginAt'] is String) {
+      lastLoginAt = DateTime.parse(data['lastLoginAt']);
+    }
+    
     return User(
       id: data['id'] ?? '',
       businessId: data['businessId'] ?? '',
@@ -154,10 +192,8 @@ class User {
               .toList() ??
           [UserRole.viewer],
       isActive: data['isActive'] ?? true,
-      createdAt: DateTime.parse(data['createdAt']),
-      lastLoginAt: data['lastLoginAt'] != null
-          ? DateTime.parse(data['lastLoginAt'])
-          : null,
+      createdAt: createdAt,
+      lastLoginAt: lastLoginAt,
       permissions: List<String>.from(data['permissions'] ?? []),
       storeRoles: (data['storeRoles'] as Map<String, dynamic>?)?.map(
             (key, value) => MapEntry(

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vendor_app/config/routes.dart';
 import 'package:vendor_app/config/theme.dart';
+import 'package:vendor_app/config/shared_preferences_keys.dart';
 import 'package:vendor_app/providers/service_providers.dart';
 import 'package:vendor_app/services/navigation_service.dart';
 
@@ -120,7 +121,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
       final prefs = await SharedPreferences.getInstance();
       final onboardingCompleted =
-          prefs.getBool('onboarding_completed') ?? false;
+          prefs.getBool(SharedPreferencesKeys.onboardingCompleted) ?? false;
       final isLoggedIn = ref.read(authServiceProvider).currentUser != null;
 
       if (!mounted) return;

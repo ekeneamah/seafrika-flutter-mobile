@@ -5,6 +5,7 @@ import 'package:vendor_app/services/navigation_service.dart';
 import 'package:vendor_app/config/theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vendor_app/providers/service_providers.dart';
+import 'package:vendor_app/providers/business_context_provider.dart';
 import 'package:vendor_app/models/user.dart';
 import 'package:vendor_app/config/routes.dart';
 import 'package:vendor_app/utils/routes.dart';
@@ -39,6 +40,7 @@ class NavigationDrawer extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authService = ref.watch(authServiceProvider);
     final User? user = authService.currentUser;
+    final selectedBusiness = ref.watch(businessContextProvider);
     final String initials = (user?.firstName.isNotEmpty == true ||
             user?.lastName.isNotEmpty == true)
         ? (user?.firstName.isNotEmpty == true ? user!.firstName[0] : '') +
@@ -54,58 +56,97 @@ class NavigationDrawer extends ConsumerWidget {
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          DrawerHeader(
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
             decoration: const BoxDecoration(
               color: AppTheme.accent,
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                profileImage != null && profileImage.isNotEmpty
-                    ? CircleAvatar(
-                        radius: 30,
-                        backgroundImage: NetworkImage(profileImage),
-                        backgroundColor: AppTheme.glass,
-                      )
-                    : CircleAvatar(
-                        radius: 30,
-                        backgroundColor: Colors.white,
-                        child: Text(
-                          initials,
-                          style: const TextStyle(
-                            fontSize: 24,
-                            color: AppTheme.accent,
-                            fontWeight: FontWeight.bold,
+            child: SafeArea(
+              bottom: false,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Profile image/initials
+                  profileImage != null && profileImage.isNotEmpty
+                      ? CircleAvatar(
+                          radius: 24,
+                          backgroundImage: NetworkImage(profileImage),
+                          backgroundColor: AppTheme.glass,
+                        )
+                      : CircleAvatar(
+                          radius: 24,
+                          backgroundColor: Colors.white,
+                          child: Text(
+                            initials,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              color: AppTheme.accent,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
+                  const SizedBox(height: 8),
+                  // User info
+                  Text(
+                    fullName,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    email,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.white70,
+                        ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 12),
+                  // Business selection
+                  GestureDetector(
+                    onTap: () => NavigationService.navigateTo(AppRoutes.businessOnboarding),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                const SizedBox(height: 10),
-                Text(
-                  fullName,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.business,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              selectedBusiness?.name ?? 'Select Business',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.arrow_drop_down,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                        ],
                       ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  email,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.white70,
-                      ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const Spacer(),
-                Text(
-                  'Vendor Dashboard',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w500,
-                      ),
-                ),
-              ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           _buildDrawerItem(
@@ -114,6 +155,16 @@ class NavigationDrawer extends ConsumerWidget {
             onTap: () => NavigationService.navigateToDashboard(),
             isSelected: currentRoute == Routes.dashboard,
           ),
+          _buildDrawerItem(
+            icon: Icons.business_center,
+            title: 'Manage Businesses',
+            onTap: () => NavigationService.navigateTo(AppRoutes.businessList),
+            isSelected: currentRoute == AppRoutes.businessList,
+          ),
+          // Business Management Section
+      
+          
+          const Divider(),
           _buildDrawerItem(
             icon: Icons.inventory,
             title: 'Inventory',
@@ -144,6 +195,7 @@ class NavigationDrawer extends ConsumerWidget {
             onTap: () => NavigationService.navigateToAnalytics(),
             isSelected: currentRoute == Routes.analytics,
           ),
+         
           _buildDrawerItem(
             icon: Icons.shopping_bag,
             title: 'Purchase Orders',

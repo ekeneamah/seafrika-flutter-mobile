@@ -2,10 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vendor_app/models/user.dart' as app_user;
 import 'package:vendor_app/providers/service_providers.dart';
-import 'package:vendor_app/services/user_service.dart';
-import 'package:vendor_app/services/team_service.dart';
 import 'package:vendor_app/widgets/error_view.dart';
-import 'package:vendor_app/widgets/loading_indicator.dart';
 import 'package:vendor_app/config/theme.dart';
 import 'create_edit_user_screen.dart';
 import 'package:vendor_app/config/routes.dart';
@@ -685,7 +682,9 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen>
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
                   error: (error, stack) => ErrorView(
-                    message: 'Error loading users',
+                    message: error.toString().contains('permission') 
+                        ? 'Permission denied. Please ensure you have the correct role to manage users.'
+                        : 'Error loading users: ${error.toString()}',
                     onRetry: () => setState(() {}),
                   ),
                 ),

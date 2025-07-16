@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vendor_app/config/theme.dart';
+import 'package:vendor_app/config/shared_preferences_keys.dart';
 import 'package:vendor_app/providers/service_providers.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -51,7 +52,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Future<void> _completeOnboarding() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('onboarding_completed', true);
+      await prefs.setBool(SharedPreferencesKeys.onboardingCompleted, true);
 
       // Log analytics event
       final analytics = ref.read(analyticsServiceProvider);

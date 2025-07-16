@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vendor_app/config/theme.dart';
 import 'package:vendor_app/config/routes.dart';
 import 'package:vendor_app/providers/service_providers.dart';
-import 'package:vendor_app/services/navigation_service.dart';
-import 'package:vendor_app/widgets/custom_button.dart';
 import 'package:vendor_app/widgets/custom_text_field.dart';
 
 enum LoginType { businessOwner, staff }
@@ -40,7 +38,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   late final AnimationController _formSlideController;
   late final Animation<Offset> _slideAnimation;
   late final Animation<double> _fadeAnimation;
-  late final Animation<Offset> _formSlideAnimation;
+  late Animation<Offset> _formSlideAnimation;
 
   @override
   void initState() {
@@ -78,6 +76,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       curve: Curves.easeIn,
     ));
 
+    // Initialize the form slide animation with a default state
     _formSlideAnimation = Tween<Offset>(
       begin: Offset.zero,
       end: Offset.zero,
@@ -115,9 +114,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
     try {
       final authService = ref.read(authServiceProvider);
-      if (authService == null) {
-        throw Exception('Authentication service is not available');
-      }
 
       bool success;
       if (_selectedLoginType == LoginType.businessOwner) {
@@ -195,6 +191,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     if (_selectedLoginType != type) {
       // Determine slide direction
       final isMovingRight = type == LoginType.staff;
+      
+      // Reset controller to ensure clean state
+      _formSlideController.reset();
       
       // Start slide out animation
       _formSlideAnimation = Tween<Offset>(
@@ -833,6 +832,43 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               ),
             ],
           ),
+          const SizedBox(height: 10),
+          // Vendor Registration button (directs to signup)
+          GestureDetector(
+            onTap: () {
+              Navigator.pushNamed(context, AppRoutes.signup);
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppTheme.primary.withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.storefront,
+                    color: AppTheme.primary,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Register as Vendor',
+                    style: TextStyle(
+                      color: AppTheme.primary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
           if (_selectedLoginType == LoginType.staff) ...[
             const SizedBox(height: 8),
             AnimatedOpacity(
@@ -926,11 +962,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
                   // Login Form with Sliding Animation
                   ClipRect(
-                    child: SlideTransition(
-                      position: _formSlideAnimation,
-                      child: _selectedLoginType == LoginType.businessOwner
-                          ? _buildBusinessOwnerForm()
-                          : _buildStaffForm(),
+                    child: AnimatedBuilder(
+                      animation: _formSlideAnimation,
+                      builder: (context, child) {
+                        return SlideTransition(
+                          position: _formSlideAnimation,
+                          child: _selectedLoginType == LoginType.businessOwner
+                              ? _buildBusinessOwnerForm()
+                              : _buildStaffForm(),
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(height: 24),

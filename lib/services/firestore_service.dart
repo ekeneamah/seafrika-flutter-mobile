@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:vendor_app/config/collection_names.dart';
 import '../models/user.dart' as app_user;
 
 class FirestoreService {
@@ -14,9 +15,10 @@ class FirestoreService {
         _auth = auth ?? FirebaseAuth.instance;
 
   // Collection references
-  CollectionReference get usersCollection => _firestore.collection('vendors');
-  CollectionReference get productsCollection => _firestore.collection('products');
-  CollectionReference get mediaCollection => _firestore.collection('media');
+  CollectionReference get usersCollection => _firestore.collection(CollectionNames.users);
+  CollectionReference get vendorsCollection => _firestore.collection('vendors'); // Keep legacy vendor collection
+  CollectionReference get productsCollection => _firestore.collection(CollectionNames.products);
+  CollectionReference get mediaCollection => _firestore.collection(CollectionNames.media);
   CollectionReference collection(String path) {
     return _firestore.collection(path);
   }

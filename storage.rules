@@ -6,23 +6,42 @@ service firebase.storage {
       return request.auth != null;
     }
     
-    function isVendor() {
+    function isBusinessOwner() {
       return isAuthenticated() && 
-        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.roles.hasAny(['vendor']);
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.roles.hasAny(['business_owner']);
+    }
+    
+    function isSameBusinessEntity(userId) {
+      return userId == request.auth.uid || 
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.vendorId == 
+        firestore.get(/databases/(default)/documents/users/$(userId)).data.vendorId;
     }
 
     // Media files
     match /media/{userId}/{fileName} {
       allow read: if true; // Public read access
-      allow write: if isVendor() && request.auth.uid == userId;
-      allow delete: if isVendor() && request.auth.uid == userId;
+      allow write: if isBusinessOwner() && (request.auth.uid == userId || 
+        (isAuthenticated() && isSameBusinessEntity(userId)));
+      allow delete: if isBusinessOwner() && (request.auth.uid == userId || 
+        (isAuthenticated() && isSameBusinessEntity(userId)));
     }
 
     // Profile images
     match /profiles/{userId}/{fileName} {
       allow read: if true; // Public read access
-      allow write: if isAuthenticated() && request.auth.uid == userId;
-      allow delete: if isAuthenticated() && request.auth.uid == userId;
+      allow write: if isAuthenticated() && (request.auth.uid == userId || 
+        (isBusinessOwner() && isSameBusinessEntity(userId)));
+      allow delete: if isAuthenticated() && (request.auth.uid == userId || 
+        (isBusinessOwner() && isSameBusinessEntity(userId)));
+    }
+    
+    // Business-specific files (products, inventory images, etc.)
+    match /business/{businessId}/{fileName} {
+      allow read: if true; // Public read access
+      allow write: if isBusinessOwner() && 
+        (businessId == firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.businessId);
+      allow delete: if isBusinessOwner() && 
+        (businessId == firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.businessId);
     }
   }
 } 

@@ -162,10 +162,7 @@ Welcome to the team! 🚀
 ''';
 
     try {
-      await Share.share(
-        shareText,
-        subject: '${widget.businessName} - Your Staff Account Credentials',
-      );
+      await Share.share(shareText);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

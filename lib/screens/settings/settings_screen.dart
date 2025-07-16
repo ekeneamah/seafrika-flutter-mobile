@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:vendor_app/config/theme.dart';
+import 'package:vendor_app/config/shared_preferences_keys.dart';
 import 'package:vendor_app/services/analytics_service.dart';
 import 'package:vendor_app/services/auth_service.dart';
 import 'package:vendor_app/services/notification_service.dart';
@@ -33,10 +34,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       setState(() {
-        _notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
-        _darkMode = prefs.getBool('dark_mode') ?? false;
-        _language = prefs.getString('language') ?? 'English';
-        _analyticsEnabled = prefs.getBool('analytics_enabled') ?? true;
+        _notificationsEnabled = prefs.getBool(SharedPreferencesKeys.notificationsEnabled) ?? true;
+        _darkMode = prefs.getBool(SharedPreferencesKeys.darkMode) ?? false;
+        _language = prefs.getString(SharedPreferencesKeys.language) ?? 'English';
+        _analyticsEnabled = prefs.getBool(SharedPreferencesKeys.analyticsEnabled) ?? true;
       });
     } catch (e) {
       debugPrint('Load settings error: $e');
@@ -50,10 +51,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     String vendorId = context.read<AuthService>().currentUser?.vendorId ?? '';
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('notifications_enabled', _notificationsEnabled);
-      await prefs.setBool('dark_mode', _darkMode);
-      await prefs.setString('language', _language);
-      await prefs.setBool('analytics_enabled', _analyticsEnabled);
+      await prefs.setBool(SharedPreferencesKeys.notificationsEnabled, _notificationsEnabled);
+      await prefs.setBool(SharedPreferencesKeys.darkMode, _darkMode);
+      await prefs.setString(SharedPreferencesKeys.language, _language);
+      await prefs.setBool(SharedPreferencesKeys.analyticsEnabled, _analyticsEnabled);
 
       // Update services
       if (_notificationsEnabled) {

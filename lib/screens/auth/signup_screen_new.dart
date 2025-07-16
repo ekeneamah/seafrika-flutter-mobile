@@ -248,7 +248,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
 
       _showSnackBar('Account created successfully! Welcome aboard.',
           isError: false);
-      Navigator.pushReplacementNamed(context, AppRoutes.businessOnboarding);
+      Navigator.pushReplacementNamed(context, AppRoutes.home);
     } catch (e) {
       if (!mounted) return;
       if (e.toString().contains('email already exists')) {

@@ -4,10 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:vendor_app/config/routes.dart';
 import 'package:vendor_app/config/theme.dart';
+import 'package:vendor_app/config/shared_preferences_keys.dart';
 import 'package:vendor_app/firebase_options.dart';
 import 'package:vendor_app/services/navigation_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vendor_app/providers/service_providers.dart';
+import 'package:vendor_app/providers/business_context_provider.dart';
 import 'package:vendor_app/models/user.dart';
 import 'package:vendor_app/services/firestore_seeder.dart';
 
@@ -23,8 +25,11 @@ void main() async {
     cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
   );
 
+  // Create business context provider override
+  final businessContextOverride = await createBusinessContextProvider();
+
   // Notification setup (optional)
-  final container = ProviderContainer();
+  final container = ProviderContainer(overrides: [businessContextOverride]);
   final notificationService = container.read(notificationServiceProvider);
   await notificationService.initialize();
   await notificationService.requestPermission();
@@ -66,7 +71,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
   Future<bool> _getOnboardingCompleted() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool('onboarding_completed') ?? false;
+    return prefs.getBool(SharedPreferencesKeys.onboardingCompleted) ?? false;
   }
 
   void _handleNavigation(User? user) async {
@@ -112,13 +117,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     // Run Firestore seeder on first load
     debugPrint('Running Firestore seeder...');
     final prefs = await SharedPreferences.getInstance();
-    final hasSeeded = prefs.getBool('hasSeededPermissions') ?? false;
+    final hasSeeded = prefs.getBool(SharedPreferencesKeys.hasSeededPermissions) ?? false;
 
     if (!hasSeeded) {
       final firestore = FirebaseFirestore.instance;
       final seeder = FirestoreSeeder(firestore: firestore);
       await seeder.seedPermissions();
-      await prefs.setBool('hasSeededPermissions', true);
+      await prefs.setBool(SharedPreferencesKeys.hasSeededPermissions, true);
     }
   }
 }

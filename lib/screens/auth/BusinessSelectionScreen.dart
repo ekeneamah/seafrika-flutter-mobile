@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:vendor_app/config/shared_preferences_keys.dart';
 import 'package:vendor_app/models/SelectBusinessInfo.dart';
 import 'package:vendor_app/services/navigation_service.dart';
 
@@ -23,8 +24,8 @@ class BusinessSelectionScreen extends StatelessWidget {
             onTap: () async {
               final prefs = await SharedPreferences.getInstance();
               await prefs.setString(
-                  'selectedBusinessName', business.businessName);
-              await prefs.setString('selectedVendorId', business.vendorId);
+                  SharedPreferencesKeys.selectedBusinessName, business.businessName);
+              await prefs.setString(SharedPreferencesKeys.selectedBusinessOwnerId, business.vendorId);
               NavigationService.navigateToStaffNavigation();
             },
           );

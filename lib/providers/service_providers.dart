@@ -17,6 +17,7 @@ import '../services/store_inventory_service.dart';
 import '../services/share_service.dart';
 import '../services/booking_service.dart';
 import '../services/permission_service.dart';
+import '../services/business_service.dart';
 import '../models/role.dart';
 import '../models/user.dart';
 import '../models/permission.dart';
@@ -152,15 +153,8 @@ final roleProvider = StreamProvider.autoDispose<List<Role>>((ref) {
 });
 
 final userProvider = StreamProvider.autoDispose<List<User>>((ref) {
-  final firestore = ref.watch(firebaseFirestoreProvider);
-  final vendorId = ref.watch(vendorIdSyncProvider);
-  return firestore
-      .collection('users')
-      .where('vendorId', isEqualTo: vendorId)
-      .snapshots()
-      .map((snapshot) {
-    return snapshot.docs.map((doc) => User.fromFirestore(doc)).toList();
-  });
+  final userService = ref.watch(userServiceProvider);
+  return userService.streamUsers();
 });
 
 final permissionProvider = StreamProvider.autoDispose<List<Permission>>((ref) {
@@ -208,3 +202,9 @@ final teamServiceProvider = Provider<TeamService>((ref) {
     notificationService: ref.watch(notificationServiceProvider),
   );
 });
+
+final businessServiceProvider = Provider<BusinessService>((ref) {
+  return BusinessService();
+});
+
+
