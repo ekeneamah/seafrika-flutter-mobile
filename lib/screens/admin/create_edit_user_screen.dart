@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
 import 'package:vendor_app/config/theme.dart';
 import 'package:vendor_app/providers/service_providers.dart';
 import 'package:vendor_app/widgets/staff_credentials_modal.dart';
@@ -23,13 +24,29 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _defaultPasswordController = TextEditingController();
+  
+  // Personal attributes controllers
+  final _dateOfBirthController = TextEditingController();
+  final _weddingAnniversaryController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _hobbiesController = TextEditingController();
+  final _notesController = TextEditingController();
   
   // Focus nodes for managing keyboard navigation
   final _firstNameFocusNode = FocusNode();
   final _lastNameFocusNode = FocusNode();
   final _emailFocusNode = FocusNode();
+  final _phoneFocusNode = FocusNode();
   final _defaultPasswordFocusNode = FocusNode();
+  
+  // Personal attributes focus nodes
+  final _dateOfBirthFocusNode = FocusNode();
+  final _weddingAnniversaryFocusNode = FocusNode();
+  final _addressFocusNode = FocusNode();
+  final _hobbiesFocusNode = FocusNode();
+  final _notesFocusNode = FocusNode();
   
   late AnimationController _fadeController;
   late AnimationController _slideController;
@@ -41,11 +58,13 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
   final Set<app_models.UserRole> _selectedRoles = {app_models.UserRole.staff}; // Default role
   bool _isLoading = false;
   bool _obscureDefaultPassword = true;
+  bool _isPersonalDetailsExpanded = false; // Accordion state
 
   // Real-time validation states
   bool _isFirstNameValid = false;
   bool _isLastNameValid = false;
   bool _isEmailValid = false;
+  bool _isPhoneValid = true; // Phone is optional, so default to valid
   bool _isDefaultPasswordValid = false;
   bool _isFormValid = false;
 
@@ -95,6 +114,7 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
     _firstNameController.addListener(_validateFirstNameRealTime);
     _lastNameController.addListener(_validateLastNameRealTime);
     _emailController.addListener(_validateEmailRealTime);
+    _phoneController.addListener(_validatePhoneRealTime);
     _defaultPasswordController.addListener(_validateDefaultPasswordRealTime);
   }
 
@@ -133,6 +153,17 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
     }
   }
 
+  void _validatePhoneRealTime() {
+    final value = _phoneController.text.trim();
+    // Phone number is optional, so empty is valid
+    final isValid = value.isEmpty || RegExp(r'^\+?[\d\s\-\(\)]+$').hasMatch(value);
+    
+    if (_isPhoneValid != isValid) {
+      setState(() => _isPhoneValid = isValid);
+      _checkFormValidity();
+    }
+  }
+
   void _validateDefaultPasswordRealTime() {
     final value = _defaultPasswordController.text;
     final isValid = value.isNotEmpty && value.length >= 6;
@@ -149,6 +180,7 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
     final isValid = _isFirstNameValid && 
                    _isLastNameValid && 
                    _isEmailValid && 
+                   _isPhoneValid &&
                    (widget.user != null || _isDefaultPasswordValid); // Password optional in edit mode
     
     if (_isFormValid != isValid) {
@@ -167,6 +199,18 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
       _firstNameController.text = user.firstName;
       _lastNameController.text = user.lastName;
       _emailController.text = user.email;
+      _phoneController.text = user.phone ?? '';
+      
+      // Populate personal details
+      _dateOfBirthController.text = user.dateOfBirth != null 
+          ? DateFormat('MMM dd, yyyy').format(user.dateOfBirth!)
+          : '';
+      _weddingAnniversaryController.text = user.weddingAnniversary != null 
+          ? DateFormat('MMM dd, yyyy').format(user.weddingAnniversary!)
+          : '';
+      _addressController.text = user.address ?? '';
+      _hobbiesController.text = user.hobbies ?? '';
+      _notesController.text = user.notes ?? '';
       
       // Set the selected roles
       _selectedRoles.clear();
@@ -176,6 +220,7 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
       _validateFirstNameRealTime();
       _validateLastNameRealTime();
       _validateEmailRealTime();
+      _validatePhoneRealTime();
       
       // For edit mode, we don't require password validation
       _isDefaultPasswordValid = true;
@@ -188,14 +233,32 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
     _firstNameController.dispose();
     _lastNameController.dispose();
     _emailController.dispose();
+    _phoneController.dispose();
     _defaultPasswordController.dispose();
+    
+    // Personal details controllers
+    _dateOfBirthController.dispose();
+    _weddingAnniversaryController.dispose();
+    _addressController.dispose();
+    _hobbiesController.dispose();
+    _notesController.dispose();
+    
     _fadeController.dispose();
     _slideController.dispose();
     _validationController.dispose();
     _firstNameFocusNode.dispose();
     _lastNameFocusNode.dispose();
     _emailFocusNode.dispose();
+    _phoneFocusNode.dispose();
     _defaultPasswordFocusNode.dispose();
+    
+    // Personal details focus nodes
+    _dateOfBirthFocusNode.dispose();
+    _weddingAnniversaryFocusNode.dispose();
+    _addressFocusNode.dispose();
+    _hobbiesFocusNode.dispose();
+    _notesFocusNode.dispose();
+    
     super.dispose();
   }
 
@@ -221,7 +284,18 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
           firstName: _firstNameController.text.trim(),
           lastName: _lastNameController.text.trim(),
           email: _emailController.text.trim(),
+          phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
           roles: _selectedRoles.toList(),
+          // Personal details
+          dateOfBirth: _dateOfBirthController.text.isEmpty 
+              ? null 
+              : DateFormat('MMM dd, yyyy').parse(_dateOfBirthController.text),
+          weddingAnniversary: _weddingAnniversaryController.text.isEmpty 
+              ? null 
+              : DateFormat('MMM dd, yyyy').parse(_weddingAnniversaryController.text),
+          address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
+          hobbies: _hobbiesController.text.trim().isEmpty ? null : _hobbiesController.text.trim(),
+          notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
         );
 
         if (!mounted) return;
@@ -265,9 +339,19 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
           defaultPassword: _defaultPasswordController.text,
           roles: _selectedRoles.toList(),
           teamIds: [], // Empty array for now, can be populated later
-          phone: null, // Can be added later
+          phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
           profileImage: null, // Can be added later
           auth: auth,
+          // Personal details
+          dateOfBirth: _dateOfBirthController.text.isEmpty 
+              ? null 
+              : DateFormat('MMM dd, yyyy').parse(_dateOfBirthController.text),
+          weddingAnniversary: _weddingAnniversaryController.text.isEmpty 
+              ? null 
+              : DateFormat('MMM dd, yyyy').parse(_weddingAnniversaryController.text),
+          address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
+          hobbies: _hobbiesController.text.trim().isEmpty ? null : _hobbiesController.text.trim(),
+          notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
         );
 
         if (!mounted) return;
@@ -363,6 +447,33 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
     }
   }
 
+  // Helper method for date selection
+  Future<void> _selectDate(BuildContext context, TextEditingController controller) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(1920),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: AppTheme.primary,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: AppTheme.textPrimary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    
+    if (picked != null) {
+      controller.text = DateFormat('MMM dd, yyyy').format(picked);
+    }
+  }
+  
   // Responsive helper methods
   double _getHorizontalPadding(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -508,67 +619,47 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
     return LayoutBuilder(
       builder: (context, constraints) {
         final horizontalPadding = _getHorizontalPadding(context);
-        final shouldStack = _shouldStackFields(context);
-        final iconSize = _getIconSize(context);
-        final fontSize = _getFontSize(context, 18);
         
-        return Padding(
-          padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-          child: _buildModernCard(
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header - Responsive layout
-                  ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: constraints.maxWidth,
-                    ),
-                    child: shouldStack
-                        ? Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(6),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.primary.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Icon(
-                                      Icons.person_add_outlined,
-                                      color: AppTheme.primary,
-                                      size: iconSize,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Flexible(
-                                    child: Text(
-                                      'User Information',
-                                      style: TextStyle(
-                                        fontSize: fontSize,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppTheme.textPrimary,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              // Form Progress Indicator
-                              _buildFormProgressIndicator(),
-                            ],
-                          )
-                        : Row(
+        return Column(
+          children: [
+            _buildRequiredFieldsCard(constraints, horizontalPadding),
+            const SizedBox(height: 16),
+            _buildOptionalFieldsCard(constraints, horizontalPadding),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildRequiredFieldsCard(BoxConstraints constraints, double horizontalPadding) {
+    final shouldStack = _shouldStackFields(context);
+    final iconSize = _getIconSize(context);
+    final fontSize = _getFontSize(context, 18);
+    
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+      child: _buildModernCard(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header - Responsive layout
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: constraints.maxWidth,
+                ),
+                child: shouldStack
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.all(8),
+                                padding: const EdgeInsets.all(6),
                                 decoration: BoxDecoration(
                                   color: AppTheme.primary.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Icon(
                                   Icons.person_add_outlined,
@@ -576,7 +667,7 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
                                   size: iconSize,
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: 8),
                               Flexible(
                                 child: Text(
                                   'User Information',
@@ -588,215 +679,467 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              const Spacer(),
-                              // Form Progress Indicator
-                              _buildFormProgressIndicator(),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.secondary.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  'Required',
+                                  style: TextStyle(
+                                    fontSize: _getFontSize(context, 11),
+                                    color: AppTheme.secondary,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
-                  ),
-                  const SizedBox(height: 20),
+                          const SizedBox(height: 12),
+                          // Form Progress Indicator
+                          _buildFormProgressIndicator(),
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.person_add_outlined,
+                              color: AppTheme.primary,
+                              size: iconSize,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Flexible(
+                            child: Text(
+                              'User Information',
+                              style: TextStyle(
+                                fontSize: fontSize,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.textPrimary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppTheme.secondary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              'Required',
+                              style: TextStyle(
+                                fontSize: _getFontSize(context, 11),
+                                color: AppTheme.secondary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                          // Form Progress Indicator
+                          _buildFormProgressIndicator(),
+                        ],
+                      ),
+              ),
+              const SizedBox(height: 20),
 
-                  // Name Fields - Responsive layout
-                  shouldStack
-                      ? Column(
-                          children: [
-                            CustomTextField(
-                              controller: _firstNameController,
-                              label: 'First Name',
-                              keyboardType: TextInputType.name,
-                              textCapitalization: TextCapitalization.words,
-                              textInputAction: TextInputAction.next,
-                              prefixIcon: Icon(Icons.person_outline, color: AppTheme.primary),
-                              suffixIcon: _buildValidationTick(_isFirstNameValid),
-                              inputFormatters: [
-                                FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
-                              ],
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'Required';
-                                }
-                                if (value.trim().length < 2) {
-                                  return 'Min 2 chars';
-                                }
-                                if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value.trim())) {
-                                  return 'Letters only';
-                                }
-                                return null;
-                              },
-                              focusNode: _firstNameFocusNode,
-                              onSubmitted: (_) => FocusScope.of(context).requestFocus(_lastNameFocusNode),
-                            ),
-                            const SizedBox(height: 16),
-                            CustomTextField(
-                              controller: _lastNameController,
-                              label: 'Last Name',
-                              keyboardType: TextInputType.name,
-                              textCapitalization: TextCapitalization.words,
-                              textInputAction: TextInputAction.next,
-                              prefixIcon: Icon(Icons.person_outline, color: AppTheme.primary),
-                              suffixIcon: _buildValidationTick(_isLastNameValid),
-                              inputFormatters: [
-                                FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
-                              ],
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'Required';
-                                }
-                                if (value.trim().length < 2) {
-                                  return 'Min 2 chars';
-                                }
-                                if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value.trim())) {
-                                  return 'Letters only';
-                                }
-                                return null;
-                              },
-                              focusNode: _lastNameFocusNode,
-                              onSubmitted: (_) => FocusScope.of(context).requestFocus(_emailFocusNode),
-                            ),
-                          ],
-                        )
-                      : IntrinsicHeight(
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: CustomTextField(
-                                  controller: _firstNameController,
-                                  label: 'First Name',
-                                  keyboardType: TextInputType.name,
-                                  textCapitalization: TextCapitalization.words,
-                                  textInputAction: TextInputAction.next,
-                                  prefixIcon: Icon(Icons.person_outline, color: AppTheme.primary),
-                                  suffixIcon: _buildValidationTick(_isFirstNameValid),
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
-                                  ],
-                                  validator: (value) {
-                                    if (value == null || value.trim().isEmpty) {
-                                      return 'Required';
-                                    }
-                                    if (value.trim().length < 2) {
-                                      return 'Min 2 chars';
-                                    }
-                                    if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value.trim())) {
-                                      return 'Letters only';
-                                    }
-                                    return null;
-                                  },
-                                  focusNode: _firstNameFocusNode,
-                                  onSubmitted: (_) => FocusScope.of(context).requestFocus(_lastNameFocusNode),
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: CustomTextField(
-                                  controller: _lastNameController,
-                                  label: 'Last Name',
-                                  keyboardType: TextInputType.name,
-                                  textCapitalization: TextCapitalization.words,
-                                  textInputAction: TextInputAction.next,
-                                  prefixIcon: Icon(Icons.person_outline, color: AppTheme.primary),
-                                  suffixIcon: _buildValidationTick(_isLastNameValid),
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
-                                  ],
-                                  validator: (value) {
-                                    if (value == null || value.trim().isEmpty) {
-                                      return 'Required';
-                                    }
-                                    if (value.trim().length < 2) {
-                                      return 'Min 2 chars';
-                                    }
-                                    if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value.trim())) {
-                                      return 'Letters only';
-                                    }
-                                    return null;
-                                  },
-                                  focusNode: _lastNameFocusNode,
-                                  onSubmitted: (_) => FocusScope.of(context).requestFocus(_emailFocusNode),
-                                ),
-                              ),
-                            ],
+              // Name Fields - Responsive layout
+              shouldStack
+                  ? Column(
+                      children: [
+                        CustomTextField(
+                          controller: _firstNameController,
+                          label: 'First Name',
+                          keyboardType: TextInputType.name,
+                          textCapitalization: TextCapitalization.words,
+                          textInputAction: TextInputAction.next,
+                          prefixIcon: Icon(Icons.person_outline, color: AppTheme.primary),
+                          onSubmitted: (_) => FocusScope.of(context).requestFocus(_lastNameFocusNode),
+                          suffixIcon: _buildSuffixIcon(isValid: _isFirstNameValid),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter first name';
+                            }
+                            if (value.length < 2) {
+                              return 'Min 2 chars';
+                            }
+                            return null;
+                          },
+                          focusNode: _firstNameFocusNode,
+                        ),
+                        const SizedBox(height: 20),
+                        CustomTextField(
+                          controller: _lastNameController,
+                          label: 'Last Name',
+                          keyboardType: TextInputType.name,
+                          textCapitalization: TextCapitalization.words,
+                          textInputAction: TextInputAction.next,
+                          prefixIcon: Icon(Icons.person_outline, color: AppTheme.primary),
+                          onSubmitted: (_) => FocusScope.of(context).requestFocus(_emailFocusNode),
+                          suffixIcon: _buildSuffixIcon(isValid: _isLastNameValid),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter last name';
+                            }
+                            if (value.length < 2) {
+                              return 'Min 2 chars';
+                            }
+                            return null;
+                          },
+                          focusNode: _lastNameFocusNode,
+                        ),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Expanded(
+                          child: CustomTextField(
+                            controller: _firstNameController,
+                            label: 'First Name',
+                            keyboardType: TextInputType.name,
+                            textCapitalization: TextCapitalization.words,
+                            textInputAction: TextInputAction.next,
+                            prefixIcon: Icon(Icons.person_outline, color: AppTheme.primary),
+                            onSubmitted: (_) => FocusScope.of(context).requestFocus(_lastNameFocusNode),
+                            suffixIcon: _buildSuffixIcon(isValid: _isFirstNameValid),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter first name';
+                              }
+                              if (value.length < 2) {
+                                return 'Min 2 chars';
+                              }
+                              return null;
+                            },
+                            focusNode: _firstNameFocusNode,
                           ),
                         ),
-                  const SizedBox(height: 20),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: CustomTextField(
+                            controller: _lastNameController,
+                            label: 'Last Name',
+                            keyboardType: TextInputType.name,
+                            textCapitalization: TextCapitalization.words,
+                            textInputAction: TextInputAction.next,
+                            prefixIcon: Icon(Icons.person_outline, color: AppTheme.primary),
+                            onSubmitted: (_) => FocusScope.of(context).requestFocus(_emailFocusNode),
+                            suffixIcon: _buildSuffixIcon(isValid: _isLastNameValid),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter last name';
+                              }
+                              if (value.length < 2) {
+                                return 'Min 2 chars';
+                              }
+                              return null;
+                            },
+                            focusNode: _lastNameFocusNode,
+                          ),
+                        ),
+                      ],
+                    ),
+              const SizedBox(height: 20),
 
-                  // Email Field - Full Width
+              // Email Field
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: constraints.maxWidth,
+                ),
+                child: CustomTextField(
+                  controller: _emailController,
+                  label: 'Email',
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  prefixIcon: Icon(Icons.email_outlined, color: AppTheme.primary),
+                  onSubmitted: (_) => FocusScope.of(context).requestFocus(_phoneFocusNode),
+                  suffixIcon: _buildSuffixIcon(isValid: _isEmailValid),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter email';
+                    }
+                    if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(value)) {
+                      return 'Invalid email format';
+                    }
+                    return null;
+                  },
+                  focusNode: _emailFocusNode,
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Phone Field
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: constraints.maxWidth,
+                ),
+                child: CustomTextField(
+                  controller: _phoneController,
+                  label: 'Phone Number',
+                  keyboardType: TextInputType.phone,
+                  textInputAction: widget.user != null ? TextInputAction.done : TextInputAction.next,
+                  prefixIcon: Icon(Icons.phone_outlined, color: AppTheme.primary),
+                  onSubmitted: (_) => widget.user != null 
+                      ? _saveUser() 
+                      : FocusScope.of(context).requestFocus(_defaultPasswordFocusNode),
+                  suffixIcon: _buildSuffixIcon(isValid: _isPhoneValid),
+                  validator: (value) {
+                    if (value != null && value.isNotEmpty) {
+                      if (value.length < 10) {
+                        return 'Min 10 digits';
+                      }
+                    }
+                    return null;
+                  },
+                  focusNode: _phoneFocusNode,
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Default Password Field - Only show in create mode
+              if (widget.user == null) ...[
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: constraints.maxWidth,
+                  ),
+                  child: CustomTextField(
+                    controller: _defaultPasswordController,
+                    label: 'Default Password',
+                    obscureText: _obscureDefaultPassword,
+                    keyboardType: TextInputType.visiblePassword,
+                    textInputAction: TextInputAction.done,
+                    textCapitalization: TextCapitalization.none,
+                    prefixIcon: Icon(Icons.lock_outline, color: AppTheme.secondary),
+                    onSubmitted: (_) => _saveUser(),
+                    suffixIcon: _buildSuffixIcon(
+                      isValid: _isDefaultPasswordValid,
+                      actionButton: IconButton(
+                        icon: Icon(
+                          _obscureDefaultPassword ? Icons.visibility_off : Icons.visibility,
+                          color: AppTheme.earth,
+                          size: iconSize,
+                        ),
+                        onPressed: () {
+                          setState(() => _obscureDefaultPassword = !_obscureDefaultPassword);
+                        },
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter a default password';
+                      }
+                      if (value.length < 6) {
+                        return 'Min 6 chars';
+                      }
+                      return null;
+                    },
+                    focusNode: _defaultPasswordFocusNode,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOptionalFieldsCard(BoxConstraints constraints, double horizontalPadding) {
+    final iconSize = _getIconSize(context);
+    final fontSize = _getFontSize(context, 18);
+    
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+      child: _buildModernCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Accordion Header
+            InkWell(
+              onTap: () {
+                setState(() {
+                  _isPersonalDetailsExpanded = !_isPersonalDetailsExpanded;
+                });
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.earth.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.person_outline,
+                        color: AppTheme.earth,
+                        size: iconSize,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Flexible(
+                      child: Text(
+                        'Personal Details',
+                        style: TextStyle(
+                          fontSize: fontSize,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textPrimary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.earth.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'Optional',
+                        style: TextStyle(
+                          fontSize: _getFontSize(context, 11),
+                          color: AppTheme.earth,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    AnimatedRotation(
+                      turns: _isPersonalDetailsExpanded ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 300),
+                      child: Icon(
+                        Icons.keyboard_arrow_down,
+                        color: AppTheme.earth,
+                        size: iconSize,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            // Accordion Content
+            AnimatedCrossFade(
+              firstChild: const SizedBox.shrink(),
+              secondChild: Column(
+                children: [
+                  const SizedBox(height: 16),
+                  
+                  // Date of Birth Field
                   ConstrainedBox(
                     constraints: BoxConstraints(
                       maxWidth: constraints.maxWidth,
                     ),
                     child: CustomTextField(
-                      controller: _emailController,
-                      label: 'Email Address',
-                      keyboardType: TextInputType.emailAddress,
+                      controller: _dateOfBirthController,
+                      label: 'Date of Birth',
+                      keyboardType: TextInputType.datetime,
                       textInputAction: TextInputAction.next,
-                      textCapitalization: TextCapitalization.none,
-                      prefixIcon: Icon(Icons.email_outlined, color: AppTheme.primary),
-                      suffixIcon: _buildValidationTick(_isEmailValid),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.deny(RegExp(r'\s')), // No spaces in email
-                      ],
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Please enter email address';
-                        }
-                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                          return 'Please enter a valid email';
-                        }
-                        return null;
-                      },
-                      focusNode: _emailFocusNode,
-                      onSubmitted: (_) => FocusScope.of(context).requestFocus(_defaultPasswordFocusNode),
+                      prefixIcon: Icon(Icons.cake_outlined, color: AppTheme.primary),
+                      onSubmitted: (_) => FocusScope.of(context).requestFocus(_weddingAnniversaryFocusNode),
+                      focusNode: _dateOfBirthFocusNode,
+                      onTap: () => _selectDate(context, _dateOfBirthController),
+                      readOnly: true,
                     ),
                   ),
                   const SizedBox(height: 20),
-
-                  // Default Password Field - Full Width
-                   ConstrainedBox(
+                  
+                  // Wedding Anniversary Field
+                  ConstrainedBox(
                     constraints: BoxConstraints(
                       maxWidth: constraints.maxWidth,
                     ),
                     child: CustomTextField(
-                      controller: _defaultPasswordController,
-                      label: 'Default Password',
-                      obscureText: _obscureDefaultPassword,
-                      keyboardType: TextInputType.visiblePassword,
-                      textInputAction: TextInputAction.done, // Changed to done as it's now the last field
-                      textCapitalization: TextCapitalization.none,
-                      prefixIcon: Icon(Icons.lock_outline, color: AppTheme.secondary),
-                      onSubmitted: (_) => _saveUser(), // Submit the form when done is pressed
-                      suffixIcon: _buildSuffixIcon(
-                        isValid: _isDefaultPasswordValid,
-                        actionButton: IconButton(
-                          icon: Icon(
-                            _obscureDefaultPassword ? Icons.visibility_off : Icons.visibility,
-                            color: AppTheme.earth,
-                            size: iconSize,
-                          ),
-                          onPressed: () {
-                            setState(() => _obscureDefaultPassword = !_obscureDefaultPassword);
-                          },
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter a default password';
-                        }
-                        if (value.length < 6) {
-                          return 'Min 6 chars';
-                        }
-                        return null;
-                      },
-                      focusNode: _defaultPasswordFocusNode,
+                      controller: _weddingAnniversaryController,
+                      label: 'Wedding Anniversary',
+                      keyboardType: TextInputType.datetime,
+                      textInputAction: TextInputAction.next,
+                      prefixIcon: Icon(Icons.favorite_outline, color: AppTheme.primary),
+                      onSubmitted: (_) => FocusScope.of(context).requestFocus(_addressFocusNode),
+                      focusNode: _weddingAnniversaryFocusNode,
+                      onTap: () => _selectDate(context, _weddingAnniversaryController),
+                      readOnly: true,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  
+                  // Address Field
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: constraints.maxWidth,
+                    ),
+                    child: CustomTextField(
+                      controller: _addressController,
+                      label: 'Address',
+                      keyboardType: TextInputType.streetAddress,
+                      textInputAction: TextInputAction.next,
+                      textCapitalization: TextCapitalization.words,
+                      prefixIcon: Icon(Icons.location_on_outlined, color: AppTheme.primary),
+                      onSubmitted: (_) => FocusScope.of(context).requestFocus(_hobbiesFocusNode),
+                      focusNode: _addressFocusNode,
+                      maxLines: 2,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  
+                  // Hobbies Field
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: constraints.maxWidth,
+                    ),
+                    child: CustomTextField(
+                      controller: _hobbiesController,
+                      label: 'Hobbies & Interests',
+                      keyboardType: TextInputType.text,
+                      textInputAction: TextInputAction.next,
+                      textCapitalization: TextCapitalization.sentences,
+                      prefixIcon: Icon(Icons.sports_esports_outlined, color: AppTheme.primary),
+                      onSubmitted: (_) => FocusScope.of(context).requestFocus(_notesFocusNode),
+                      focusNode: _hobbiesFocusNode,
+                      maxLines: 2,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  
+                  // Notes Field
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: constraints.maxWidth,
+                    ),
+                    child: CustomTextField(
+                      controller: _notesController,
+                      label: 'Additional Notes',
+                      keyboardType: TextInputType.text,
+                      textInputAction: TextInputAction.done,
+                      textCapitalization: TextCapitalization.sentences,
+                      prefixIcon: Icon(Icons.note_outlined, color: AppTheme.primary),
+                      onSubmitted: (_) => _saveUser(),
+                      focusNode: _notesFocusNode,
+                      maxLines: 3,
                     ),
                   ),
                 ],
               ),
+              crossFadeState: _isPersonalDetailsExpanded 
+                  ? CrossFadeState.showSecond 
+                  : CrossFadeState.showFirst,
+              duration: const Duration(milliseconds: 300),
             ),
-          ),
-        );
-      },
+          ],
+        ),
+      ),
     );
   }
 
@@ -1081,7 +1424,9 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
                                     const SizedBox(width: 8),
                                     Flexible(
                                       child: Text(
-                                        _isFormValid ? 'Create User' : 'Complete Form First',
+                                        _isFormValid 
+                                            ? (widget.user != null ? 'Update User' : 'Create User') 
+                                            : 'Complete Form First',
                                         style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           fontSize: fontSize,
@@ -1166,7 +1511,7 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
         title: LayoutBuilder(
           builder: (context, constraints) {
             return Text(
-              'Add New User',
+              widget.user != null ? 'Edit User' : 'Add New User',
               style: TextStyle(
                 color: AppTheme.textPrimary,
                 fontWeight: FontWeight.w600,

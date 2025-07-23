@@ -145,6 +145,12 @@ class UserService {
     Map<String, List<UserRole>>? storeRoles,
     bool? isActive,
     String? email,
+    // Personal details
+    DateTime? dateOfBirth,
+    DateTime? weddingAnniversary,
+    String? address,
+    String? hobbies,
+    String? notes,
   }) async {
     // Prevent duplicate users with the same email for this vendor (excluding this user)
     if (email != null) {
@@ -175,6 +181,15 @@ class UserService {
           key, value.map((role) => role.toString().split('.').last).toList()));
     }
     if (isActive != null) updates['isActive'] = isActive;
+    if (email != null) updates['email'] = email;
+    
+    // Personal details
+    if (dateOfBirth != null) updates['dateOfBirth'] = dateOfBirth.toIso8601String();
+    if (weddingAnniversary != null) updates['weddingAnniversary'] = weddingAnniversary.toIso8601String();
+    if (address != null) updates['address'] = address;
+    if (hobbies != null) updates['hobbies'] = hobbies;
+    if (notes != null) updates['notes'] = notes;
+    
     updates['lastUpdatedAt'] = FieldValue.serverTimestamp();
 
     await _firestore.collection('users').doc(userId).update(updates);
@@ -262,6 +277,12 @@ class UserService {
     String? phone,
     String? profileImage,
     required FirebaseAuth auth,
+    // Personal details
+    DateTime? dateOfBirth,
+    DateTime? weddingAnniversary,
+    String? address,
+    String? hobbies,
+    String? notes,
   }) async {
     try {
       // Check for duplicate email in this business
@@ -310,6 +331,12 @@ class UserService {
         createdAt: DateTime.now(),
         lastLoginAt: null,
         defaultPasswordChanged: false,
+        // Personal details
+        dateOfBirth: dateOfBirth,
+        weddingAnniversary: weddingAnniversary,
+        address: address,
+        hobbies: hobbies,
+        notes: notes,
       );
       
       // Create user in Firebase Authentication

@@ -6,6 +6,7 @@ import 'package:vendor_app/models/user.dart';
 import 'package:vendor_app/providers/service_providers.dart';
 import 'package:vendor_app/config/routes.dart';
 import 'package:vendor_app/widgets/staff_credentials_modal.dart';
+import 'package:vendor_app/screens/admin/create_edit_user_screen.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -856,6 +857,118 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     );
   }
 
+  Widget _buildPersonalDetailsSection() {
+    final authService = ref.watch(authServiceProvider);
+    final routeUser = ModalRoute.of(context)?.settings.arguments;
+    final User? userArg = routeUser is User ? routeUser : null;
+    final user = userArg ?? widget.user ?? authService.currentUser;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final iconSize = _getIconSize(context);
+        final fontSize = _getFontSize(context, 18);
+        
+        return _buildModernCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.earth.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.person_outline,
+                      color: AppTheme.earth,
+                      size: iconSize,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Flexible(
+                    child: Text(
+                      'Personal Details',
+                      style: TextStyle(
+                        fontSize: fontSize,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppTheme.earth.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'Optional',
+                      style: TextStyle(
+                        fontSize: _getFontSize(context, 11),
+                        color: AppTheme.earth,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              
+              // Date of Birth
+              _buildInfoRow(
+                'Date of Birth',
+                user?.dateOfBirth != null 
+                    ? _formatDate(user!.dateOfBirth!) 
+                    : 'Not provided',
+                Icons.cake_outlined,
+              ),
+              
+              // Wedding Anniversary
+              _buildInfoRow(
+                'Wedding Anniversary',
+                user?.weddingAnniversary != null 
+                    ? _formatDate(user!.weddingAnniversary!) 
+                    : 'Not provided',
+                Icons.favorite_outline,
+              ),
+              
+              // Address
+              _buildInfoRow(
+                'Address',
+                user?.address?.isNotEmpty == true 
+                    ? user!.address! 
+                    : 'Not provided',
+                Icons.location_on_outlined,
+              ),
+              
+              // Hobbies
+              _buildInfoRow(
+                'Hobbies & Interests',
+                user?.hobbies?.isNotEmpty == true 
+                    ? user!.hobbies! 
+                    : 'Not provided',
+                Icons.sports_esports_outlined,
+              ),
+              
+              // Notes
+              _buildInfoRow(
+                'Additional Notes',
+                user?.notes?.isNotEmpty == true 
+                    ? user!.notes! 
+                    : 'No notes added',
+                Icons.note_outlined,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildCurrentBusinessInfo() {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -1630,23 +1743,39 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 16),
-            decoration: BoxDecoration(
-              color: AppTheme.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: Icon(
-                Icons.edit_outlined, 
-                color: AppTheme.primary,
-                size: _getIconSize(context),
-              ),
-              onPressed: () {
-                Navigator.pushNamed(context, '/profile-edit');
-              },
-              tooltip: 'Edit Profile',
-            ),
+          Consumer(
+            builder: (context, ref, child) {
+              final authService = ref.watch(authServiceProvider);
+              final routeUser = ModalRoute.of(context)?.settings.arguments;
+              final User? userArg = routeUser is User ? routeUser : null;
+              final user = userArg ?? widget.user ?? authService.currentUser;
+              
+              return Container(
+                margin: const EdgeInsets.only(right: 16),
+                decoration: BoxDecoration(
+                  color: user != null 
+                      ? AppTheme.primary.withOpacity(0.1)
+                      : AppTheme.earth.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: IconButton(
+                  icon: Icon(
+                    Icons.edit_outlined, 
+                    color: user != null ? AppTheme.primary : AppTheme.earth,
+                    size: _getIconSize(context),
+                  ),
+                  onPressed: user != null ? () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CreateEditUserScreen(user: user),
+                      ),
+                    );
+                  } : null,
+                  tooltip: user != null ? 'Edit User' : 'No user to edit',
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -1671,6 +1800,11 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                   // User Info Summary
                   SliverToBoxAdapter(
                     child: _buildUserInfoSummary(),
+                  ),
+
+                  // Personal Details Section
+                  SliverToBoxAdapter(
+                    child: _buildPersonalDetailsSection(),
                   ),
 
                   // Quick Actions Panel

@@ -1,10 +1,7 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:vendor_app/models/SelectBusinessInfo.dart';
 import 'package:vendor_app/models/user.dart' as app_user;
 import 'package:vendor_app/models/user.dart';
 import 'package:vendor_app/services/firestore_service.dart';
@@ -85,11 +82,11 @@ class AuthService extends StateNotifier<app_user.User?> {
   }
 
   Future<bool> loginStaff(
-      String phone, String password, String businessId) async {
+      String email, String password) async {
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now();
-    final attemptsKey = '$_attemptsKeyPrefix$phone';
-    final lastAttemptKey = '$_lastAttemptKeyPrefix$phone';
+    final attemptsKey = '$_attemptsKeyPrefix$email';
+    final lastAttemptKey = '$_lastAttemptKeyPrefix$email';
 
     int failedAttempts = prefs.getInt(attemptsKey) ?? 0;
     DateTime? lastAttempt;
@@ -101,32 +98,48 @@ class AuthService extends StateNotifier<app_user.User?> {
     // Check for lockout
     if (failedAttempts >= 3 &&
         lastAttempt != null &&
-        now.difference(lastAttempt).inMinutes < 15) {
+        now.difference(lastAttempt).inSeconds < 10) {
       throw Exception('Too many failed attempts. Try again after 15 minutes.');
     }
 
     try {
       // Attempt login
       final userCredential = await _auth.signInWithEmailAndPassword(
-        email: '$phone@smeafrika.com', // Adjust as needed for your auth logic
+        email: email, 
         password: password,
       );
 
-      // Check if user exists in business
+      // Fetch staff details from Firestore
       final userDoc = await _firestore
-          .collection('vendors')
-          .doc(businessId)
-          .collection('staff')
+          .collection(CollectionNames.users)
           .doc(userCredential.user!.uid)
           .get();
 
       if (!userDoc.exists) {
-        throw Exception('User does not exist in this business.');
+        throw Exception('Staff user does not exist.');
       }
 
-      // Reset failed attempts on success
-      await prefs.setInt(attemptsKey, 0);
-      await prefs.setInt(lastAttemptKey, now.millisecondsSinceEpoch);
+      // Deserialize Firestore document into app_user.User model
+      final user = app_user.User.fromMap(userDoc.data()! as Map<String, dynamic>);
+
+      // Update state with the logged-in user
+      state = user;
+
+      // Check if the default password has been changed
+      if (!user.defaultPasswordChanged) {
+        throw Exception('You must reset your password before proceeding.');
+      }
+
+      // Update last login timestamp in Firestore
+      await _firestore.updateDocument(
+        CollectionNames.users,
+        user.id,
+        {'lastLoginAt': DateTime.now().toIso8601String()},
+      );
+
+      // Log the login event
+      await _analytics.logLogin(method: 'email');
+
       return true;
 
       // If login fails, check if user exists in business by phone
@@ -410,5 +423,14 @@ class AuthService extends StateNotifier<app_user.User?> {
     final rand = DateTime.now().millisecondsSinceEpoch;
     return List.generate(length, (i) => chars[(rand + i) % chars.length])
         .join();
+  }
+
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+    } catch (e) {
+      debugPrint('Error sending password reset email: $e');
+      throw Exception('Failed to send password reset email. Please try again.');
+    }
   }
 }

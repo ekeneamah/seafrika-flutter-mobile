@@ -26,7 +26,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   // Staff Controllers
   final _staffEmailController = TextEditingController();
   final _staffPasswordController = TextEditingController();
-  final _businessIdController = TextEditingController();
   
   bool _isLoading = false;
   bool _obscureBusinessPassword = true;
@@ -96,7 +95,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     _businessPasswordController.dispose();
     _staffEmailController.dispose();
     _staffPasswordController.dispose();
-    _businessIdController.dispose();
     _slideController.dispose();
     _fadeController.dispose();
     _formSlideController.dispose();
@@ -124,8 +122,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       } else {
         success = await authService.loginStaff(
           _staffEmailController.text.trim(),
-          _staffPasswordController.text,
-          _businessIdController.text.trim(),
+          _staffPasswordController.text
         );
       }
 
@@ -155,6 +152,40 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       }
       _showSnackBar(errorMessage, isError: true);
       debugPrint('Login error: $e');
+
+      if (e.toString().contains('You must reset your password')) {
+        // Show modal dialog for password reset
+        await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Password Reset Required'),
+            content: const Text(
+              'You must reset your password before proceeding. Please update your password now.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  try {
+                    final authService = ref.read(authServiceProvider);
+                    await authService.sendPasswordResetEmail(
+                      _staffEmailController.text.trim(),
+                    );
+                    _showSnackBar('Password reset email sent successfully.', isError: false);
+                  } catch (e) {
+                    _showSnackBar('Failed to send password reset email. Please try again.', isError: true);
+                  }
+                },
+                child: const Text('Reset Password'),
+              ),
+            ],
+          ),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -638,24 +669,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             ),
             const SizedBox(height: 24),
 
-            // Business ID Field
-            CustomTextField(
-              controller: _businessIdController,
-              label: 'Business ID',
-              keyboardType: TextInputType.text,
-              prefixIcon: Icon(Icons.business_outlined, color: AppTheme.secondary),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter the business ID';
-                }
-                if (value.length < 3) {
-                  return 'Business ID must be at least 3 characters';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 20),
-
             // Staff Email Field
             CustomTextField(
               controller: _staffEmailController,
@@ -724,7 +737,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Contact your business owner for the Business ID',
+                      'Contact your business owner for assistance.',
                       style: TextStyle(
                         color: AppTheme.earth,
                         fontSize: 12,
@@ -884,49 +897,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                       fontStyle: FontStyle.italic,
                     ),
                     textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.pushNamed(
-                        context, 
-                        AppRoutes.staffRegistration,
-                        arguments: {
-                          'businessId': _businessIdController.text.trim(),
-                          'email': _staffEmailController.text.trim(),
-                        },
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: AppTheme.secondary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: AppTheme.secondary.withOpacity(0.3),
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.person_add_outlined,
-                            color: AppTheme.secondary,
-                            size: 16,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Complete Staff Registration',
-                            style: TextStyle(
-                              color: AppTheme.secondary,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                   ),
                 ],
               ),

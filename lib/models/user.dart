@@ -30,6 +30,13 @@ class User {
   final List<String> permissions;
   final Map<String, List<UserRole>> storeRoles;
   final bool defaultPasswordChanged;
+  
+  // Optional personal attributes
+  final DateTime? dateOfBirth;
+  final DateTime? weddingAnniversary;
+  final String? address;
+  final String? hobbies;
+  final String? notes;
 
   User({
     required this.id,
@@ -52,6 +59,12 @@ class User {
     required this.permissions,
     required this.storeRoles,
     this.defaultPasswordChanged = false,
+    // Optional personal attributes
+    this.dateOfBirth,
+    this.weddingAnniversary,
+    this.address,
+    this.hobbies,
+    this.notes,
   });
 
   String get fullName => '$firstName $lastName';
@@ -83,6 +96,12 @@ class User {
         ),
       ),
       'defaultPasswordChanged': defaultPasswordChanged,
+      // Optional personal attributes
+      'dateOfBirth': dateOfBirth?.toIso8601String(),
+      'weddingAnniversary': weddingAnniversary?.toIso8601String(),
+      'address': address,
+      'hobbies': hobbies,
+      'notes': notes,
     };
   }
 
@@ -146,6 +165,16 @@ class User {
           ) ??
           {},
       defaultPasswordChanged: map['defaultPasswordChanged'] ?? false,
+      // Optional personal attributes
+      dateOfBirth: map['dateOfBirth'] != null
+          ? DateTime.parse(map['dateOfBirth'])
+          : null,
+      weddingAnniversary: map['weddingAnniversary'] != null
+          ? DateTime.parse(map['weddingAnniversary'])
+          : null,
+      address: map['address'],
+      hobbies: map['hobbies'],
+      notes: map['notes'],
     );
   }
 
@@ -208,6 +237,16 @@ class User {
           ) ??
           {},
       defaultPasswordChanged: data['defaultPasswordChanged'] ?? false,
+      // Optional personal attributes
+      dateOfBirth: data['dateOfBirth'] != null
+          ? DateTime.parse(data['dateOfBirth'])
+          : null,
+      weddingAnniversary: data['weddingAnniversary'] != null
+          ? DateTime.parse(data['weddingAnniversary'])
+          : null,
+      address: data['address'],
+      hobbies: data['hobbies'],
+      notes: data['notes'],
     );
   }
 
@@ -238,6 +277,12 @@ class User {
         ),
       ),
       'defaultPasswordChanged': defaultPasswordChanged,
+      // Optional personal attributes
+      'dateOfBirth': dateOfBirth?.toIso8601String(),
+      'weddingAnniversary': weddingAnniversary?.toIso8601String(),
+      'address': address,
+      'hobbies': hobbies,
+      'notes': notes,
     };
   }
 
@@ -262,6 +307,12 @@ class User {
     List<String>? permissions,
     Map<String, List<UserRole>>? storeRoles,
     bool? defaultPasswordChanged,
+    // Optional personal attributes
+    DateTime? dateOfBirth,
+    DateTime? weddingAnniversary,
+    String? address,
+    String? hobbies,
+    String? notes,
   }) {
     return User(
       id: id ?? this.id,
@@ -285,6 +336,12 @@ class User {
       defaultPasswordChanged:
           defaultPasswordChanged ?? this.defaultPasswordChanged,
       businessId: businessId ?? this.businessId,
+      // Optional personal attributes
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+      weddingAnniversary: weddingAnniversary ?? this.weddingAnniversary,
+      address: address ?? this.address,
+      hobbies: hobbies ?? this.hobbies,
+      notes: notes ?? this.notes,
     );
   }
 

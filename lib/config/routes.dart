@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:vendor_app/models/SelectBusinessInfo.dart';
-import 'package:vendor_app/models/team.dart';
 import 'package:vendor_app/models/user.dart';
 import 'package:vendor_app/screens/Dashboard.dart';
 import 'package:vendor_app/screens/admin/admin_panel_screen.dart';
@@ -168,6 +167,7 @@ class AppRoutes {
   static const String editBusiness = '/businesses/edit';
   static const String businessManagement = '/businesses/management';
   static const String businessOnboarding = '/businesses/onboarding';
+  static const String passwordReset = '/auth/password-reset';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
