@@ -22,27 +22,30 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vendor_app/config/theme.dart' as theme;
 import 'package:vendor_app/models/inventory.dart';
+import 'package:vendor_app/models/business_inventory.dart';
 import 'package:vendor_app/models/invoice.dart';
 import 'package:vendor_app/models/product.dart';
 import 'package:vendor_app/models/purchase_order.dart';
 import 'package:vendor_app/models/supplier.dart';
 import 'package:vendor_app/services/inventory_service.dart';
-import 'package:vendor_app/services/product_service.dart';
-import 'package:vendor_app/widgets/error_view.dart' as error;
+import 'package:vendor_app/services/business_inventory_service.dart';
 import 'package:vendor_app/widgets/loading_view.dart';
 import 'package:vendor_app/services/store_service.dart' as store_service;
-import 'package:vendor_app/models/store.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:vendor_app/services/navigation_service.dart';
 import 'package:vendor_app/providers/service_providers.dart';
-import 'package:vendor_app/theme/app_theme.dart';
+import 'package:vendor_app/providers/business_context_provider.dart';
+import 'package:vendor_app/utils/business_preferences_helper.dart';
+import 'package:vendor_app/utils/business_validation_helper.dart';
 
 class CreateInventoryScreen extends ConsumerStatefulWidget {
   final Inventory? inventory;
+  final Product? prefilledProduct;
 
   const CreateInventoryScreen({
     Key? key,
     this.inventory,
+    this.prefilledProduct,
   }) : super(key: key);
 
   @override
@@ -100,12 +103,21 @@ class _CreateInventoryScreenState extends ConsumerState<CreateInventoryScreen>
     super.initState();
     _isEditing = widget.inventory != null;
     _initializeAnimations();
+    _validateBusinessSelection();
 
     if (_isEditing) {
       _loadInventory();
     } else {
+      _prefillProductDetails();
       _startAnimations();
     }
+  }
+
+  /// Validates that business is selected, redirects if not
+  Future<void> _validateBusinessSelection() async {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await BusinessValidationHelper.validateBusinessSelection(context);
+    });
   }
 
   void _initializeAnimations() {
@@ -139,6 +151,29 @@ class _CreateInventoryScreenState extends ConsumerState<CreateInventoryScreen>
         _isInitialized = true;
       });
     });
+  }
+
+  void _prefillProductDetails() {
+    if (widget.prefilledProduct != null) {
+      final product = widget.prefilledProduct!;
+      setState(() {
+        _selectedProductId = product.id;
+        _selectedProductName = product.name;
+        _selectedProductImage = product.displayImageUrl ?? (product.images.isNotEmpty ? product.images.first : null);
+        _selectedCategory = product.category;
+        _unitPrice = product.price;
+        _costPrice = product.price; // Default cost price to selling price
+        _minimumQuantity = product.minQuantity;
+        _quantity = product.stock; // Set current stock as quantity
+        
+        // Populate form controllers
+        _productNameController.text = product.name;
+        _quantityController.text = product.stock.toString(); // Add current quantity
+        _unitPriceController.text = product.price.toString();
+        _costPriceController.text = product.price.toString();
+        _minimumQuantityController.text = product.minQuantity.toString();
+      });
+    }
   }
 
   @override
@@ -388,14 +423,13 @@ class _CreateInventoryScreenState extends ConsumerState<CreateInventoryScreen>
         _selectedProductIds.add(selectedProduct.id);
         _selectedProductId = selectedProduct.id;
         _selectedProductName = selectedProduct.name;
-        _selectedProductImage = selectedProduct.images.isNotEmpty
-            ? selectedProduct.images[0]
-            : null;
+        _selectedProductImage = selectedProduct.displayImageUrl ?? 
+            (selectedProduct.images.isNotEmpty ? selectedProduct.images[0] : null);
         _selectedCategory = selectedProduct.category;
         _selectedUnit = selectedProduct.unit;
 
-        // Update quantity and unit price
-        _quantityController.text = '1';
+        // Update quantity and unit price - always use the product's actual stock quantity
+        _quantityController.text = selectedProduct.stock.toString();
         _unitPriceController.text = selectedProduct.price.toStringAsFixed(2);
       });
     }
@@ -414,29 +448,21 @@ class _CreateInventoryScreenState extends ConsumerState<CreateInventoryScreen>
 
     setState(() => _isLoading = true);
     try {
-      final inventoryService = ref.read(inventoryServiceProvider);
-      // final productService = ref.read(productServiceProvider); // Not used
+      // Get business context for business inventory creation
+      final businessContext = ref.read(businessContextProvider);
+      if (businessContext == null) {
+        _showSnackBar('No business selected. Please select a business first.', isError: true);
+        return;
+      }
+
+      final businessInventoryService = BusinessInventoryService();
 
       if (_isEditing && widget.inventory != null) {
+        // For editing, still use the old inventory service for now
+        // TODO: Update this when business inventory editing is implemented
+        final inventoryService = ref.read(inventoryServiceProvider);
         await inventoryService.updateInventory(
           widget.inventory!.id!,
-          quantity: int.parse(_quantityController.text),
-          minimumQuantity: int.parse(_minimumQuantityController.text),
-          unitPrice: double.parse(_unitPriceController.text),
-          location: _locationController.text,
-          notes: _notesController.text,
-          supplierId: _selectedSupplierId,
-          purchaseOrderId: _selectedPurchaseOrderId,
-          invoiceId: _selectedInvoiceId,
-          costPrice: double.tryParse(_costPriceController.text) ?? 0.0,
-          sellingPrice: double.tryParse(_sellingPriceController.text) ?? 0.0, // Added
-          maxDiscount: int.tryParse(_maxDiscountController.text) ?? 0, // Added
-        );
-        _showSnackBar('Inventory updated successfully', isError: false);
-      } else {
-        await inventoryService.createInventory(
-          productId: _selectedProductId!,
-          productName: _selectedProductName!,
           quantity: int.parse(_quantityController.text),
           minimumQuantity: int.parse(_minimumQuantityController.text),
           unitPrice: double.parse(_unitPriceController.text),
@@ -449,14 +475,45 @@ class _CreateInventoryScreenState extends ConsumerState<CreateInventoryScreen>
           sellingPrice: double.tryParse(_sellingPriceController.text) ?? 0.0,
           maxDiscount: int.tryParse(_maxDiscountController.text) ?? 0,
         );
-        _showSnackBar('Inventory created successfully', isError: false);
+        _showSnackBar('Inventory updated successfully', isError: false);
+      } else {
+        // Create business inventory (warehouse level)
+        // First check if this product already exists
+        final existingInventory = await businessInventoryService.getBusinessInventoryByProductId(
+          businessId: businessContext.id,
+          productId: _selectedProductId!,
+        );
+
+        await businessInventoryService.createBusinessInventory(
+          businessId: businessContext.id,
+          productId: _selectedProductId!,
+          productName: _selectedProductName!,
+          category: _selectedCategory ?? 'Uncategorized',
+          totalQuantity: int.parse(_quantityController.text),
+          costPrice: double.tryParse(_costPriceController.text) ?? 0.0,
+          sellingPrice: double.tryParse(_sellingPriceController.text) ?? 0.0,
+          supplierId: _selectedSupplierId,
+          purchaseOrderId: _selectedPurchaseOrderId,
+          invoiceId: _selectedInvoiceId,
+          displayImageUrl: _selectedProductImage, // Add product image URL
+        );
+        
+        // Provide appropriate feedback
+        if (existingInventory != null) {
+          _showSnackBar(
+            'Product inventory updated! Added ${_quantityController.text} units to existing stock.',
+            isError: false,
+          );
+        } else {
+          _showSnackBar('Business inventory created successfully', isError: false);
+        }
       }
 
       if (mounted) {
         Navigator.pop(context);
       }
     } catch (e) {
-      _showSnackBar('Failed to save inventory item', isError: true);
+      _showSnackBar('Failed to save inventory item: ${e.toString()}', isError: true);
     } finally {
       setState(() => _isLoading = false);
     }
@@ -1872,6 +1929,7 @@ class _WarehouseProductSelectionScreenState
             quantity: warehouseQty,
             minimumQuantity: 1,
             unitPrice: product.price,
+            displayImageUrl: product.displayImageUrl, // Add product image URL
           );
 
           // Get the latest inventory item for this product
@@ -1885,16 +1943,23 @@ class _WarehouseProductSelectionScreenState
           final inventoryDoc = inventorySnapshot.docs.first;
           final inventory = Inventory.fromFirestore(inventoryDoc);
 
-          // Then create the store inventory item using the master inventory ID
+          // Get business details from SharedPreferences
+          final businessId = await BusinessPreferencesHelper.getSelectedBusinessId();
+          final businessName = await BusinessPreferencesHelper.getSelectedBusinessName();
+
+          // Then create the store inventory item using the business inventory ID
           await storeInventoryService.createStoreInventory(
+            businessId: businessId!,
+            businessName: businessName!,
             vendorId: inventoryService.currentVendorId,
             storeId: result['storeId'],
+            businessInventoryId: inventory.id, // Updated to use businessInventoryId
             productId: product.id,
-            inventoryId: inventory.id,
             productName: product.name,
             quantity: warehouseQty,
             minimumQuantity: 1,
             unitPrice: product.price,
+            displayImageUrl: product.displayImageUrl, // Add product image URL
           );
         }
       }

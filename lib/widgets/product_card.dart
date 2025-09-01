@@ -106,7 +106,7 @@ class _ProductCardState extends State<ProductCard>
                             topLeft: Radius.circular(20),
                             topRight: Radius.circular(20),
                           ),
-                          child: Container(
+                          child: SizedBox(
                             width: double.infinity,
                             height: double.infinity,
                             child: widget.product.images.isNotEmpty
@@ -256,11 +256,11 @@ class _ProductCardState extends State<ProductCard>
                           const Spacer(),
                           
                           // Rating (if available)
-                          if (widget.product.rating != null && widget.product.rating! > 0) ...[
+                          if (widget.product.rating > 0) ...[
                             Row(
                               children: [
                                 RatingBarIndicator(
-                                  rating: widget.product.rating!.toDouble(),
+                                  rating: widget.product.rating.toDouble(),
                                   itemBuilder: (context, _) => Icon(
                                     Icons.star,
                                     color: AppTheme.accent,
@@ -271,7 +271,7 @@ class _ProductCardState extends State<ProductCard>
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  widget.product.rating!.toStringAsFixed(1),
+                                  widget.product.rating.toStringAsFixed(1),
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w500,

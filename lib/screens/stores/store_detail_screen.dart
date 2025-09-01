@@ -166,7 +166,7 @@ class StoreInventoryList extends ConsumerWidget {
 
     return ref
         .watch(storeInventoryStreamProvider(
-            (vendorId: vendorId, storeId: storeId)))
+            (businessId: vendorId, storeId: storeId)))
         .when(
           data: (inventory) {
             if (inventory.isEmpty) {

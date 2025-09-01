@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:vendor_app/config/theme.dart';
 import 'package:vendor_app/models/expense.dart';
 import 'package:vendor_app/services/expense_service.dart';
 import 'package:vendor_app/services/auth_service.dart';

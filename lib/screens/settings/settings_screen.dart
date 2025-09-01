@@ -140,6 +140,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ],
           ),
           _buildSection(
+            title: 'Business Management',
+            children: [
+              ListTile(
+                leading: const Icon(Icons.inventory_2),
+                title: const Text('Manage Products'),
+                subtitle: const Text('View and manage your product catalog'),
+                trailing: const Icon(Icons.arrow_forward_ios),
+                onTap: () {
+                  Navigator.pushNamed(context, AppRoutes.productList);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.business_center),
+                title: const Text('Business Inventory Management'),
+                subtitle: const Text('Manage all business inventory with bulk operations'),
+                trailing: const Icon(Icons.arrow_forward_ios),
+                onTap: () {
+                  Navigator.pushNamed(context, AppRoutes.businessInventoryManagement);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.room_service),
+                title: const Text('Manage Services'),
+                subtitle: const Text('View and manage your service offerings'),
+                trailing: const Icon(Icons.arrow_forward_ios),
+                onTap: () {
+                  Navigator.pushNamed(context, AppRoutes.serviceList);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.integration_instructions),
+                title: const Text('Integrations'),
+                subtitle: const Text('Connect with external platforms and services'),
+                trailing: const Icon(Icons.arrow_forward_ios),
+                onTap: () {
+                  Navigator.pushNamed(context, AppRoutes.integrationManagement);
+                },
+              ),
+            ],
+          ),
+          _buildSection(
             title: 'Privacy',
             children: [
               SwitchListTile(

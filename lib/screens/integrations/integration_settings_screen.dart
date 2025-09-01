@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:vendor_app/config/theme.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vendor_app/models/integration.dart';
+import 'package:vendor_app/providers/service_providers.dart';
 import 'package:vendor_app/services/integration_service.dart';
 import 'package:vendor_app/services/navigation_service.dart';
 import 'package:vendor_app/widgets/error_view.dart' as error;
 import 'package:vendor_app/widgets/loading_view.dart';
 
-class IntegrationSettingsScreen extends StatefulWidget {
+class IntegrationSettingsScreen extends ConsumerStatefulWidget {
   final String integrationId;
 
   const IntegrationSettingsScreen({
@@ -16,11 +16,11 @@ class IntegrationSettingsScreen extends StatefulWidget {
   });
 
   @override
-  State<IntegrationSettingsScreen> createState() =>
+  ConsumerState<IntegrationSettingsScreen> createState() =>
       _IntegrationSettingsScreenState();
 }
 
-class _IntegrationSettingsScreenState extends State<IntegrationSettingsScreen> {
+class _IntegrationSettingsScreenState extends ConsumerState<IntegrationSettingsScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = true;
   String? _error;
@@ -44,23 +44,34 @@ class _IntegrationSettingsScreenState extends State<IntegrationSettingsScreen> {
     });
 
     try {
-      final integrationService = context.read<IntegrationService>();
+      final integrationService = ref.read(integrationServiceProvider);
       final integration =
           await integrationService.fetchIntegration(widget.integrationId);
-      setState(() {
-        _integration = integration;
-        _autoSync = integration.settings.autoSync;
-        _syncInterval = integration.settings.syncInterval;
-        _syncInventory = integration.settings.syncInventory;
-        _syncOrders = integration.settings.syncOrders;
-        _syncProducts = integration.settings.syncProducts;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _integration = integration;
+          _autoSync = integration.settings.autoSync;
+          _syncInterval = integration.settings.syncInterval;
+          _syncInventory = integration.settings.syncInventory;
+          _syncOrders = integration.settings.syncOrders;
+          _syncProducts = integration.settings.syncProducts;
+          _isLoading = false;
+        });
+      }
+    } on IntegrationException catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.message;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _error = 'Failed to load integration settings';
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _error = 'Failed to load integration settings';
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -70,7 +81,7 @@ class _IntegrationSettingsScreenState extends State<IntegrationSettingsScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final integrationService = context.read<IntegrationService>();
+      final integrationService = ref.read(integrationServiceProvider);
       await integrationService.updateIntegrationSettings(
         integrationId: widget.integrationId,
         settings: IntegrationSettings(
@@ -88,10 +99,30 @@ class _IntegrationSettingsScreenState extends State<IntegrationSettingsScreen> {
         );
         NavigationService.goBack();
       }
+    } on IntegrationException catch (e) {
+      if (mounted) {
+        setState(() => _error = e.message);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.message),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } catch (e) {
-      setState(() => _error = 'Failed to save settings');
+      if (mounted) {
+        setState(() => _error = 'Failed to save settings');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to save settings'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 

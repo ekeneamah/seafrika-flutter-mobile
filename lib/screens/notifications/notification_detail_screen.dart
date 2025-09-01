@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:vendor_app/config/theme.dart';
 import 'package:vendor_app/config/routes.dart';
 import 'package:vendor_app/models/notification.dart';
 import 'package:vendor_app/services/auth_service.dart';

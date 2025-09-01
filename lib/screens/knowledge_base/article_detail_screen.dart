@@ -186,7 +186,7 @@ class _ArticleDetailScreenState extends State<ArticleDetailScreen> {
                                     label: Text(tag),
                                     backgroundColor: Theme.of(context)
                                         .colorScheme
-                                        .surfaceVariant,
+                                        .surfaceContainerHighest,
                                   )),
                             ],
                           ),

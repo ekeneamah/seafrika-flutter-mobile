@@ -67,6 +67,7 @@ class InventoryService extends ChangeNotifier {
     String? supplierId,
     String? purchaseOrderId,
     String? invoiceId,
+    String? displayImageUrl,
     double? costPrice,
     double? sellingPrice, // Added
     int? maxDiscount, // Added
@@ -90,6 +91,7 @@ class InventoryService extends ChangeNotifier {
       costPrice: costPrice,
       sellingPrice: sellingPrice, // Added
       maxDiscount: maxDiscount, // Added
+      displayImageUrl: displayImageUrl, // Add image URL
     );
 
     await _inventoryCollection.add(inventory.toMap());

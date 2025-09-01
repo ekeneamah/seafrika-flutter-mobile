@@ -162,15 +162,22 @@ class NavigationDrawer extends ConsumerWidget {
             isSelected: currentRoute == AppRoutes.businessList,
           ),
           // Business Management Section
+          _buildDrawerItem(
+            icon: Icons.inventory_2,
+            title: 'Products',
+            onTap: () => NavigationService.navigateTo(AppRoutes.productList),
+            isSelected: currentRoute == AppRoutes.productList,
+          ),
+          _buildDrawerItem(
+            icon: Icons.room_service,
+            title: 'Services',
+            onTap: () => NavigationService.navigateTo(AppRoutes.serviceList),
+            isSelected: currentRoute == AppRoutes.serviceList,
+          ),
       
           
           const Divider(),
-          _buildDrawerItem(
-            icon: Icons.inventory,
-            title: 'Inventory',
-            onTap: () => NavigationService.navigateToInventory(),
-            isSelected: currentRoute == Routes.inventory,
-          ),
+        
           _buildDrawerItem(
             icon: Icons.shopping_cart,
             title: 'Orders',
@@ -182,6 +189,18 @@ class NavigationDrawer extends ConsumerWidget {
             title: 'Customers',
             onTap: () => NavigationService.navigateToCustomers(),
             isSelected: currentRoute == Routes.customers,
+          ),
+          _buildDrawerItem(
+            icon: Icons.add_shopping_cart,
+            title: 'Create Order',
+            onTap: () => NavigationService.navigateToCreateOrder(),
+            isSelected: currentRoute == AppRoutes.createOrder,
+          ),
+          _buildDrawerItem(
+            icon: Icons.assignment,
+            title: 'Order Management',
+            onTap: () => NavigationService.navigateToOrderManagement(),
+            isSelected: currentRoute == AppRoutes.orderManagement,
           ),
           _buildDrawerItem(
             icon: Icons.local_shipping,

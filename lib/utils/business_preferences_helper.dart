@@ -31,6 +31,7 @@ class BusinessPreferencesHelper {
   /// Get selected business ID from SharedPreferences
   static Future<String?> getSelectedBusinessId() async {
     final prefs = await SharedPreferences.getInstance();
+    print('Selected Business ID: ${prefs.getString(SharedPreferencesKeys.selectedBusinessId)}');
     return prefs.getString(SharedPreferencesKeys.selectedBusinessId);
   }
 

@@ -1,49 +1,56 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:vendor_app/config/collection_references.dart';
 import 'package:vendor_app/models/store.dart';
+import 'package:vendor_app/providers/business_context_provider.dart';
 import 'package:vendor_app/providers/service_providers.dart';
 import 'package:vendor_app/services/notification_service.dart';
 import 'package:vendor_app/models/notification.dart';
-import 'package:vendor_app/services/firestore_service.dart';
 
 class StoreService extends ChangeNotifier {
   final FirebaseFirestore _firestore;
-  final String _vendorId;
+  final String _ownerId;
+   final String _businessId;
   final NotificationService _notificationService;
   List<Store> _stores = [];
   bool _isLoading = false;
 
-  StoreService(this._firestore, this._vendorId, this._notificationService);
+  StoreService(this._firestore, this._ownerId, this._notificationService, this._businessId);
 
   List<Store> get stores => _stores;
   bool get isLoading => _isLoading;
 
   Future<void> fetchStores() async {
     if (_isLoading) return;
-
+    
+    // If no business is selected, set empty stores and exit loading
+    if (_businessId.isEmpty) {
+      _stores = [];
+      _isLoading = false;
+      notifyListeners();
+      return;
+    }
+    
     _isLoading = true;
     notifyListeners();
 
     try {
-      final snapshot = await _firestore
-          .collection('stores')
-          .where('vendorId', isEqualTo: _vendorId)
-          .get();
+      final snapshot = await CollectionReferences
+          .storesForBusiness(_businessId)
+          .get()
+          .timeout(const Duration(seconds: 15));
 
-      if (snapshot.docs.isEmpty) {
-        _stores = [];
-        return;
-      }
-
-      _stores = snapshot.docs.map((doc) {
-        final data = doc.data();
-        data['id'] = doc.id;
-        return Store.fromMap(data);
-      }).toList()
+      _stores = snapshot.docs
+          .map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            data['id'] = doc.id;
+            return Store.fromMap(data);
+          })
+          .toList()
         ..sort((a, b) => a.name.compareTo(b.name));
-    } catch (e) {
-      print('Error fetching stores: $e');
+    } catch (e, st) {
+      debugPrint('Error fetching stores: $e\n$st');
       _stores = [];
     } finally {
       _isLoading = false;
@@ -53,7 +60,9 @@ class StoreService extends ChangeNotifier {
 
   Future<void> createStore({required Store store}) async {
     try {
-      final docRef = await _firestore.collection('stores').add(store.toMap());
+       assert(store.businessId == _businessId);
+      assert(store.ownerId      == _ownerId);
+      final docRef = await CollectionReferences.stores.add(store.toMap());
       final newStore = store.copyWith(id: docRef.id);
       _stores = [..._stores, newStore]
         ..sort((a, b) => a.name.compareTo(b.name));
@@ -61,38 +70,43 @@ class StoreService extends ChangeNotifier {
 
       await _notificationService.sendNotification(
         title: 'New Store Added',
-        message: 'Store ${store.name} has been added',
+        message: 'Store ${newStore.name} has been added',
         type: NotificationType.system,
         priority: NotificationPriority.low,
         data: newStore.toMap(),
       );
-    } catch (e) {
-      print('Error creating store: $e');
+    } catch (e, st) {
+      debugPrint('Error creating store: $e\n$st');
       rethrow;
     }
   }
 
   Future<void> updateStore(Store store) async {
     try {
-      await _firestore.collection('stores').doc(store.id).update(store.toMap());
+      assert(store.businessId == _businessId);
+    assert(store.ownerId      == _ownerId);
+    
+      await CollectionReferences.stores
+          .doc(store.id)
+          .update(store.toMap());
       _stores = [
         for (final s in _stores)
           if (s.id == store.id) store else s
       ]..sort((a, b) => a.name.compareTo(b.name));
       notifyListeners();
-    } catch (e) {
-      print('Error updating store: $e');
+    } catch (e, st) {
+      debugPrint('Error updating store: $e\n$st');
       rethrow;
     }
   }
 
   Future<void> deleteStore(String storeId) async {
     try {
-      await _firestore.collection('stores').doc(storeId).delete();
+      await CollectionReferences.stores.doc(storeId).delete();
       _stores = _stores.where((s) => s.id != storeId).toList();
       notifyListeners();
-    } catch (e) {
-      print('Error deleting store: $e');
+    } catch (e, st) {
+      debugPrint('Error deleting store: $e\n$st');
       rethrow;
     }
   }
@@ -103,19 +117,22 @@ class StoreService extends ChangeNotifier {
     required int quantity,
   }) async {
     final store = await fetchStore(storeId);
-    final inventoryDoc =
-        await _firestore.collection('inventory').doc(inventoryId).get();
+
+    // Fetch main inventory via CollectionReferences
+    final inventoryDoc = await CollectionReferences.inventory
+        .doc(inventoryId)
+        .get();
 
     if (!inventoryDoc.exists) {
       throw Exception('Inventory item not found');
     }
+    final inventoryData = inventoryDoc.data()!;
 
-    final inventoryData = inventoryDoc.data() as Map<String, dynamic>;
     if (inventoryData['quantity'] < quantity) {
       throw Exception('Insufficient inventory quantity');
     }
 
-    // Create store inventory record
+    // Create a record in the store_inventory collection
     await _firestore.collection('store_inventory').add({
       'storeId': storeId,
       'inventoryId': inventoryId,
@@ -123,13 +140,15 @@ class StoreService extends ChangeNotifier {
       'pushedAt': DateTime.now().toIso8601String(),
     });
 
-    // Update main inventory quantity
-    await _firestore.collection('inventory').doc(inventoryId).update({
+    // Decrement main inventory
+    await CollectionReferences.inventory
+        .doc(inventoryId)
+        .update({
       'quantity': (inventoryData['quantity'] as int) - quantity,
       'lastUpdated': DateTime.now().toIso8601String(),
     });
 
-    // Send notification
+    // Notify
     await _notificationService.sendNotification(
       title: 'Inventory Pushed to Store',
       message: 'Pushed $quantity units to ${store.name}',
@@ -150,43 +169,46 @@ class StoreService extends ChangeNotifier {
     required int quantity,
   }) async {
     final store = await fetchStore(storeId);
-    final storeInventorySnapshot = await _firestore
+
+    final storeInvSnap = await _firestore
         .collection('store_inventory')
         .where('storeId', isEqualTo: storeId)
         .where('inventoryId', isEqualTo: inventoryId)
         .get();
 
-    if (storeInventorySnapshot.docs.isEmpty) {
+    if (storeInvSnap.docs.isEmpty) {
       throw Exception('Inventory not found in store');
     }
+    final invRecord = storeInvSnap.docs.first;
+    final storeInvData = invRecord.data();
 
-    final storeInventoryData =
-        storeInventorySnapshot.docs.first.data() as Map<String, dynamic>;
-    if (storeInventoryData['quantity'] < quantity) {
+    if (storeInvData['quantity'] < quantity) {
       throw Exception('Insufficient store inventory quantity');
     }
 
-    // Update store inventory quantity
+    // Decrement store inventory
     await _firestore
         .collection('store_inventory')
-        .doc(storeInventorySnapshot.docs.first.id)
+        .doc(invRecord.id)
         .update({
-      'quantity': (storeInventoryData['quantity'] as int) - quantity,
+      'quantity': (storeInvData['quantity'] as int) - quantity,
       'lastUpdated': DateTime.now().toIso8601String(),
     });
 
-    // Update main inventory quantity
-    final inventoryDoc =
-        await _firestore.collection('inventory').doc(inventoryId).get();
-    final inventoryData = inventoryDoc.data() as Map<String, dynamic>;
-    await _firestore.collection('inventory').doc(inventoryId).update({
+    // Increment main inventory
+    final inventoryDoc = await CollectionReferences.inventory
+        .doc(inventoryId)
+        .get();
+    final inventoryData = inventoryDoc.data()!;
+    await CollectionReferences.inventory
+        .doc(inventoryId)
+        .update({
       'quantity': (inventoryData['quantity'] as int) + quantity,
       'lastUpdated': DateTime.now().toIso8601String(),
     });
 
-    // Send notification
+    // Notify
     await _notificationService.sendNotification(
-      vendorId: _firestore.app.options.projectId ?? '',
       title: 'Inventory Pulled from Store',
       message: 'Pulled $quantity units from ${store.name}',
       type: NotificationType.system,
@@ -201,11 +223,11 @@ class StoreService extends ChangeNotifier {
   }
 
   Future<Store> fetchStore(String storeId) async {
-    final doc = await _firestore.collection('stores').doc(storeId).get();
+    final doc = await CollectionReferences.stores.doc(storeId).get();
     if (!doc.exists) {
       throw Exception('Store not found');
     }
-    final data = doc.data()!;
+    final data = doc.data()! as Map<String, dynamic>;
     data['id'] = doc.id;
     return Store.fromMap(data);
   }
@@ -213,9 +235,14 @@ class StoreService extends ChangeNotifier {
 
 final storeServiceProvider = ChangeNotifierProvider<StoreService>((ref) {
   final vendorId = ref.watch(vendorIdSyncProvider);
+  final businessId = ref.watch(selectedBusinessIdProvider);
+  
+  // Return a service with empty businessId if none selected - this prevents crashes
+  // and allows the UI to handle the "no business selected" state gracefully
   return StoreService(
     ref.watch(firebaseFirestoreProvider),
     vendorId,
     ref.watch(notificationServiceProvider),
+    businessId ?? '', // Use empty string instead of null assertion
   );
 });

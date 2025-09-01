@@ -17,8 +17,10 @@ class CollectionNames {
   
   // Product and inventory collections
   static const String products = 'products';
-  static const String inventory = 'inventory';
+  static const String inventory = 'inventory'; // Store inventory (current)
+  static const String businessInventory = 'business_inventory'; // Business warehouse inventory
   static const String inventoryTransactions = 'inventory_transactions';
+  static const String costPriceHistory = 'cost_price_history'; // Cost price change history
   static const String categories = 'categories';
   
   // Order collections

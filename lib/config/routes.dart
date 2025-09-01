@@ -18,8 +18,10 @@ import 'package:vendor_app/screens/settings/settings_screen.dart';
 import 'package:vendor_app/screens/auth/login_screen.dart';
 import 'package:vendor_app/screens/auth/forgot_password_screen.dart';
 import 'package:vendor_app/screens/products/create_product_screen.dart';
-import 'package:vendor_app/screens/orders/order_list_screen.dart';
-import 'package:vendor_app/screens/orders/order_detail_screen.dart';
+import 'package:vendor_app/screens/products/products_list_screen.dart';
+import 'package:vendor_app/screens/services/services_list_screen.dart';
+import 'package:vendor_app/screens/orders/order_details_screen.dart';
+import 'package:vendor_app/providers/service_providers.dart';
 import 'package:vendor_app/screens/main/media_detail_screen.dart';
 import 'package:vendor_app/screens/bookings/customer_requests_screen.dart';
 import 'package:vendor_app/screens/bookings/booking_creation_screen.dart';
@@ -55,10 +57,14 @@ import 'package:vendor_app/screens/customers/customers_screen.dart';
 import 'package:vendor_app/screens/customers/create_customer_screen.dart';
 import 'package:vendor_app/screens/customers/customer_detail_screen.dart';
 import 'package:vendor_app/screens/customers/customer_analytics_screen.dart';
+import 'package:vendor_app/screens/orders/create_order_screen.dart';
+import 'package:vendor_app/screens/orders/enhanced_order_management_screen.dart';
 import 'package:vendor_app/screens/inventory/inventory_dashboard_screen.dart';
 import 'package:vendor_app/screens/inventory/inventory_list_screen.dart';
 import 'package:vendor_app/screens/inventory/create_inventory_screen.dart';
-import 'package:vendor_app/screens/inventory/inventory_detail_screen.dart';
+import 'package:vendor_app/screens/inventory/store_inventory_detail_screen.dart';
+import 'package:vendor_app/screens/inventory/business_inventory_detail_screen.dart';
+import 'package:vendor_app/screens/inventory/business_inventory_management_screen.dart';
 import 'package:vendor_app/screens/notifications/notifications_screen.dart';
 import 'package:vendor_app/screens/notifications/notification_detail_screen.dart';
 import 'package:photo_manager/photo_manager.dart';
@@ -91,8 +97,8 @@ class AppRoutes {
   static const String settings = '/settings';
   static const String help = '/help';
   static const String productList = '/products';
+  static const String serviceList = '/services';
   static const String productDetail = '/products/detail';
-  static const String orderList = '/orders';
   static const String orderDetail = '/orders/detail';
   static const String mediaDetail = '/media-detail';
   static const String createProduct = '/create-product';
@@ -138,11 +144,15 @@ class AppRoutes {
   static const String editCustomer = '/customers/edit';
   static const String customerDetail = '/customers/detail';
   static const String customerAnalytics = '/customers/analytics';
+  static const String createOrder = '/orders/create';
+  static const String orderManagement = '/orders/management';
   static const String inventoryDashboard = '/inventory/dashboard';
   static const String inventoryList = '/inventory/list';
   static const String createInventory = '/inventory/create';
   static const String editInventory = '/inventory/edit';
   static const String inventoryDetail = '/inventory/detail';
+  static const String businessInventoryDetail = '/business_inventory/detail';
+  static const String businessInventoryManagement = '/business_inventory/management';
   static const String notifications = '/notifications';
   static const String notificationDetail = '/notifications/detail';
   static const String accountSettings = '/settings/account';
@@ -199,22 +209,26 @@ class AppRoutes {
         return MaterialPageRoute(builder: (_) => const HelpScreen());
       case productList:
         return MaterialPageRoute(
-          builder: (_) => const MainScreen(initialTab: 1),
+          builder: (_) => const ProductsListScreen(),
+        );
+      case serviceList:
+        return MaterialPageRoute(
+          builder: (_) => const ServicesListScreen(),
         );
       case productDetail:
         final args = settings.arguments as Map<String, dynamic>;
         return MaterialPageRoute(
           builder: (_) => pd.ProductDetailScreen(
             productId: args['productId'],
-            storeId: args['storeId'],
+            storeId: args['storeId'], // Optional parameter
           ),
         );
-      case orderList:
-        return MaterialPageRoute(builder: (_) => const OrderListScreen());
+      case orders:
+        return MaterialPageRoute(builder: (_) => const OrderManagementScreen());
       case orderDetail:
         final args = settings.arguments as Map<String, dynamic>;
         return MaterialPageRoute(
-          builder: (_) => OrderDetailScreen(orderId: args['orderId']),
+          builder: (_) => _OrderDetailWrapper(orderId: args['orderId']),
         );
       case mediaDetail:
         final args = settings.arguments as Map<String, dynamic>;
@@ -462,6 +476,14 @@ class AppRoutes {
         return MaterialPageRoute(
           builder: (context) => const CustomerAnalyticsScreen(),
         );
+      case createOrder:
+        return MaterialPageRoute(
+          builder: (context) => const CreateOrderScreen(),
+        );
+      case orderManagement:
+        return MaterialPageRoute(
+          builder: (context) => const OrderManagementScreen(),
+        );
       case inventoryDashboard:
         return MaterialPageRoute(
           builder: (context) => const InventoryDashboardScreen(),
@@ -473,8 +495,11 @@ class AppRoutes {
           builder: (context) => InventoryListScreen(storeId: storeId),
         );
       case createInventory:
+        final args = settings.arguments as Map<String, dynamic>?;
         return MaterialPageRoute(
-          builder: (context) => const CreateInventoryScreen(),
+          builder: (context) => CreateInventoryScreen(
+            prefilledProduct: args?['product'],
+          ),
         );
       case editInventory:
         final args = settings.arguments as Map<String, dynamic>;
@@ -485,11 +510,29 @@ class AppRoutes {
         );
       case inventoryDetail:
         final args = settings.arguments as Map<String, dynamic>;
+        // Use store inventory detail screen for backward compatibility
         return MaterialPageRoute(
           builder: (context) => Consumer(
-            builder: (context, ref, child) => InventoryDetailScreen(
-              inventoryId: args['inventoryId'],
+            builder: (context, ref, child) => StoreInventoryDetailScreen(
+              businessId: args['businessId'] ?? 'default-business',
+              storeId: args['storeId'] ?? 'default-store', 
+              inventoryId: args['inventoryId'] ?? 'unknown',
             ),
+          ),
+        );
+      case businessInventoryDetail:
+        final args = settings.arguments as Map<String, dynamic>;
+        return MaterialPageRoute(
+          builder: (context) => Consumer(
+            builder: (context, ref, child) => BusinessInventoryDetailScreen(
+              businessInventoryId: args['businessInventoryId'],
+            ),
+          ),
+        );
+      case businessInventoryManagement:
+        return MaterialPageRoute(
+          builder: (context) => Consumer(
+            builder: (context, ref, child) => const BusinessInventoryManagementScreen(),
           ),
         );
       case notifications:
@@ -539,17 +582,9 @@ class AppRoutes {
         return MaterialPageRoute(
           builder: (_) => const UserManagementScreen(),
         );
-      case permissionsManagement:
-        return MaterialPageRoute(
-          builder: (_) => const PermissionsScreen(),
-        );
-      case teamManagement:
-        return MaterialPageRoute(
-          builder: (_) => const TeamsScreen(),
-        );
       case storeManagement:
         return MaterialPageRoute(
-          builder: (_) => const PermissionsScreen(),
+          builder: (_) => const MainScreen(initialTab: 2), // Store tab
         );
       case adminPanel:
         return MaterialPageRoute(
@@ -589,5 +624,80 @@ class AppRoutes {
           ),
         );
     }
+  }
+}
+
+// Wrapper to adapt orderId to orderDetails Map for the new OrderDetailsScreen
+class _OrderDetailWrapper extends ConsumerStatefulWidget {
+  final String orderId;
+
+  const _OrderDetailWrapper({required this.orderId});
+
+  @override
+  ConsumerState<_OrderDetailWrapper> createState() => _OrderDetailWrapperState();
+}
+
+class _OrderDetailWrapperState extends ConsumerState<_OrderDetailWrapper> {
+  bool _isLoading = true;
+  Map<String, dynamic>? _orderDetails;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadOrderDetails();
+  }
+
+  Future<void> _loadOrderDetails() async {
+    try {
+      final orderService = ref.read(orderManagementServiceProvider);
+      final orderDetails = await orderService.getOrderDetails(widget.orderId);
+      
+      setState(() {
+        _orderDetails = orderDetails;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_error != null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Error')),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('Error loading order: $_error'),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Go Back'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_orderDetails == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Order Not Found')),
+        body: const Center(child: Text('Order not found')),
+      );
+    }
+
+    return OrderDetailsScreen(orderDetails: _orderDetails!);
   }
 }

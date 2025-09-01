@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:vendor_app/services/review_service.dart';
-import 'package:vendor_app/services/navigation_service.dart';
 
 class AddPlatformScreen extends StatefulWidget {
   const AddPlatformScreen({Key? key}) : super(key: key);

@@ -7,10 +7,8 @@ import 'package:vendor_app/screens/main/media_screen.dart';
 import 'package:vendor_app/screens/stores/store_detail_screen.dart';
 import 'package:vendor_app/screens/main/analytics_screen.dart';
 import 'package:vendor_app/screens/main/main_screen.dart';
-import 'package:vendor_app/screens/main/product_detail_screen.dart';
 import 'package:vendor_app/screens/main/media_detail_screen.dart';
 import 'package:photo_manager/photo_manager.dart';
-import 'package:vendor_app/screens/products/product_detail_screen.dart';
 import 'package:vendor_app/models/store.dart';
 
 class AppRouter {

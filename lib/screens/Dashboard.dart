@@ -4,6 +4,7 @@ import 'package:vendor_app/config/theme.dart';
 import 'package:vendor_app/models/store.dart';
 import 'package:vendor_app/providers/service_providers.dart' as providers;
 import 'package:vendor_app/providers/service_providers.dart';
+import 'package:vendor_app/providers/business_context_provider.dart';
 import 'package:vendor_app/utils/business_preferences_helper.dart';
 import 'package:vendor_app/widgets/search_widget.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -82,13 +83,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   }
 
   Future<void> _loadInitialData() async {
-    final storeService = ref.read(providers.storeServiceProvider);
-    await storeService.fetchStores();
-    final stores = storeService.stores;
-    if (stores.isNotEmpty && _selectedStore == null) {
-      setState(() {
-        _selectedStore = stores.first;
-      });
+    try {
+      final businessId = ref.read(selectedBusinessIdProvider);
+      if (businessId == null) {
+        print('No business selected, skipping store loading');
+        return;
+      }
+      
+      final storeService = ref.read(providers.storeServiceProvider);
+      await storeService.fetchStores();
+      final stores = storeService.stores;
+      if (stores.isNotEmpty && _selectedStore == null) {
+        setState(() {
+          _selectedStore = stores.first;
+        });
+      }
+    } catch (e) {
+      print('Error loading initial data: $e');
     }
     
     // Load selected business details from SharedPreferences

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:vendor_app/config/theme.dart';
 import 'package:vendor_app/models/review.dart';
 import 'package:vendor_app/services/navigation_service.dart';
 import 'package:vendor_app/services/review_service.dart';

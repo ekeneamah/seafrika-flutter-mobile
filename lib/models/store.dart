@@ -1,6 +1,7 @@
 class Store {
   final String id;
-  final String vendorId;
+  final String businessId;   // renamed from vendorId
+  final String ownerId;      // now required
   final String name;
   final String address;
   final String contactPerson;
@@ -10,14 +11,16 @@ class Store {
   final DateTime updatedAt;
   final String? imageUrl;
   final String? coverImageUrl;
-  final String? ownerId;
   final String? description;
   final String? phone;
   final String? email;
+  final String? type; // 'physical' or 'online'
+  final String? platform; // For online stores: 'shopify', 'woocommerce', etc.
 
   Store({
     required this.id,
-    required this.vendorId,
+    required this.businessId,
+    required this.ownerId,
     required this.name,
     required this.address,
     required this.contactPerson,
@@ -25,18 +28,19 @@ class Store {
     this.notes,
     required this.createdAt,
     required this.updatedAt,
-    required this.imageUrl,
-    required this.coverImageUrl,
-    this.ownerId,
-    required this.description,
-    required this.phone,
-    required this.email,
+    this.imageUrl,
+    this.coverImageUrl,
+    this.description,
+    this.phone,
+    this.email, required bool isDeleted, required bool isVerified,
+    this.type,
+    this.platform,
   });
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
-      'vendorId': vendorId,
+      'businessId': businessId,
+      'ownerId': ownerId,
       'name': name,
       'address': address,
       'contactPerson': contactPerson,
@@ -46,17 +50,19 @@ class Store {
       'updatedAt': updatedAt.toIso8601String(),
       'imageUrl': imageUrl,
       'coverImageUrl': coverImageUrl,
-      'ownerId': ownerId,
       'description': description,
       'phone': phone,
       'email': email,
+      'type': type,
+      'platform': platform,
     };
   }
 
   factory Store.fromMap(Map<String, dynamic> map) {
     return Store(
       id: map['id'] as String,
-      vendorId: map['vendorId'] as String,
+      businessId: map['businessId'] as String,
+      ownerId: map['ownerId'] as String,
       name: map['name'] as String,
       address: map['address'] as String,
       contactPerson: map['contactPerson'] as String,
@@ -66,26 +72,39 @@ class Store {
       updatedAt: DateTime.parse(map['updatedAt'] as String),
       imageUrl: map['imageUrl'] as String?,
       coverImageUrl: map['coverImageUrl'] as String?,
-      ownerId: map['ownerId'] as String?,
       description: map['description'] as String?,
       phone: map['phone'] as String?,
       email: map['email'] as String?,
+      type: map['type'] as String?,
+      platform: map['platform'] as String?,
+      isDeleted: map['isDeleted'] as bool? ?? false,  
+      isVerified: map['isVerified'] as bool? ?? false,
     );
   }
 
   Store copyWith({
     String? id,
-    String? vendorId,
+    String? businessId,
+    String? ownerId,
     String? name,
     String? address,
     String? contactPerson,
     String? contactPhone,
     String? notes,
     DateTime? createdAt,
+    DateTime? updatedAt,
+    String? imageUrl,
+    String? coverImageUrl,
+    String? description,
+    String? phone,
+    String? email,
+    String? type,
+    String? platform,
   }) {
     return Store(
       id: id ?? this.id,
-      vendorId: vendorId ?? this.vendorId,
+      businessId: businessId ?? this.businessId,
+      ownerId: ownerId ?? this.ownerId,
       name: name ?? this.name,
       address: address ?? this.address,
       contactPerson: contactPerson ?? this.contactPerson,
@@ -95,10 +114,13 @@ class Store {
       updatedAt: updatedAt ?? this.updatedAt,
       imageUrl: imageUrl ?? this.imageUrl,
       coverImageUrl: coverImageUrl ?? this.coverImageUrl,
-      ownerId: ownerId ?? this.ownerId,
       description: description ?? this.description,
       phone: phone ?? this.phone,
       email: email ?? this.email,
+      type: type ?? this.type,
+      platform: platform ?? this.platform,
+      isDeleted: false,  // Assuming copy does not change deletion status
+      isVerified: false, // Assuming copy does not change verification status
     );
   }
 

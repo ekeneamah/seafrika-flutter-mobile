@@ -51,6 +51,13 @@ class IntegrationSettings {
   final bool syncInventory;
   final bool syncOrders;
   final bool syncProducts;
+  
+  // Review & Feedback specific settings
+  final bool syncReviews;
+  final bool syncRatings;
+  final bool autoRespondReviews;
+  final bool notifyNewReviews;
+  final bool syncCustomerFeedback;
 
   IntegrationSettings({
     required this.autoSync,
@@ -58,15 +65,25 @@ class IntegrationSettings {
     required this.syncInventory,
     required this.syncOrders,
     required this.syncProducts,
+    this.syncReviews = false,
+    this.syncRatings = false,
+    this.autoRespondReviews = false,
+    this.notifyNewReviews = true,
+    this.syncCustomerFeedback = false,
   });
 
   factory IntegrationSettings.fromMap(Map<String, dynamic> map) {
     return IntegrationSettings(
       autoSync: map['autoSync'] as bool,
       syncInterval: map['syncInterval'] as int,
-      syncInventory: map['syncInventory'] as bool,
-      syncOrders: map['syncOrders'] as bool,
-      syncProducts: map['syncProducts'] as bool,
+      syncInventory: map['syncInventory'] as bool? ?? false,
+      syncOrders: map['syncOrders'] as bool? ?? false,
+      syncProducts: map['syncProducts'] as bool? ?? false,
+      syncReviews: map['syncReviews'] as bool? ?? false,
+      syncRatings: map['syncRatings'] as bool? ?? false,
+      autoRespondReviews: map['autoRespondReviews'] as bool? ?? false,
+      notifyNewReviews: map['notifyNewReviews'] as bool? ?? true,
+      syncCustomerFeedback: map['syncCustomerFeedback'] as bool? ?? false,
     );
   }
 
@@ -77,6 +94,11 @@ class IntegrationSettings {
       'syncInventory': syncInventory,
       'syncOrders': syncOrders,
       'syncProducts': syncProducts,
+      'syncReviews': syncReviews,
+      'syncRatings': syncRatings,
+      'autoRespondReviews': autoRespondReviews,
+      'notifyNewReviews': notifyNewReviews,
+      'syncCustomerFeedback': syncCustomerFeedback,
     };
   }
 }

@@ -1,8 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vendor_app/models/store_inventory.dart';
 import 'package:vendor_app/providers/service_providers.dart' as services;
-import 'package:vendor_app/providers/vendor_id_provider.dart';
+import 'package:vendor_app/providers/business_context_provider.dart';
 import 'package:vendor_app/services/store_inventory_service.dart';
+import 'package:vendor_app/utils/business_preferences_helper.dart';
 import 'dart:async';
 
 class StoreInventoryState {
@@ -54,15 +55,17 @@ class StoreInventoryState {
 final storeInventoryProvider =
     StateNotifierProvider<StoreInventoryNotifier, StoreInventoryState>((ref) {
   final service = ref.watch(services.storeInventoryServiceProvider);
-  final vendorId = ref.watch(services.vendorIdSyncProvider); // ✅ sync String
-  return StoreInventoryNotifier(service, vendorId);
+  final vendorId = ref.watch(services.vendorIdSyncProvider); // current user id
+  final businessId = ref.watch(selectedBusinessIdProvider); // selected business
+  return StoreInventoryNotifier(service, vendorId, businessId);
 });
 
 class StoreInventoryNotifier extends StateNotifier<StoreInventoryState> {
   final StoreInventoryService _service;
   final String _vendorId;
+  final String? _businessId;
 
-  StoreInventoryNotifier(this._service, this._vendorId)
+  StoreInventoryNotifier(this._service, this._vendorId, this._businessId)
       : super(const StoreInventoryState());
 
   void clearInventory() {
@@ -75,6 +78,15 @@ class StoreInventoryNotifier extends StateNotifier<StoreInventoryState> {
   }
 
   Future<void> loadInventory() async {
+    if (_businessId == null || _businessId?.isEmpty == true) {
+      // No business selected; ensure UI isn't stuck in loading
+      state = state.copyWith(
+        isLoading: false,
+        error: 'No business selected. Please select a business first.',
+        items: [],
+      );
+      return;
+    }
     if (state.selectedStoreId == null) {
       print(
           '[StoreInventoryNotifier] No store selected — skipping inventory load.');
@@ -92,7 +104,7 @@ class StoreInventoryNotifier extends StateNotifier<StoreInventoryState> {
 
     try {
       final snapshot = await _service.getStoreInventory(
-        vendorId: _vendorId,
+        businessId: _businessId!,
         storeId: state.selectedStoreId!,
         searchQuery: state.searchQuery,
       );
@@ -141,8 +153,6 @@ class StoreInventoryNotifier extends StateNotifier<StoreInventoryState> {
   Future<void> deleteInventory(String inventoryId) async {
     try {
       await _service.deleteStoreInventory(
-        vendorId: _vendorId,
-        storeId: state.selectedStoreId!,
         inventoryId: inventoryId,
       );
       await loadInventory();
@@ -153,26 +163,32 @@ class StoreInventoryNotifier extends StateNotifier<StoreInventoryState> {
 
   Future<void> createInventory({
     required String productId,
-    required String inventoryId,
+    required String businessInventoryId,
     required String productName,
     required int quantity,
     required int minimumQuantity,
     required double unitPrice,
     String? location,
     String? notes,
+    String? displayImageUrl,
   }) async {
     try {
+      final businessId = await BusinessPreferencesHelper.getSelectedBusinessId();
+      final businessName = await BusinessPreferencesHelper.getSelectedBusinessName();
       await _service.createStoreInventory(
+        businessId: businessId!,
+        businessName: businessName!,
         vendorId: _vendorId,
         storeId: state.selectedStoreId!,
         productId: productId,
-        inventoryId: inventoryId,
+        businessInventoryId: businessInventoryId,
         productName: productName,
         quantity: quantity,
         minimumQuantity: minimumQuantity,
         unitPrice: unitPrice,
         location: location,
         notes: notes,
+        displayImageUrl: displayImageUrl,
       );
       await loadInventory();
     } catch (e) {
@@ -186,8 +202,6 @@ class StoreInventoryNotifier extends StateNotifier<StoreInventoryState> {
   }) async {
     try {
       await _service.updateStoreInventory(
-        vendorId: _vendorId,
-        storeId: state.selectedStoreId!,
         inventoryId: inventoryId,
         data: data,
       );

@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:vendor_app/config/theme.dart';
 import 'package:vendor_app/models/purchase_order.dart';
-import 'package:vendor_app/services/navigation_service.dart';
 import 'package:vendor_app/services/purchase_order_service.dart';
-import 'package:vendor_app/widgets/error_view.dart' as error;
 import 'package:vendor_app/widgets/loading_view.dart';
 import 'package:vendor_app/widgets/supplier_selection_dialog.dart';
 import 'package:vendor_app/services/product_service.dart';

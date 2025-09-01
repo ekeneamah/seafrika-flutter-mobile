@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:vendor_app/config/theme.dart';
 import 'package:vendor_app/models/booking_request.dart';
 import 'package:vendor_app/services/booking_service.dart';
 import 'package:vendor_app/services/navigation_service.dart';
 import 'package:vendor_app/widgets/error_view.dart' as error;
-import 'package:vendor_app/widgets/loading_view.dart';
 import 'package:vendor_app/widgets/empty_view.dart';
 import 'package:vendor_app/services/customer_service.dart';
 import 'package:vendor_app/services/service_service.dart';

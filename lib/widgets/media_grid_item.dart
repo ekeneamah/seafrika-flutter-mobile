@@ -1,7 +1,5 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:vendor_app/config/theme.dart';
-import 'package:intl/intl.dart';
 
 class MediaGridItem extends StatelessWidget {
   final String id;

@@ -24,17 +24,18 @@ dependencies:
   flutter_svg: ^2.0.7
   shimmer: ^3.0.0
   timezone: ^0.10.1
-  video_player: ^2.8.2
+  video_player: ^2.10.0
   flutter_secure_storage: ^9.2.4
   path: ^1.8.3
   dotted_border: ^2.0.0
   photo_manager: ^3.0.0
-  wechat_assets_picker: ^8.6.2
-  image_cropper: ^5.0.1
+  wechat_assets_picker: ^9.2.1
+  image_cropper: ^9.1.0
   image: ^4.1.7
   flutter_riverpod: ^2.4.9
   riverpod_annotation: ^2.3.3
   connectivity_plus: ^5.0.2
+  crypto: ^3.0.3
 
   # ✅ Firebase: aligned versions
   firebase_core: ^3.10.0
@@ -56,6 +57,11 @@ dependencies:
   dio: ^5.8.0+1
   password_strength_checker: ^1.2.4
   password_strength_indicator_plus: ^0.0.1
+  flutter_image_compress: ^2.4.0
+  
+  # ✅ PDF Generation
+  pdf: ^3.10.7
+  printing: ^5.12.0
 
 dependency_overrides:
   firebase_auth_platform_interface: ^7.1.0

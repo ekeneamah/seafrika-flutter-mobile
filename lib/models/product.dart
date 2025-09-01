@@ -8,6 +8,7 @@ class Product {
   final double price;
   final List<String> images;
   final int stock;
+  final int minQuantity; // Minimum stock threshold for low stock alerts
   final double rating;
   final int reviews;
   final String category;
@@ -15,6 +16,7 @@ class Product {
   final DateTime createdAt;
   final DateTime updatedAt;
   final String vendorId;
+  final String businessId; // Added for flat design
   final String? unit;
   final String? displayImageUrl;
 
@@ -25,6 +27,7 @@ class Product {
     required this.price,
     required this.images,
     required this.stock,
+    required this.minQuantity,
     required this.rating,
     required this.reviews,
     required this.category,
@@ -32,9 +35,13 @@ class Product {
     required this.createdAt,
     required this.updatedAt,
     required this.vendorId,
+    required this.businessId, // Added for flat design
     this.unit,
     this.displayImageUrl,
   });
+
+  // Check if product is low stock
+  bool get isLowStock => stock < minQuantity;
 
   factory Product.fromJson(Map<String, dynamic> json) {
     DateTime parseDate(dynamic value) {
@@ -51,6 +58,7 @@ class Product {
       price: (json['price'] as num).toDouble(),
       images: List<String>.from(json['images'] as List),
       stock: json['stock'] as int,
+      minQuantity: json['minQuantity'] as int? ?? 1, // Default to 1 if not provided
       rating: (json['rating'] as num).toDouble(),
       reviews: json['reviews'] as int,
       category: json['category'] as String,
@@ -58,6 +66,7 @@ class Product {
       createdAt: parseDate(json['createdAt']),
       updatedAt: parseDate(json['updatedAt']),
       vendorId: json['vendorId'] as String? ?? '',
+      businessId: json['businessId'] as String? ?? '',
       unit: json['unit'] as String?,
       displayImageUrl: json['displayImageUrl'] as String?,
     );
@@ -71,6 +80,7 @@ class Product {
       'price': price,
       'images': images,
       'stock': stock,
+      'minQuantity': minQuantity,
       'rating': rating,
       'reviews': reviews,
       'category': category,
@@ -78,6 +88,7 @@ class Product {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'vendorId': vendorId,
+      'businessId': businessId,
       'unit': unit,
       'displayImageUrl': displayImageUrl,
     };
@@ -90,6 +101,7 @@ class Product {
     double? price,
     List<String>? images,
     int? stock,
+    int? minQuantity,
     double? rating,
     int? reviews,
     String? category,
@@ -97,6 +109,7 @@ class Product {
     DateTime? createdAt,
     DateTime? updatedAt,
     String? vendorId,
+    String? businessId,
     String? unit,
     String? displayImageUrl,
   }) {
@@ -107,6 +120,7 @@ class Product {
       price: price ?? this.price,
       images: images ?? this.images,
       stock: stock ?? this.stock,
+      minQuantity: minQuantity ?? this.minQuantity,
       rating: rating ?? this.rating,
       reviews: reviews ?? this.reviews,
       category: category ?? this.category,
@@ -114,6 +128,7 @@ class Product {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       vendorId: vendorId ?? this.vendorId,
+      businessId: businessId ?? this.businessId,
       unit: unit ?? this.unit,
       displayImageUrl: displayImageUrl ?? this.displayImageUrl,
     );
@@ -129,6 +144,7 @@ class Product {
         other.price == price &&
         listEquals(other.images, images) &&
         other.stock == stock &&
+        other.minQuantity == minQuantity &&
         other.rating == rating &&
         other.reviews == reviews &&
         other.category == category &&
@@ -136,6 +152,7 @@ class Product {
         other.createdAt == createdAt &&
         other.updatedAt == updatedAt &&
         other.vendorId == vendorId &&
+        other.businessId == businessId &&
         other.unit == unit &&
         other.displayImageUrl == displayImageUrl;
   }
@@ -149,6 +166,7 @@ class Product {
       price,
       Object.hashAll(images),
       stock,
+      minQuantity,
       rating,
       reviews,
       category,
@@ -156,6 +174,7 @@ class Product {
       createdAt,
       updatedAt,
       vendorId,
+      businessId,
       unit,
       displayImageUrl,
     );

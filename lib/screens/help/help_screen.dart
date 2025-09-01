@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:vendor_app/config/theme.dart';
-import 'package:vendor_app/services/analytics_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class HelpScreen extends StatelessWidget {

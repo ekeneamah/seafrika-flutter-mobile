@@ -59,6 +59,72 @@ class CustomerService {
     return Customer.fromMap(doc.id, doc.data() as Map<String, dynamic>);
   }
 
+  /// Search customers by name or phone number
+  Future<List<Customer>> searchCustomers({
+    required String query,
+    int limit = 10,
+  }) async {
+    final normalizedQuery = query.toLowerCase().trim();
+    
+    if (normalizedQuery.isEmpty) {
+      return [];
+    }
+
+    // Search by name
+    final nameQuery = _firestore
+        .collection('vendors')
+        .doc(_vendorId)
+        .collection('customers')
+        .where('name', isGreaterThanOrEqualTo: normalizedQuery)
+        .where('name', isLessThanOrEqualTo: normalizedQuery + '\uf8ff')
+        .limit(limit);
+
+    // Search by phone (if query looks like a phone number)
+    Query? phoneQuery;
+    if (RegExp(r'^[\d\s\+\-\(\)]+$').hasMatch(query)) {
+      phoneQuery = _firestore
+          .collection('vendors')
+          .doc(_vendorId)
+          .collection('customers')
+          .where('phone', isGreaterThanOrEqualTo: query)
+          .where('phone', isLessThanOrEqualTo: query + '\uf8ff')
+          .limit(limit);
+    }
+
+    // Execute queries
+    final futures = <Future<QuerySnapshot>>[];
+    futures.add(nameQuery.get());
+    if (phoneQuery != null) {
+      futures.add(phoneQuery.get());
+    }
+
+    final results = await Future.wait(futures);
+    final customers = <Customer>[];
+    final seenIds = <String>{};
+
+    for (final snapshot in results) {
+      for (final doc in snapshot.docs) {
+        if (!seenIds.contains(doc.id)) {
+          seenIds.add(doc.id);
+          customers.add(Customer.fromMap(doc.id, doc.data() as Map<String, dynamic>));
+        }
+      }
+    }
+
+    // Sort by relevance (exact matches first, then partial matches)
+    customers.sort((a, b) {
+      final aNameMatch = a.name.toLowerCase().startsWith(normalizedQuery);
+      final bNameMatch = b.name.toLowerCase().startsWith(normalizedQuery);
+      
+      if (aNameMatch && !bNameMatch) return -1;
+      if (!aNameMatch && bNameMatch) return 1;
+      
+      return a.name.compareTo(b.name);
+    });
+
+    return customers.take(limit).toList();
+  }
+
   Future<Customer> createCustomer({
     required String name,
     required String email,

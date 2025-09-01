@@ -88,7 +88,7 @@ class NavigationService {
 
   // Order Management Navigation Methods
   static Future<dynamic> navigateToOrderList() {
-    return navigateTo(AppRoutes.orderList);
+    return navigateTo(AppRoutes.orders);
   }
 
   static Future<dynamic> navigateToOrderDetail(String orderId) {
@@ -289,6 +289,15 @@ class NavigationService {
     return navigateTo(AppRoutes.customerAnalytics);
   }
 
+  // Order Management Navigation Methods
+  static Future<dynamic> navigateToCreateOrder() {
+    return navigateTo(AppRoutes.createOrder);
+  }
+
+  static Future<dynamic> navigateToOrderManagement() {
+    return navigateTo(AppRoutes.orderManagement);
+  }
+
   // Inventory Management Navigation Methods
   static Future<dynamic> navigateToInventoryDashboard() {
     return navigateTo(AppRoutes.inventoryDashboard);
@@ -298,8 +307,8 @@ class NavigationService {
     return navigateTo(AppRoutes.inventoryList);
   }
 
-  static Future<dynamic> navigateToCreateInventory() {
-    return navigateTo(AppRoutes.createInventory);
+  static Future<dynamic> navigateToCreateInventory({Object? arguments}) {
+    return navigateTo(AppRoutes.createInventory, arguments: arguments);
   }
 
   static Future<dynamic> navigateToEditInventory(String inventoryId) {
@@ -310,6 +319,15 @@ class NavigationService {
   static Future<dynamic> navigateToInventoryDetail(String inventoryId) {
     return navigateTo(AppRoutes.inventoryDetail,
         arguments: {'inventoryId': inventoryId});
+  }
+
+  static Future<dynamic> navigateToBusinessInventoryDetail(String businessInventoryId) {
+    return navigateTo(AppRoutes.businessInventoryDetail,
+        arguments: {'businessInventoryId': businessInventoryId});
+  }
+
+  static Future<dynamic> navigateToBusinessInventoryManagement() {
+    return navigateTo(AppRoutes.businessInventoryManagement);
   }
 
   // Notifications Navigation Methods

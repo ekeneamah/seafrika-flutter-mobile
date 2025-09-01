@@ -337,7 +337,7 @@ class TaskDetailScreenState extends State<TaskDetailScreen> {
   Widget _buildInfoChip(String label, String value) {
     return Chip(
       label: Text('$label: $value'),
-      backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
     );
   }
 }

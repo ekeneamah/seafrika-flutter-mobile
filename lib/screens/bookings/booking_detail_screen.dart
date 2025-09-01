@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:vendor_app/config/theme.dart';
 import 'package:vendor_app/models/booking.dart';
 import 'package:vendor_app/models/task.dart';
 import 'package:vendor_app/services/booking_service.dart';

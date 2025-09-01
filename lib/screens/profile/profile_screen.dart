@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:vendor_app/config/theme.dart';
-import 'package:vendor_app/models/user.dart';
 import 'package:vendor_app/services/auth_service.dart';
 import 'package:vendor_app/services/media_service.dart';
 import 'package:vendor_app/services/firestore_service.dart';

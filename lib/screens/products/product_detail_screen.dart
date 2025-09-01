@@ -1,35 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:vendor_app/config/theme.dart';
 import 'package:vendor_app/models/product_listing.dart';
 import 'package:vendor_app/models/task.dart';
 import 'package:vendor_app/services/product_service.dart';
-import 'package:vendor_app/services/share_service.dart';
+import 'package:vendor_app/providers/service_providers.dart';
+import 'package:vendor_app/providers/business_context_provider.dart';
+import 'package:vendor_app/providers/business_inventory_provider.dart' as biz_inventory;
 import 'package:vendor_app/widgets/error_view.dart' as error;
 import 'package:vendor_app/widgets/loading_view.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:vendor_app/services/navigation_service.dart';
 import 'package:vendor_app/models/product.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
-import 'package:glassmorphism/glassmorphism.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'dart:ui';
 
-class ProductDetailScreen extends StatefulWidget {
+class ProductDetailScreen extends ConsumerStatefulWidget {
   final String productId;
-  final String storeId;
+  final String? storeId; // Made optional since it's not used
 
   const ProductDetailScreen({
     super.key,
     required this.productId,
-    required this.storeId,
+    this.storeId, // Made optional
   });
 
   @override
-  State<ProductDetailScreen> createState() => _ProductDetailScreenState();
+  ConsumerState<ProductDetailScreen> createState() => _ProductDetailScreenState();
 }
 
 // --- Modern Metric Card Widget ---
@@ -49,53 +51,45 @@ class _ModernMetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-            spreadRadius: 0,
-          ),
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-            spreadRadius: 0,
-          ),
-        ],
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.2)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: color, size: 24),
+            child: Icon(icon, color: color, size: 20),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Text(
             value,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: const Color(0xFF1A1A1A),
-                  fontWeight: FontWeight.w700,
-                  fontSize: 20,
-                ),
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w700,
+              fontSize: 16,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 4),
           Text(
             label,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: const Color(0xFF6B7280),
-                  fontWeight: FontWeight.w500,
-                  fontSize: 13,
-                ),
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+              fontSize: 12,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -105,45 +99,45 @@ class _ModernMetricCard extends StatelessWidget {
 
 // --- Modern Section Card Widget ---
 class _ModernSectionCard extends StatelessWidget {
+  final String title;
   final Widget child;
-  final EdgeInsets? padding;
-  final EdgeInsets? margin;
 
   const _ModernSectionCard({
+    required this.title,
     required this.child,
-    this.padding,
-    this.margin,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: margin ?? const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      padding: padding ?? const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-            spreadRadius: 0,
-          ),
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-            spreadRadius: 0,
-          ),
-        ],
+    return Card(
+      elevation: 2,
+      shadowColor: Colors.black26,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
       ),
-      child: child,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            child,
+          ],
+        ),
+      ),
     );
   }
 }
 
-class _ProductDetailScreenState extends State<ProductDetailScreen>
+class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
     with TickerProviderStateMixin {
   bool _isLoading = true;
   String? _error;
@@ -154,8 +148,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
   List<Map<String, dynamic>> _topComplaints = [];
   List<Map<String, dynamic>> _tasks = [];
   int _currentImageIndex = 0;
+  bool _isProductInInventoryState = false;
   final PageController _carouselController = PageController();
-  int _visibleReviews = 2;
   bool _showAllReviews = false;
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
@@ -186,7 +180,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
     });
 
     try {
-      final productService = context.read<ProductService>();
+      final productService = ref.read(productServiceProvider);
       final product = await productService.getProduct(widget.productId);
       if (product == null) {
         setState(() {
@@ -204,6 +198,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
       ]);
 
       setState(() {
+                setState(() {
         _product = product;
         _externalListings = results[0] as List<ExternalListing>;
         _analytics = results[1] as ProductAnalytics;
@@ -212,10 +207,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
         _tasks = results[4] as List<Map<String, dynamic>>;
         _isLoading = false;
       });
+      
+      // Check if product is in inventory asynchronously
+      _checkProductInventoryStatus();
+      
+      _fadeController.forward();
+        _isLoading = false;
+      });
       _fadeController.forward();
     } catch (e) {
+      debugPrint('Product detail load error: $e');
       setState(() {
-        _error = 'Failed to load product details';
+        _error = 'Failed to load product details: ${e.toString()}';
         _isLoading = false;
       });
     }
@@ -267,58 +270,126 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
     }
   }
 
+  Future<void> _addToInventory() async {
+    final businessId = ref.read(selectedBusinessIdProvider);
+    
+    if (businessId == null || businessId.isEmpty) {
+      _showModernSnackBar('No business selected. Please select a business first.', Icons.error_outline);
+      return;
+    }
+
+    // Get the current product details to pass to inventory screen
+    final productService = ref.read(productServiceProvider);
+    final product = await productService.getProduct(widget.productId);
+    
+    if (product == null) {
+      _showModernSnackBar('Product not found', Icons.error_outline);
+      return;
+    }
+
+    // Navigate to create inventory screen with product details
+    final result = await NavigationService.navigateToCreateInventory(
+      arguments: {
+        'product': product,
+      },
+    );
+    
+    // Show success message if inventory was created
+    if (result == true) {
+      _showModernSnackBar('Product added to inventory successfully!', Icons.check_circle_outline);
+    }
+  }
+
   Future<void> _createInvoice() async {
     NavigationService.navigateToCreateInvoice(productId: widget.productId);
+  }
+
+  Future<bool> _isProductInInventory() async {
+    try {
+      // Check if the product has any inventory records
+      final businessId = ref.read(selectedBusinessIdProvider);
+      if (businessId == null || businessId.isEmpty) {
+        return false;
+      }
+      
+      // Use the business inventory service to check if product exists in inventory
+      final businessInventoryService = ref.read(biz_inventory.businessInventoryServiceProvider);
+      final businessInventory = await businessInventoryService.getBusinessInventoryByProductId(
+        businessId: businessId,
+        productId: widget.productId,
+      );
+      
+      // Return true if inventory exists and has available quantity > 0
+      return businessInventory != null && businessInventory.availableQuantity > 0;
+    } catch (e) {
+      debugPrint('Error checking inventory: $e');
+      return false;
+    }
+  }
+
+  Future<void> _checkProductInventoryStatus() async {
+    final isInInventory = await _isProductInInventory();
+    setState(() {
+      _isProductInInventoryState = isInInventory;
+    });
+  }
+
+  Future<void> _navigateToInventoryDetails() async {
+    try {
+      // Get the business inventory ID for this product
+      final businessId = ref.read(selectedBusinessIdProvider);
+      if (businessId == null || businessId.isEmpty) {
+        _showModernSnackBar('Business not selected', Icons.error_outline);
+        return;
+      }
+
+      // Look up the business inventory for this product
+      final businessInventoryService = ref.read(biz_inventory.businessInventoryServiceProvider);
+      final businessInventory = await businessInventoryService.getBusinessInventoryByProductId(
+        businessId: businessId,
+        productId: widget.productId,
+      );
+      
+      if (businessInventory == null) {
+        _showModernSnackBar('Product not found in inventory', Icons.error_outline);
+        return;
+      }
+      
+      // Navigate to business inventory detail screen
+      NavigationService.navigateToBusinessInventoryDetail(businessInventory.id);
+    } catch (e) {
+      debugPrint('Error navigating to inventory details: $e');
+      _showModernSnackBar('Failed to open inventory details', Icons.error_outline);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      extendBodyBehindAppBar: true,
+      backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: Container(
-          margin: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.9),
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
+        title: Text(
+          _product?.name ?? 'Product Details',
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 20,
           ),
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new,
-                color: Color(0xFF1A1A1A), size: 20),
-            onPressed: () => Navigator.pop(context),
-          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
         actions: [
-          Container(
-            margin: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.9),
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.edit_outlined,
-                  color: Color(0xFF1A1A1A), size: 20),
-              onPressed: () {
-                NavigationService.navigateToEditProduct(widget.productId);
-              },
-            ),
+          IconButton(
+            icon: const Icon(Icons.edit_outlined),
+            onPressed: () {
+              NavigationService.navigateToEditProduct(widget.productId);
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.share_outlined),
+            onPressed: _shareProduct,
           ),
         ],
       ),
@@ -331,60 +402,40 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                 )
               : FadeTransition(
                   opacity: _fadeAnimation,
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (_product != null)
-                          _buildProductDetailSection(_product!),
-                        const SizedBox(height: 16),
-                        _buildAnalyticsSection(),
-                        _buildExternalStoresSection(),
-                        _buildReviewsAndComplaintsSection(),
-                        _buildTaskManagementSection(),
-                        const SizedBox(height: 100), // Bottom padding for FAB
-                      ],
+                  child: RefreshIndicator(
+                    onRefresh: _loadData,
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (_product != null)
+                            _buildProductDetailSection(_product!),
+                          const SizedBox(height: 16),
+                          _buildAnalyticsSection(),
+                          _buildExternalStoresSection(),
+                          _buildReviewsAndComplaintsSection(),
+                          _buildTaskManagementSection(),
+                          const SizedBox(height: 20), // Reduced bottom padding
+                        ],
+                      ),
                     ),
                   ),
                 ),
-      floatingActionButton: _isLoading || _error != null
-          ? null
-          : Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.primary.withOpacity(0.3),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: FloatingActionButton.extended(
-                onPressed: _shareProduct,
-                backgroundColor: AppTheme.primary,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20)),
-                icon: const Icon(Icons.share_outlined),
-                label: const Text('Share Product',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
-              ),
-            ),
+      
       bottomNavigationBar: _isLoading || _error != null
           ? null
           : Container(
-              margin: const EdgeInsets.all(20),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 20,
-                    offset: const Offset(0, -4),
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 10,
+                    offset: const Offset(0, -2),
                     spreadRadius: 0,
                   ),
                 ],
@@ -397,6 +448,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                     _buildBottomAction(Icons.edit_outlined, 'Edit', () {
                       NavigationService.navigateToEditProduct(widget.productId);
                     }),
+                    _buildBottomAction(
+                        _isProductInInventoryState 
+                            ? Icons.inventory 
+                            : Icons.inventory_outlined, 
+                        _isProductInInventoryState 
+                            ? 'View Inventory' 
+                            : 'Add to Inventory', 
+                        _isProductInInventoryState 
+                            ? _navigateToInventoryDetails 
+                            : _addToInventory),
                     _buildBottomAction(
                         Icons.receipt_long_outlined, 'Invoice', _createInvoice),
                     _buildBottomAction(Icons.analytics_outlined, 'Analytics',
@@ -414,28 +475,31 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
       IconData icon, String label, VoidCallback onPressed) {
     return InkWell(
       onTap: onPressed,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        constraints: const BoxConstraints(minWidth: 60, maxWidth: 90),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
                 color: const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(icon, color: const Color(0xFF475569), size: 20),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 2),
             Text(
               label,
               style: const TextStyle(
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: FontWeight.w500,
                 color: Color(0xFF475569),
+                overflow: TextOverflow.ellipsis,
               ),
+              maxLines: 1,
             ),
           ],
         ),
@@ -556,7 +620,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
 
         // --- Modern Product Info Card ---
         _ModernSectionCard(
-          margin: const EdgeInsets.all(20),
+          title: "Product Information",
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -569,7 +633,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                       style: const TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF1A1A1A),
+                        color: AppTheme.textPrimary,
                         height: 1.2,
                       ),
                       maxLines: 2,
@@ -582,21 +646,21 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: product.stock > 0
-                          ? const Color(0xFF10B981).withOpacity(0.1)
-                          : const Color(0xFFEF4444).withOpacity(0.1),
+                          ? AppTheme.primary.withOpacity(0.1)
+                          : Colors.red.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: product.stock > 0
-                            ? const Color(0xFF10B981).withOpacity(0.2)
-                            : const Color(0xFFEF4444).withOpacity(0.2),
+                            ? AppTheme.primary.withOpacity(0.3)
+                            : Colors.red.withOpacity(0.3),
                       ),
                     ),
                     child: Text(
                       product.stock > 0 ? 'In Stock' : 'Out of Stock',
                       style: TextStyle(
                         color: product.stock > 0
-                            ? const Color(0xFF10B981)
-                            : const Color(0xFFEF4444),
+                            ? AppTheme.primary
+                            : Colors.red,
                         fontWeight: FontWeight.w600,
                         fontSize: 12,
                       ),
@@ -610,14 +674,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                 style: const TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFF059669),
+                  color: AppTheme.primary,
                 ),
               ),
               const SizedBox(height: 12),
               Row(
                 children: [
                   RatingBarIndicator(
-                    rating: (product.rating ?? 0).toDouble(),
+                    rating: product.rating,
                     itemBuilder: (context, _) => const Icon(
                       Icons.star_rounded,
                       color: Color(0xFFFBBF24),
@@ -628,18 +692,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    (product.rating ?? 0).toStringAsFixed(1),
+                    product.rating.toStringAsFixed(1),
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF1A1A1A),
+                      color: AppTheme.textPrimary,
                       fontSize: 16,
                     ),
                   ),
                   const SizedBox(width: 4),
                   Text(
                     '(${product.reviews} reviews)',
-                    style: const TextStyle(
-                      color: Color(0xFF6B7280),
+                    style: TextStyle(
+                      color: Colors.grey[600],
                       fontSize: 14,
                     ),
                   ),
@@ -651,15 +715,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF1A1A1A),
+                  color: AppTheme.textPrimary,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 product.description,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
-                  color: Color(0xFF4B5563),
+                  color: Colors.grey[700],
                   height: 1.5,
                 ),
                 maxLines: 4,
@@ -771,17 +835,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
   Widget _buildAnalyticsSection() {
     if (_analytics == null) return const SizedBox.shrink();
     return _ModernSectionCard(
+      title: "Analytics Overview",
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Analytics Overview',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF1A1A1A),
-            ),
-          ),
           const SizedBox(height: 20),
           Row(
             children: [
@@ -871,17 +928,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
 
   Widget _buildExternalStoresSection() {
     return _ModernSectionCard(
+      title: "External Stores",
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'External Stores',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF1A1A1A),
-            ),
-          ),
           const SizedBox(height: 16),
           if (_externalListings.isEmpty)
             Container(
@@ -991,17 +1041,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
         : (_topReviews.length > 2 ? 2 : _topReviews.length);
 
     return _ModernSectionCard(
+      title: "Reviews & Feedback",
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Reviews & Feedback',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF1A1A1A),
-            ),
-          ),
           const SizedBox(height: 20),
           if (_topReviews.isNotEmpty) ...[
             const Text(
@@ -1089,13 +1132,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                     _showAllReviews = !_showAllReviews;
                   });
                 },
-                child: Text(
-                  _showAllReviews ? 'Show less' : 'Show more',
-                  style: const TextStyle(
-                    color: Color(0xFF3B82F6),
-                    fontWeight: FontWeight.w600,
-                  ),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppTheme.primary,
+                  textStyle: const TextStyle(fontWeight: FontWeight.w600),
                 ),
+                child: Text(_showAllReviews ? 'Show less' : 'Show more'),
               ),
           ],
           if (_topComplaints.isNotEmpty) ...[
@@ -1168,18 +1209,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                 NavigationService.navigateToReviews(
                     productId: widget.productId);
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF3B82F6),
-                foregroundColor: Colors.white,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              child: const Text(
-                'View All Reviews',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
+              child: const Text('View All Reviews'),
             ),
           ),
         ],
@@ -1189,17 +1219,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
 
   Widget _buildTaskManagementSection() {
     return _ModernSectionCard(
+      title: "Task Management",
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Task Management',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF1A1A1A),
-            ),
-          ),
           const SizedBox(height: 16),
           if (_tasks.isEmpty)
             Container(
@@ -1284,21 +1307,19 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
           Row(
             children: [
               Expanded(
-                child: ElevatedButton.icon(
+                child: OutlinedButton.icon(
                   onPressed: () {
                     NavigationService.navigateToTaskList(
                         arguments: {'productId': widget.productId});
                   },
                   icon: const Icon(Icons.list_outlined, size: 18),
                   label: const Text('View Tasks'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF374151),
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    side: const BorderSide(color: Color(0xFFE2E8F0)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.primary,
+                    side: BorderSide(color: AppTheme.primary.withOpacity(0.3)),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(16)),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                 ),
               ),
@@ -1316,14 +1337,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                   },
                   icon: const Icon(Icons.add, size: 18),
                   label: const Text('Create Task'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF3B82F6),
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
                 ),
               ),
             ],
@@ -1379,7 +1392,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
               ElevatedButton(
                 onPressed: () => Navigator.pop(context, true),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFEF4444),
+                  backgroundColor: Colors.red,
                   foregroundColor: Colors.white,
                 ),
                 child: const Text('Remove'),

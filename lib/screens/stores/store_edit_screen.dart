@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vendor_app/models/store.dart';
+import 'package:vendor_app/providers/business_context_provider.dart' show businessContextProvider;
 import 'package:vendor_app/providers/service_providers.dart';
 import 'package:vendor_app/config/theme.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
 import 'package:image_cropper/image_cropper.dart';
-import 'package:dotted_border/dotted_border.dart';
 import 'package:wechat_assets_picker/wechat_assets_picker.dart';
 
 class StoreEditScreen extends ConsumerStatefulWidget {
   final Store? store;
-  const StoreEditScreen({Key? key, this.store}) : super(key: key);
+  const StoreEditScreen({super.key, this.store});
 
   @override
   ConsumerState<StoreEditScreen> createState() => _StoreEditScreenState();
@@ -33,6 +32,12 @@ class _StoreEditScreenState extends ConsumerState<StoreEditScreen>
   late Animation<double> _fadeAnimation;
   File? _selectedLogoFile;
   File? _selectedCoverFile;
+  
+  // Store type and platform selection
+  String _storeType = 'physical'; // Default to physical store
+  String? _selectedPlatform; // For online stores
+  List<Map<String, dynamic>> _availablePlatforms = []; // Platforms from database
+  bool _isLoadingPlatforms = false;
 
   @override
   void initState() {
@@ -55,7 +60,35 @@ class _StoreEditScreenState extends ConsumerState<StoreEditScreen>
     _coverImageUrlController =
         TextEditingController(text: s?.coverImageUrl ?? '');
 
+    // Initialize store type and platform from existing store
+    if (s != null) {
+      _storeType = s.type ?? 'physical';
+      _selectedPlatform = s.platform;
+    }
+
     _fadeController.forward();
+    _loadAvailablePlatforms();
+  }
+
+  Future<void> _loadAvailablePlatforms() async {
+    setState(() {
+      _isLoadingPlatforms = true;
+    });
+
+    try {
+      final integrationService = ref.read(integrationServiceProvider);
+      final platforms = await integrationService.getSupportedPlatforms();
+      
+      setState(() {
+        _availablePlatforms = platforms;
+        _isLoadingPlatforms = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingPlatforms = false;
+      });
+      // Handle error silently or show snackbar if needed
+    }
   }
 
   @override
@@ -86,13 +119,7 @@ class _StoreEditScreenState extends ConsumerState<StoreEditScreen>
       if (file != null) {
         final cropped = await ImageCropper().cropImage(
           sourcePath: file.path,
-          aspectRatioPresets: [
-            CropAspectRatioPreset.square,
-            CropAspectRatioPreset.ratio3x2,
-            CropAspectRatioPreset.original,
-            CropAspectRatioPreset.ratio4x3,
-            CropAspectRatioPreset.ratio16x9
-          ],
+          aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
           uiSettings: [
             AndroidUiSettings(
               toolbarTitle: 'Crop Image',
@@ -139,6 +166,13 @@ class _StoreEditScreenState extends ConsumerState<StoreEditScreen>
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    
+    // Check for integration keys if it's an online store
+    if (_storeType == 'online' && _selectedPlatform != null) {
+      final shouldProceed = await _checkIntegrationKeys(_selectedPlatform!);
+      if (!shouldProceed) return; // User chose not to proceed
+    }
+    
     setState(() => _isLoading = true);
 
     try {
@@ -166,7 +200,7 @@ class _StoreEditScreenState extends ConsumerState<StoreEditScreen>
       final isEdit = widget.store != null;
       final store = Store(
         id: isEdit ? widget.store!.id : '',
-        vendorId: authService.currentUser!.vendorId,
+        ownerId: authService.currentUser!.vendorId,
         name: _nameController.text.trim(),
         description: _descController.text.trim(),
         address: _addressController.text.trim(),
@@ -176,7 +210,12 @@ class _StoreEditScreenState extends ConsumerState<StoreEditScreen>
         email: _emailController.text.trim(),
         imageUrl: logoUrl,
         coverImageUrl: coverUrl,
-        ownerId: isEdit ? widget.store!.ownerId : '',
+        type: _storeType,
+        platform: _storeType == 'online' ? _selectedPlatform : null,
+        isDeleted: false,
+        isVerified: true,
+        notes: '',
+        businessId: ref.read(businessContextProvider)!.id,
         createdAt: isEdit ? widget.store!.createdAt : now,
         updatedAt: now,
       );
@@ -309,44 +348,26 @@ class _StoreEditScreenState extends ConsumerState<StoreEditScreen>
     );
   }
 
-  Widget _buildImagePicker({
+   Widget _buildImagePicker({
     required String title,
     required TextEditingController controller,
     required String storagePath,
     required IconData icon,
     double? height,
-    double? aspectRatio,
   }) {
-    final hasImage = controller.text.isNotEmpty;
+    // pick the right file field based on storagePath
+    final File? file = storagePath == 'store_logos'
+        ? _selectedLogoFile
+        : _selectedCoverFile;
+
+    final bool hasFile = file != null;
+    final bool hasUrl = controller.text.isNotEmpty;
+    final bool hasImage = hasFile || hasUrl;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: AppTheme.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                icon,
-                color: AppTheme.primary,
-                size: 16,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              title,
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-          ],
-        ),
+        // … your title row …
         const SizedBox(height: 12),
         GestureDetector(
           onTap: () => _pickAndUploadImage(controller, storagePath),
@@ -377,34 +398,31 @@ class _StoreEditScreenState extends ConsumerState<StoreEditScreen>
                       ClipRRect(
                         borderRadius: BorderRadius.circular(18),
                         child: GestureDetector(
-                          onTap: () => _showFullImage(controller.text),
-                          child: Image.network(
-                            controller.text,
-                            width: double.infinity,
-                            height: double.infinity,
-                            fit: BoxFit.cover,
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return Container(
-                                color: AppTheme.whiteSmoke,
-                                child: Center(
-                                  child: CircularProgressIndicator(
-                                    color: AppTheme.primary,
-                                  ),
+                          onTap: () {
+                            final url = hasUrl ? controller.text : file!.path;
+                            _showFullImage(url);
+                          },
+                          child: hasFile
+                              ? Image.file(
+                                  file,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  fit: BoxFit.cover,
+                                )
+                              : Image.network(
+                                  controller.text,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  fit: BoxFit.cover,
+                                  loadingBuilder: (ctx, child, progress) {
+                                    if (progress == null) return child;
+                                    return Center(
+                                      child: CircularProgressIndicator(
+                                        color: AppTheme.primary,
+                                      ),
+                                    );
+                                  },
                                 ),
-                              );
-                            },
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                color: AppTheme.whiteSmoke,
-                                child: Icon(
-                                  Icons.broken_image_outlined,
-                                  color: AppTheme.earth,
-                                  size: 32,
-                                ),
-                              );
-                            },
-                          ),
                         ),
                       ),
                       Positioned(
@@ -434,11 +452,7 @@ class _StoreEditScreenState extends ConsumerState<StoreEditScreen>
                           color: AppTheme.primary.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: Icon(
-                          icon,
-                          size: 32,
-                          color: AppTheme.primary,
-                        ),
+                        child: Icon(icon, size: 32, color: AppTheme.primary),
                       ),
                       const SizedBox(height: 12),
                       Text(
@@ -456,7 +470,7 @@ class _StoreEditScreenState extends ConsumerState<StoreEditScreen>
       ],
     );
   }
-
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -465,7 +479,7 @@ class _StoreEditScreenState extends ConsumerState<StoreEditScreen>
         backgroundColor: AppTheme.glass,
         elevation: 0,
         title: Text(
-          widget.store == null ? 'Create Store' : 'Edit Store',
+          widget.store == null ? 'Create StoreXX' : 'Edit Store',
           style: TextStyle(
             color: AppTheme.textPrimary,
             fontWeight: FontWeight.w600,
@@ -564,19 +578,29 @@ class _StoreEditScreenState extends ConsumerState<StoreEditScreen>
                           v == null || v.isEmpty ? 'Enter description' : null,
                     ),
                     const SizedBox(height: 20),
+                    
+                    // Store Type Selection
+                    _buildStoreTypeSection(),
+                    const SizedBox(height: 20),
+                    
                     TextFormField(
                       controller: _addressController,
                       textInputAction: TextInputAction.next,
                       textCapitalization: TextCapitalization.sentences,
                       keyboardType: TextInputType.streetAddress,
                       decoration: InputDecoration(
-                        labelText: 'Address',
+                        labelText: _storeType == 'physical' ? 'Store Address' : 'Business Address (Optional)',
                         hintText: 'Enter store address',
                         prefixIcon: Icon(Icons.location_on_outlined,
                             color: AppTheme.primary),
                       ),
-                      validator: (v) =>
-                          v == null || v.isEmpty ? 'Enter address' : null,
+                      validator: (v) {
+                        // Address is required for physical stores, optional for online stores
+                        if (_storeType == 'physical') {
+                          return v == null || v.isEmpty ? 'Enter address' : null;
+                        }
+                        return null; // Optional for online stores
+                      },
                     ),
                   ],
                 ),
@@ -792,5 +816,162 @@ class _StoreEditScreenState extends ConsumerState<StoreEditScreen>
         ),
       ),
     );
+  }
+
+  Widget _buildStoreTypeSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Store Type',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: AppTheme.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 12),
+        
+        // Physical Store Radio Button
+        RadioListTile<String>(
+          title: const Text('Physical Store'),
+          subtitle: const Text('A brick-and-mortar store with physical location'),
+          value: 'physical',
+          groupValue: _storeType,
+          onChanged: (value) {
+            setState(() {
+              _storeType = value!;
+              _selectedPlatform = null; // Reset platform selection
+            });
+          },
+          activeColor: AppTheme.primary,
+          contentPadding: EdgeInsets.zero,
+        ),
+        
+        // Online Store Radio Button
+        RadioListTile<String>(
+          title: const Text('Online Store'),
+          subtitle: const Text('An e-commerce store or marketplace integration'),
+          value: 'online',
+          groupValue: _storeType,
+          onChanged: (value) {
+            setState(() {
+              _storeType = value!;
+              _selectedPlatform = null; // Reset platform selection
+            });
+          },
+          activeColor: AppTheme.primary,
+          contentPadding: EdgeInsets.zero,
+        ),
+        
+        // Platform Selection (only for online stores)
+        if (_storeType == 'online') ...[
+          const SizedBox(height: 16),
+          Text(
+            'Select Platform',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: AppTheme.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          
+          if (_isLoadingPlatforms)
+            const Center(
+              child: CircularProgressIndicator(),
+            )
+          else if (_availablePlatforms.isEmpty)
+            Text(
+              'No platforms available',
+              style: TextStyle(
+                color: AppTheme.textSecondary,
+                fontSize: 14,
+              ),
+            )
+          else
+            DropdownButtonFormField<String>(
+              value: _selectedPlatform,
+              hint: const Text('Choose a platform'),
+              items: _availablePlatforms.map((platform) {
+                return DropdownMenuItem<String>(
+                  value: platform['id'] as String,
+                  child: Row(
+                    children: [
+                      Text(platform['name'] as String),
+                    ],
+                  ),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedPlatform = value;
+                });
+              },
+              decoration: InputDecoration(
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
+              validator: (value) {
+                if (_storeType == 'online' && value == null) {
+                  return 'Please select a platform for online store';
+                }
+                return null;
+              },
+            ),
+        ],
+      ],
+    );
+  }
+
+  Future<bool> _checkIntegrationKeys(String platform) async {
+    try {
+      final integrationService = ref.read(integrationServiceProvider);
+      final hasIntegration = await integrationService.hasIntegrationForPlatform(platform);
+      
+      if (hasIntegration) {
+        return true; // Integration exists, proceed with store creation
+      }
+      
+      // Show dialog asking user if they want to proceed without integration
+      final shouldProceed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Integration Required'),
+          content: Text(
+            'You haven\'t set up integration keys for $platform yet. '
+            'You can create the store now and add integration keys later, '
+            'or cancel and set up the integration first.\n\n'
+            'Would you like to proceed without integration keys?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Proceed Anyway'),
+            ),
+          ],
+        ),
+      );
+      
+      return shouldProceed ?? false;
+    } catch (e) {
+      // If there's an error checking integrations, allow creation but show warning
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Unable to check integration status: $e'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return true;
+    }
   }
 }

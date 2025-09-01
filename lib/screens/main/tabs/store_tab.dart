@@ -2,17 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vendor_app/config/theme.dart';
 import 'package:vendor_app/config/routes.dart';
+import 'package:vendor_app/models/store.dart';
 import 'package:vendor_app/models/store_inventory.dart';
 import 'package:vendor_app/providers/store_inventory_provider.dart';
 import 'package:vendor_app/providers/service_providers.dart';
-import 'package:vendor_app/services/analytics_service.dart';
-import 'package:vendor_app/services/share_service.dart';
-import 'package:vendor_app/widgets/product_card.dart';
+import 'package:vendor_app/providers/business_context_provider.dart';
+import 'package:vendor_app/utils/business_preferences_helper.dart';
 import 'package:vendor_app/widgets/error_view.dart' as error;
 import 'package:vendor_app/widgets/loading_view.dart';
-import 'package:vendor_app/widgets/empty_view.dart' as empty;
 import 'package:vendor_app/services/navigation_service.dart';
-import 'package:vendor_app/models/store.dart';
 import 'package:vendor_app/screens/stores/store_edit_screen.dart';
 
 class InventoryTab extends ConsumerStatefulWidget {
@@ -25,20 +23,25 @@ class InventoryTab extends ConsumerStatefulWidget {
 class _InventoryTabState extends ConsumerState<InventoryTab>
     with TickerProviderStateMixin {
   late AnimationController _fadeController;
+  // Animation is prepared for future transitions; currently not used.
+  // ignore: unused_field
   late Animation<double> _fadeAnimation;
   final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
-    super.initState();
-    _fadeController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 300));
+  super.initState();
+  _fadeController = AnimationController(
+    duration: const Duration(milliseconds: 500),
+    vsync: this,
+  );
+  _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(_fadeController);
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
-    );
-    _loadStoresAndProducts();
-  }
+  // defer loading (and fade) until after first paint
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    _checkBusinessSelectionAndInitialize();
+  });
+}
 
   @override
   void dispose() {
@@ -47,27 +50,64 @@ class _InventoryTabState extends ConsumerState<InventoryTab>
     super.dispose();
   }
 
+  Future<void> _checkBusinessSelectionAndInitialize() async {
+    // Wait a moment for providers to initialize
+    await Future.delayed(const Duration(milliseconds: 100));
+    
+    // Check if a business is selected
+    bool hasSelectedBusiness = await BusinessPreferencesHelper.hasSelectedBusiness();
+    
+    if (!hasSelectedBusiness) {
+      print('No business selected');
+      // No business selected, route to business list screen
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed(AppRoutes.businessList);
+      }
+      
+      return;
+    }
+    
+    // Get and print the actual business ID
+    final businessId = await BusinessPreferencesHelper.getSelectedBusinessId();
+    print('Business is selected: $businessId');
+
+    // Additional wait to ensure providers are synchronized
+    await Future.delayed(const Duration(milliseconds: 200));
+
+    // Business is selected, proceed with normal initialization
+    _loadStoresAndProducts();
+  }
+
   Future<void> _loadStoresAndProducts() async {
     print('🔄 [StoreTab] Loading stores and products...');
-    final storeService = ref.read(storeServiceProvider);
-    await storeService.fetchStores();
-    final stores = storeService.stores;
-    print('📦 [StoreTab] Found ${stores.length} stores');
+    
+    try {
+      final storeService = ref.read(storeServiceProvider);
+      await storeService.fetchStores();
+      final stores = storeService.stores;
+      print('📦 [StoreTab] Found ${stores.length} stores');
 
-    if (stores.isNotEmpty) {
-      print('🏪 [StoreTab] Setting selected store to: ${stores.first.id}');
-      ref
-          .read(storeInventoryProvider.notifier)
-          .setSelectedStore(stores.first.id);
-    } else {
-      print('⚠️ [StoreTab] No stores found');
-      // Clear the store inventory when no stores are found
-      ref.read(storeInventoryProvider.notifier).clearInventory();
+      if (stores.isNotEmpty) {
+        print('🏪 [StoreTab] Setting selected store to: ${stores.first.id}');
+        ref
+            .read(storeInventoryProvider.notifier)
+            .setSelectedStore(stores.first.id);
+      } else {
+        print('⚠️ [StoreTab] No stores found');
+        // Clear the store inventory when no stores are found
+        ref.read(storeInventoryProvider.notifier).clearInventory();
+      }
+
+      // Always trigger the fade animation regardless of store count
+      print('🎭 [StoreTab] Triggering fade animation');
+      _fadeController.forward();
+    } catch (e) {
+      print('❌ [StoreTab] Error loading stores: $e');
+      // If there's an error (like no business selected), redirect to business selection
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed(AppRoutes.businessList);
+      }
     }
-
-    // Always trigger the fade animation regardless of store count
-    print('🎭 [StoreTab] Triggering fade animation');
-    _fadeController.forward();
   }
 
   Future<void> _deleteInventory(StoreInventory inventory) async {
@@ -144,7 +184,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab>
               ),
             ),
           ],
-        ),
+              )
       );
 
       if (confirmed == true) {
@@ -388,13 +428,79 @@ class _InventoryTabState extends ConsumerState<InventoryTab>
 
   @override
   Widget build(BuildContext context) {
+    // Watch business context to react to business selection changes
+    final businessContext = ref.watch(businessContextProvider);
     final storeService = ref.watch(storeServiceProvider);
     final stores = storeService.stores;
     final isLoadingStores = storeService.isLoading;
     final state = ref.watch(storeInventoryProvider);
 
     print(
-        '🔄 [StoreTab] Building - isLoading: $isLoadingStores, stores: ${stores.length}, selectedStoreId: ${state.selectedStoreId}');
+        '🔄 [StoreTab] Building - businessId: ${businessContext?.id}, isLoading: $isLoadingStores, stores: ${stores.length}, selectedStoreId: ${state.selectedStoreId}');
+    print('📊 [StoreTab] Inventory state - isLoading: ${state.isLoading}, error: ${state.error}, filteredItems: ${state.filteredItems.length}');
+
+    // If no business is selected, show a message or redirect
+    if (businessContext == null) {
+      return Scaffold(
+        backgroundColor: AppTheme.backgroundColor,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          title: Text(
+            'My Store',
+            style: TextStyle(
+              color: AppTheme.textPrimary,
+              fontWeight: FontWeight.w600,
+              fontSize: 20,
+            ),
+          ),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.business,
+                size: 64,
+                color: AppTheme.earth.withOpacity(0.5),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'No Business Selected',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Please select a business to view stores',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pushReplacementNamed(AppRoutes.businessList);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Select Business'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
@@ -464,15 +570,12 @@ class _InventoryTabState extends ConsumerState<InventoryTab>
         ],
       ),
       body: isLoadingStores
-          ? Center(child: CircularProgressIndicator(color: AppTheme.primary))
-          : FadeTransition(
-              opacity: _fadeAnimation,
-              child: stores.isEmpty
-                  ? _NoStoreView(onAddStore: () async {
-                      print(
-                          '➕ [StoreTab] Opening store creation from empty state');
-                      final created = await Navigator.push(
-                        context,
+           ? Center(child: CircularProgressIndicator(color: AppTheme.primary))
+           : stores.isEmpty
+               ? _NoStoreView(onAddStore: () async {
+                   print('➕ [StoreTab] Opening store creation from empty state');
+                   final created = await Navigator.push(
+                     context,
                         MaterialPageRoute(
                             builder: (_) => const StoreEditScreen()),
                       );
@@ -727,9 +830,9 @@ class _InventoryTabState extends ConsumerState<InventoryTab>
                               },
                             ),
                           )
-                        else if (state.filteredItems.isEmpty)
+                        else if (state.selectedStoreId != null && state.filteredItems.isEmpty)
                           SliverFillRemaining(
-                            child: state.selectedStoreId != null
+                            child: stores.isNotEmpty
                                 ? _NoInventoryView(
                                     store: stores.firstWhere(
                                       (s) => s.id == state.selectedStoreId,
@@ -747,7 +850,15 @@ class _InventoryTabState extends ConsumerState<InventoryTab>
                                       );
                                     },
                                   )
-                                : const SizedBox.shrink(),
+                                : Center(
+                                    child: Text(
+                                      'No store data available',
+                                      style: TextStyle(
+                                        color: AppTheme.textSecondary,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ),
                           )
                         else
                           SliverPadding(
@@ -766,15 +877,21 @@ class _InventoryTabState extends ConsumerState<InventoryTab>
                                   return _StoreInventoryCard(
                                     inventory: inventory,
                                     onTap: () {
-                                      print(
-                                          '📦 [StoreTab] Opening inventory detail: ${inventory.inventoryId}');
-                                      NavigationService
-                                          .navigateToInventoryDetail(
-                                              inventory.inventoryId);
+                                      // Navigate to store inventory detail screen
+                                      print('📦 [StoreTab] Opening store inventory detail: ${inventory.id}');
+                                      Navigator.pushNamed(
+                                        context,
+                                        AppRoutes.inventoryDetail,
+                                        arguments: {
+                                          'businessId': inventory.businessId,
+                                          'storeId': inventory.storeId,
+                                          'inventoryId': inventory.id,
+                                        },
+                                      );
                                     },
                                     onLongPress: () {
                                       print(
-                                          '⚙️ [StoreTab] Showing options for inventory: ${inventory.inventoryId}');
+                                          '⚙️ [StoreTab] Showing options for inventory: ${inventory.id}');
                                       _showInventoryOptions(inventory);
                                     },
                                   );
@@ -788,7 +905,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab>
                         const SliverToBoxAdapter(child: SizedBox(height: 100)),
                       ],
                     ),
-            ),
+            
     );
   }
 }
@@ -980,8 +1097,11 @@ class _StoreInventoryCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final storeService = ref.watch(storeServiceProvider);
-    final stores = storeService.stores;
-    final isLoading = storeService.isLoading;
+  // Access vars if needed for debugging in future; currently unused.
+  // ignore: unused_local_variable
+  final stores = storeService.stores;
+  // ignore: unused_local_variable
+  final isLoading = storeService.isLoading;
     return GestureDetector(
       onTap: onTap,
       onLongPress: onLongPress,

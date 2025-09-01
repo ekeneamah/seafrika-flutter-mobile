@@ -6,28 +6,28 @@ class CollectionReferences {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // Products Collection References
-  static CollectionReference get products => 
+  static CollectionReference<Map<String, dynamic>> get products => 
       _firestore.collection(CollectionNames.products);
 
-  static Query productsForBusiness(String businessId) => 
+  static Query<Map<String, dynamic>> productsForBusiness(String businessId) => 
       products.where('businessId', isEqualTo: businessId);
 
-  static Query productsForStore(String storeId) => 
+  static Query<Map<String, dynamic>> productsForStore(String storeId) => 
       products.where('storeId', isEqualTo: storeId);
 
-  static Query productsForCategory(String businessId, String category) => 
+  static Query<Map<String, dynamic>> productsForCategory(String businessId, String category) => 
       productsForBusiness(businessId)
           .where('category', isEqualTo: category);
 
-  static Query activeProductsForBusiness(String businessId) => 
+  static Query<Map<String, dynamic>> activeProductsForBusiness(String businessId) => 
       productsForBusiness(businessId)
           .where('status', isEqualTo: 'active');
 
-  static Query lowStockProducts(String businessId) => 
+  static Query<Map<String, dynamic>> lowStockProducts(String businessId) => 
       productsForBusiness(businessId)
           .where('quantity', isLessThanOrEqualTo: 'lowStockThreshold');
 
-  static Query searchProductsByName(String businessId, String searchTerm) => 
+  static Query<Map<String, dynamic>> searchProductsByName(String businessId, String searchTerm) => 
       productsForBusiness(businessId)
           .orderBy('name')
           .startAt([searchTerm])
@@ -69,19 +69,83 @@ class CollectionReferences {
           .startAt([searchTerm])
           .endAt([searchTerm + '\uf8ff']);
 
-  // Inventory Collection References
-  static CollectionReference get inventory => 
+  // Inventory Collection References (Store Level)
+  static CollectionReference<Map<String, dynamic>> get inventory => 
       _firestore.collection(CollectionNames.inventory);
 
-  static Query inventoryForBusiness(String businessId) => 
+  static Query<Map<String, dynamic>> inventoryForBusiness(String businessId) => 
       inventory.where('businessId', isEqualTo: businessId);
 
-  static Query inventoryForStore(String storeId) => 
-      inventory.where('storeId', isEqualTo: storeId);
+  static Query<Map<String, dynamic>> inventoryForStore(String businessId, String storeId) => 
+      inventory
+          .where('businessId', isEqualTo: businessId)
+          .where('storeId', isEqualTo: storeId);
 
-  static Query lowStockInventory(String businessId) => 
+  static Query<Map<String, dynamic>> activeInventoryForStore(String businessId, String storeId) => 
+      inventoryForStore(businessId, storeId)
+          .where('status', isEqualTo: 'active');
+
+  static Query<Map<String, dynamic>> lowStockInventory(String businessId) => 
       inventoryForBusiness(businessId)
           .where('quantity', isLessThanOrEqualTo: 'lowStockThreshold');
+
+  static Query<Map<String, dynamic>> lowStockInventoryForStore(String businessId, String storeId) => 
+      inventoryForStore(businessId, storeId)
+          .where('quantity', isLessThanOrEqualTo: 'lowStockThreshold');
+
+  static Query<Map<String, dynamic>> searchInventoryByName(String businessId, String storeId, String searchTerm) => 
+      inventoryForStore(businessId, storeId)
+          .orderBy('productName')
+          .startAt([searchTerm])
+          .endAt([searchTerm + '\uf8ff']);
+
+  static Query<Map<String, dynamic>> inventoryByCategory(String businessId, String storeId, String category) => 
+      inventoryForStore(businessId, storeId)
+          .where('category', isEqualTo: category);
+
+  // Business Inventory Collection References (Warehouse)
+  static CollectionReference<Map<String, dynamic>> get businessInventory => 
+      _firestore.collection(CollectionNames.businessInventory);
+
+  static Query<Map<String, dynamic>> businessInventoryForBusiness(String businessId) => 
+      businessInventory.where('businessId', isEqualTo: businessId);
+
+  static Query<Map<String, dynamic>> activeBusinessInventory(String businessId) => 
+      businessInventoryForBusiness(businessId)
+          .where('status', isEqualTo: 'active');
+
+  static Query<Map<String, dynamic>> lowStockBusinessInventory(String businessId) => 
+      businessInventoryForBusiness(businessId)
+          .where('availableQuantity', isLessThanOrEqualTo: 10);
+
+  static Query<Map<String, dynamic>> searchBusinessInventoryByName(String businessId, String searchTerm) => 
+      businessInventoryForBusiness(businessId)
+          .orderBy('productName')
+          .startAt([searchTerm])
+          .endAt([searchTerm + '\uf8ff']);
+
+  static Query<Map<String, dynamic>> businessInventoryByCategory(String businessId, String category) => 
+      businessInventoryForBusiness(businessId)
+          .where('category', isEqualTo: category);
+
+  // Cost Price History Collection References
+  static CollectionReference<Map<String, dynamic>> get costPriceHistory => 
+      _firestore.collection(CollectionNames.costPriceHistory);
+
+  static Query<Map<String, dynamic>> costPriceHistoryForBusiness(String businessId) => 
+      costPriceHistory.where('businessId', isEqualTo: businessId);
+
+  static Query<Map<String, dynamic>> costPriceHistoryForItem(String businessInventoryId) => 
+      costPriceHistory.where('businessInventoryId', isEqualTo: businessInventoryId);
+
+  static Query<Map<String, dynamic>> activeCostPriceHistory(String businessId) => 
+      costPriceHistoryForBusiness(businessId)
+          .where('status', isEqualTo: 'active');
+
+  static Query<Map<String, dynamic>> costPriceHistoryByDateRange(String businessId, DateTime start, DateTime end) => 
+      costPriceHistoryForBusiness(businessId)
+          .where('changedAt', isGreaterThanOrEqualTo: start)
+          .where('changedAt', isLessThanOrEqualTo: end);
 
   // Staff Collection References
   static CollectionReference get staff => 
@@ -219,4 +283,23 @@ class CollectionReferences {
   static Query pendingBookings(String businessId) => 
       bookingsForBusiness(businessId)
           .where('status', isEqualTo: 'pending');
+
+  // Integration Collection References
+  static CollectionReference get integrations => 
+      _firestore.collection(CollectionNames.integrations);
+
+  static Query integrationsForBusiness(String businessId) => 
+      integrations.where('businessId', isEqualTo: businessId);
+
+  static Query integrationsForPlatform(String businessId, String platform) => 
+      integrationsForBusiness(businessId)
+          .where('platform', isEqualTo: platform);
+
+  static Query activeIntegrations(String businessId) => 
+      integrationsForBusiness(businessId)
+          .where('isActive', isEqualTo: true);
+
+  static Query activeIntegrationsForPlatform(String businessId, String platform) => 
+      integrationsForPlatform(businessId, platform)
+          .where('isActive', isEqualTo: true);
 }

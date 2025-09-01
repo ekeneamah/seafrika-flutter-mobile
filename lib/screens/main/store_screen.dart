@@ -3,6 +3,7 @@ import 'package:vendor_app/models/store_inventory.dart';
 import 'package:vendor_app/providers/service_providers.dart' as services;
 import 'package:vendor_app/providers/vendor_id_provider.dart';
 import 'package:vendor_app/services/store_inventory_service.dart';
+import 'package:vendor_app/utils/business_preferences_helper.dart';
 import 'dart:async';
 
 class StoreInventoryState {
@@ -83,7 +84,7 @@ class StoreInventoryNotifier extends StateNotifier<StoreInventoryState> {
 
   try {
     final snapshot = await _service.getStoreInventory(
-      vendorId: _vendorId,
+      businessId: _vendorId, // Using vendorId as businessId for now
       storeId: state.selectedStoreId!,
       searchQuery: state.searchQuery,
     );
@@ -132,8 +133,6 @@ class StoreInventoryNotifier extends StateNotifier<StoreInventoryState> {
   Future<void> deleteInventory(String inventoryId) async {
     try {
       await _service.deleteStoreInventory(
-        vendorId: _vendorId,
-        storeId: state.selectedStoreId!,
         inventoryId: inventoryId,
       );
       await loadInventory();
@@ -151,19 +150,25 @@ class StoreInventoryNotifier extends StateNotifier<StoreInventoryState> {
     required double unitPrice,
     String? location,
     String? notes,
+    String? displayImageUrl,
   }) async {
     try {
+      final businessId = await BusinessPreferencesHelper.getSelectedBusinessId();
+      final businessName = await BusinessPreferencesHelper.getSelectedBusinessName();
       await _service.createStoreInventory(
+        businessId: businessId!,
+        businessName: businessName!,
         vendorId: _vendorId,
         storeId: state.selectedStoreId!,
         productId: productId,
-        inventoryId: inventoryId,
+        businessInventoryId: inventoryId,
         productName: productName,
         quantity: quantity,
         minimumQuantity: minimumQuantity,
         unitPrice: unitPrice,
         location: location,
         notes: notes,
+        displayImageUrl: displayImageUrl,
       );
       await loadInventory();
     } catch (e) {
@@ -177,8 +182,6 @@ class StoreInventoryNotifier extends StateNotifier<StoreInventoryState> {
   }) async {
     try {
       await _service.updateStoreInventory(
-        vendorId: _vendorId,
-        storeId: state.selectedStoreId!,
         inventoryId: inventoryId,
         data: data,
       );

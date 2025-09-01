@@ -16,16 +16,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vendor_app/config/theme.dart';
 import 'package:vendor_app/models/product.dart';
 import 'package:vendor_app/services/product_service.dart';
+import 'package:vendor_app/services/media_service.dart';
 import 'package:vendor_app/widgets/loading_view.dart';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:wechat_assets_picker/wechat_assets_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'dart:io';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image/image.dart' as img;
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:vendor_app/config/routes.dart';
+import 'package:vendor_app/services/navigation_service.dart';
 import 'package:vendor_app/providers/service_providers.dart';
+import 'package:vendor_app/providers/business_context_provider.dart';
 import 'package:uuid/uuid.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:typed_data';
@@ -59,6 +62,10 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen>
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
   final _stockController = TextEditingController();
+  final _minQuantityController = TextEditingController();
+  final _costPriceController = TextEditingController();
+  final _sellingPriceController = TextEditingController();
+  final _initialQuantityController = TextEditingController();
   bool _isLoading = false;
   bool _isUploading = false;
   Product? _product;
@@ -90,10 +97,62 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen>
   void initState() {
     super.initState();
     _initializeAnimations();
+    
+    // Set default minimum quantity for new products
+    if (widget.productId == null) {
+      _minQuantityController.text = '1'; // Default minimum quantity
+    }
+    
+    // Validate user authentication and business context
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _validateUserAndBusinessContext();
+    });
+    
     if (widget.productId != null) {
       _loadProduct();
     }
     _prefillThumbnail();
+  }
+
+  /// Validate that user is logged in and has selected a business
+  Future<bool> _validateUserAndBusinessContext() async {
+    try {
+      // Check if user is logged in (vendorId/ownerId)
+      final vendorId = ref.read(vendorIdSyncProvider);
+      if (vendorId.isEmpty) {
+        // User not logged in - redirect to login with clear stack
+        if (mounted) {
+          _showSnackBar('Please log in to continue.', isError: true);
+          await NavigationService.navigateToAndClearStack(AppRoutes.login);
+        }
+        return false;
+      }
+
+      // Check if business is selected
+      final businessId = ref.read(selectedBusinessIdProvider);
+      if (businessId == null || businessId.isEmpty) {
+        // No business selected - redirect to business selection
+        if (mounted) {
+          _showSnackBar('Please select a business to continue.', isError: true);
+          await NavigationService.navigateTo(AppRoutes.selectBusiness);
+          // Pop current screen after business selection navigation
+          Navigator.of(context).pop();
+        }
+        return false;
+      }
+
+      // Both validations passed - user can create products
+      print('User validation passed - vendorId: $vendorId, businessId: $businessId');
+      return true;
+      
+    } catch (e) {
+      print('Error during user validation: $e');
+      if (mounted) {
+        _showSnackBar('Authentication error. Please login again.', isError: true);
+        await NavigationService.navigateToAndClearStack(AppRoutes.login);
+      }
+      return false;
+    }
   }
 
   void _initializeAnimations() {
@@ -134,6 +193,7 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen>
     _descriptionController.dispose();
     _priceController.dispose();
     _stockController.dispose();
+    _minQuantityController.dispose();
     super.dispose();
   }
 
@@ -143,15 +203,29 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen>
       final productService = ref.read(productServiceProvider);
       final product = await productService.getProduct(widget.productId!);
       if (product != null) {
-        setState(() {
-          _product = product;
-          _nameController.text = product.name;
-          _descriptionController.text = product.description;
-          _priceController.text = product.price.toString();
-          _stockController.text = product.stock.toString();
-          _selectedCategory =
-              product.category.isNotEmpty ? product.category : 'Electronics';
-        });
+        // Load product details
+        _product = product;
+        _nameController.text = product.name;
+        _descriptionController.text = product.description;
+        _priceController.text = product.price.toString();
+        _stockController.text = product.stock.toString();
+        _minQuantityController.text = product.minQuantity.toString();
+        _selectedCategory = product.category.isNotEmpty ? product.category : 'Electronics';
+
+        // Load existing images into _selectedImages
+        _selectedImages.clear();
+        for (final imageUrl in product.images) {
+          try {
+            // Download image bytes for thumbnail (or use a placeholder if fails)
+            final uri = Uri.parse(imageUrl);
+            final bytes = await NetworkAssetBundle(uri).load(imageUrl).then((bd) => bd.buffer.asUint8List());
+            _selectedImages.add(_SelectedImage(filePath: imageUrl, thumbnail: bytes));
+          } catch (e) {
+            // If download fails, use an empty/placeholder thumbnail
+            _selectedImages.add(_SelectedImage(filePath: imageUrl, thumbnail: Uint8List(0)));
+          }
+        }
+        setState(() {});
       }
     } catch (e) {
       if (mounted) {
@@ -169,11 +243,7 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen>
         if (file != null) {
           final croppedFile = await ImageCropper().cropImage(
             sourcePath: file.path,
-            aspectRatioPresets: [
-              CropAspectRatioPreset.square,
-              CropAspectRatioPreset.original,
-              CropAspectRatioPreset.ratio4x3,
-            ],
+            aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
             uiSettings: [
               AndroidUiSettings(
                 toolbarTitle: 'Edit & Crop Image',
@@ -252,18 +322,36 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen>
     });
 
     try {
-      final productService = ref.read(productServiceProvider);
-      final vendorId = ref.read(vendorIdSyncProvider);
-
-      if (vendorId.isEmpty) {
-        throw Exception('Vendor ID is missing. Please log in again.');
+      // Validate authentication and business context
+      final isValid = await _validateUserAndBusinessContext();
+      if (!isValid) {
+        setState(() {
+          _isUploading = false;
+        });
+        return;
       }
 
-      // Upload images and get URLs (assuming you have this logic)
-      final List<String> uploadedImageUrls = await _uploadAllImages();
-      final displayImageUrl = uploadedImageUrls.isNotEmpty &&
-              _displayImageIndex < uploadedImageUrls.length
-          ? uploadedImageUrls[_displayImageIndex]
+      final productService = ref.read(productServiceProvider);
+      final vendorId = ref.read(vendorIdSyncProvider);
+      final businessId = ref.read(selectedBusinessIdProvider);
+
+      // Separate local images (need upload) and remote URLs (already uploaded)
+      final List<_SelectedImage> localImages = [];
+      final List<String> remoteImageUrls = [];
+      for (final imgObj in _selectedImages) {
+        if (imgObj.filePath.startsWith('http')) {
+          remoteImageUrls.add(imgObj.filePath);
+        } else {
+          localImages.add(imgObj);
+        }
+      }
+
+      // Upload only local images
+      final List<String> uploadedImageUrls = await _uploadAllImages(localImages);
+      final List<String> allImageUrls = [...remoteImageUrls, ...uploadedImageUrls];
+      final displayImageUrl = allImageUrls.isNotEmpty &&
+              _displayImageIndex < allImageUrls.length
+          ? allImageUrls[_displayImageIndex]
           : null;
 
       final product = Product(
@@ -272,13 +360,15 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen>
         description: _descriptionController.text,
         price: double.parse(_priceController.text),
         stock: int.parse(_stockController.text),
+        minQuantity: _minQuantityController.text.isEmpty ? 1 : int.parse(_minQuantityController.text),
         category: _selectedCategory,
         vendorId: vendorId,
-        images: uploadedImageUrls,
+        businessId: businessId!,
+        images: allImageUrls,
         displayImageUrl: displayImageUrl,
-        rating: 0.0, // Default rating for new products
-        reviews: 0, // Default review count for new products
-        tags: [], // Empty tags list for new products
+        rating: 0.0,
+        reviews: 0,
+        tags: [],
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -286,7 +376,8 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen>
       if (widget.productId != null) {
         await productService.updateProduct(product);
       } else {
-        await productService.createProduct(product);
+        // Pass businessId to createProduct method
+        await productService.createProduct(product, businessId: businessId);
       }
 
       if (mounted) {
@@ -305,34 +396,54 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen>
     }
   }
 
-  Future<List<String>> _uploadAllImages() async {
+  Future<List<String>> _uploadAllImages([List<_SelectedImage>? imagesToUpload]) async {
     final List<String> urls = [];
-    _isImageUploading = List.filled(_selectedImages.length, false);
-    _uploadProgress = List.filled(_selectedImages.length, 0.0);
+    final images = imagesToUpload ?? _selectedImages;
+    if (images.isEmpty) return urls;
+    _isImageUploading = List.filled(images.length, false);
+    _uploadProgress = List.filled(images.length, 0.0);
 
-    for (int i = 0; i < _selectedImages.length; i++) {
+    // Get MediaService from providers
+    final mediaService = ref.read(mediaServiceProvider);
+    final businessContext = ref.read(businessContextProvider);
+    final tempProductId = const Uuid().v4();
+
+    // Only upload images passed in (local images)
+    for (int i = 0; i < images.length; i++) {
+      final imgObj = images[i];
+      if (imgObj.filePath.startsWith('http')) continue; // Skip remote URLs
       _isImageUploading[i] = true;
       setState(() {});
-
-      final file = File(_selectedImages[i].filePath);
-      final fileName =
-          'products/${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
-      final ref = FirebaseStorage.instance.ref().child(fileName);
-      final uploadTask = ref.putFile(file);
-
-      uploadTask.snapshotEvents.listen((event) {
-        if (event.totalBytes > 0) {
-          _uploadProgress[i] = event.bytesTransferred / event.totalBytes;
-          setState(() {});
+      try {
+        final file = File(imgObj.filePath);
+        final imageBytes = await file.readAsBytes();
+        final fileName = 'product_image_${DateTime.now().millisecondsSinceEpoch}_$i';
+        final downloadUrl = await mediaService.uploadMediaFromBytesWithCompression(
+          bytes: imageBytes,
+          fileName: fileName,
+          type: 'image',
+          vendorId: businessContext?.ownerId,
+          productId: tempProductId,
+          maxSizeBytes: 1024 * 1024,
+          maxWidth: 1920,
+          maxHeight: 1080,
+          quality: 85,
+          forceCompression: true,
+        );
+        if (downloadUrl != null) {
+          urls.add(downloadUrl);
+          debugPrint('Image $i uploaded successfully with WebP compression: $downloadUrl');
+        } else {
+          throw Exception('Failed to upload image $i');
         }
-      });
-
-      final snapshot = await uploadTask.whenComplete(() {});
-      final url = await snapshot.ref.getDownloadURL();
-      urls.add(url);
-
-      _isImageUploading[i] = false;
-      setState(() {});
+      } catch (e) {
+        debugPrint('Error uploading image $i: $e');
+        _showSnackBar('Failed to upload image ${i + 1}: $e', isError: true);
+      } finally {
+        _isImageUploading[i] = false;
+        _uploadProgress[i] = 1.0;
+        setState(() {});
+      }
     }
     return urls;
   }
@@ -933,58 +1044,142 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen>
             ],
           ),
           const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _priceController,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  textInputAction: TextInputAction.next,
-                  decoration: InputDecoration(
-                    labelText: 'Price',
-                    hintText: '0.00',
-                    prefixText: 'NGN ',
-                    prefixIcon: Icon(Icons.currency_exchange_outlined,
-                        color: AppTheme.secondary),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a price';
-                    }
-                    final price = double.tryParse(value);
-                    if (price == null || price <= 0) {
-                      return 'Please enter a valid price';
-                    }
-                    return null;
-                  },
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: TextFormField(
-                  controller: _stockController,
-                  keyboardType: TextInputType.number,
-                  textInputAction: TextInputAction.done,
-                  decoration: InputDecoration(
-                    labelText: 'Stock Quantity',
-                    hintText: '0',
-                    prefixIcon: Icon(Icons.inventory_outlined,
-                        color: AppTheme.secondary),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter stock quantity';
-                    }
-                    final stock = int.tryParse(value);
-                    if (stock == null || stock < 0) {
-                      return 'Please enter a valid quantity';
-                    }
-                    return null;
-                  },
-                ),
-              ),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              // Use horizontal layout for screens wider than 600px, vertical for smaller
+              final isWideScreen = constraints.maxWidth > 600;
+              
+              if (isWideScreen) {
+                // Horizontal layout for larger screens
+                return Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _priceController,
+                        keyboardType:
+                            const TextInputType.numberWithOptions(decimal: true),
+                        textInputAction: TextInputAction.next,
+                        decoration: InputDecoration(
+                          labelText: 'Price',
+                          hintText: '0.00',
+                          prefixText: 'NGN ',
+                          prefixIcon: Icon(Icons.currency_exchange_outlined,
+                              color: AppTheme.secondary),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter a price';
+                          }
+                          final price = double.tryParse(value);
+                          if (price == null || price <= 0) {
+                            return 'Please enter a valid price';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _stockController,
+                        keyboardType: TextInputType.number,
+                        textInputAction: TextInputAction.done,
+                        decoration: InputDecoration(
+                          labelText: 'Stock Quantity',
+                          hintText: '0',
+                          prefixIcon: Icon(Icons.inventory_outlined,
+                              color: AppTheme.secondary),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter stock quantity';
+                          }
+                          final stock = int.tryParse(value);
+                          if (stock == null || stock < 0) {
+                            return 'Please enter a valid quantity';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              } else {
+                // Vertical layout for smaller screens
+                return Column(
+                  children: [
+                    TextFormField(
+                      controller: _priceController,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      textInputAction: TextInputAction.next,
+                      decoration: InputDecoration(
+                        labelText: 'Price',
+                        hintText: '0.00',
+                        prefixText: 'NGN ',
+                        prefixIcon: Icon(Icons.currency_exchange_outlined,
+                            color: AppTheme.secondary),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter a price';
+                        }
+                        final price = double.tryParse(value);
+                        if (price == null || price <= 0) {
+                          return 'Please enter a valid price';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _stockController,
+                      keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.done,
+                      decoration: InputDecoration(
+                        labelText: 'Stock Quantity',
+                        hintText: '0',
+                        prefixIcon: Icon(Icons.inventory_outlined,
+                            color: AppTheme.secondary),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter stock quantity';
+                        }
+                        final stock = int.tryParse(value);
+                        if (stock == null || stock < 0) {
+                          return 'Please enter a valid quantity';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _minQuantityController,
+                      keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.done,
+                      decoration: InputDecoration(
+                        labelText: 'Minimum Stock Alert',
+                        hintText: '5',
+                        prefixIcon: Icon(Icons.warning_outlined,
+                            color: AppTheme.secondary),
+                        helperText: 'Alert when stock falls below this level',
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter minimum quantity';
+                        }
+                        final minQty = int.tryParse(value);
+                        if (minQty == null || minQty < 0) {
+                          return 'Please enter a valid minimum quantity';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                );
+              }
+            },
           ),
         ],
       ),
@@ -996,13 +1191,7 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen>
     if (await File(originalFilePath).exists()) {
       final croppedFile = await ImageCropper().cropImage(
         sourcePath: originalFilePath,
-        aspectRatioPresets: [
-          CropAspectRatioPreset.square,
-          CropAspectRatioPreset.ratio3x2,
-          CropAspectRatioPreset.original,
-          CropAspectRatioPreset.ratio4x3,
-          CropAspectRatioPreset.ratio16x9
-        ],
+        aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
         uiSettings: [
           AndroidUiSettings(
             toolbarTitle: 'Edit & Crop Image',
@@ -1162,7 +1351,7 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen>
                                 margin: const EdgeInsets.symmetric(vertical: 4),
                                 child: Row(
                                   children: [
-                                    Container(
+                                    SizedBox(
                                       width: 16,
                                       height: 16,
                                       child: _isImageUploading.length > index &&
@@ -1288,50 +1477,59 @@ class _CroppingDialogState extends State<_CroppingDialog> {
 
       final file = await asset.file;
       if (file != null) {
-        final croppedFile = await ImageCropper().cropImage(
-          sourcePath: file.path,
-          aspectRatioPresets: [
-            CropAspectRatioPreset.square,
-            CropAspectRatioPreset.ratio3x2,
-            CropAspectRatioPreset.original,
-            CropAspectRatioPreset.ratio4x3,
-            CropAspectRatioPreset.ratio16x9
-          ],
-          uiSettings: [
-            AndroidUiSettings(
-              toolbarTitle: 'Edit & Crop Image',
-              toolbarColor: AppTheme.primary,
-              toolbarWidgetColor: Colors.white,
-              initAspectRatio: CropAspectRatioPreset.original,
-              lockAspectRatio: false,
-            ),
-            IOSUiSettings(
-              title: 'Edit & Crop Image',
-            ),
-          ],
-        );
+        try {
+          final croppedFile = await ImageCropper().cropImage(
+            sourcePath: file.path,
+            aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+            uiSettings: [
+              AndroidUiSettings(
+                toolbarTitle: 'Edit & Crop Image',
+                toolbarColor: AppTheme.primary,
+                toolbarWidgetColor: Colors.white,
+                initAspectRatio: CropAspectRatioPreset.original,
+                lockAspectRatio: false,
+              ),
+              IOSUiSettings(
+                title: 'Edit & Crop Image',
+              ),
+            ],
+          );
 
-        if (croppedFile != null) {
-          final appDir = await getApplicationDocumentsDirectory();
-          final imagesDir = Directory('${appDir.path}/cropped_images');
-          if (!await imagesDir.exists()) {
-            await imagesDir.create(recursive: true);
+          if (croppedFile != null) {
+            final appDir = await getApplicationDocumentsDirectory();
+            final imagesDir = Directory('${appDir.path}/cropped_images');
+            if (!await imagesDir.exists()) {
+              await imagesDir.create(recursive: true);
+            }
+
+            final fileName =
+                'product_${DateTime.now().millisecondsSinceEpoch}.jpg';
+            final savedFile =
+                await File(croppedFile.path).copy('${imagesDir.path}/$fileName');
+
+            final bytes = await savedFile
+                .readAsBytes(); // Define bytes **after** copying the file
+
+            if (!mounted) return;
+            setState(() {
+              _croppedImages.add(
+                _SelectedImage(filePath: savedFile.path, thumbnail: bytes),
+              );
+            });
+          } else {
+            // User cancelled cropping - navigate back to previous screen
+            if (!mounted) return;
+            Navigator.of(context).pop(); // Close the cropping dialog
+            Navigator.of(context).pop(); // Navigate back to previous screen (media detail)
+            return;
           }
-
-          final fileName =
-              'product_${DateTime.now().millisecondsSinceEpoch}.jpg';
-          final savedFile =
-              await File(croppedFile.path).copy('${imagesDir.path}/$fileName');
-
-          final bytes = await savedFile
-              .readAsBytes(); // Define bytes **after** copying the file
-
+        } catch (e) {
+          // Handle cropping error gracefully - navigate back to previous screen
+          print('Error during image cropping: $e');
           if (!mounted) return;
-          setState(() {
-            _croppedImages.add(
-              _SelectedImage(filePath: savedFile.path, thumbnail: bytes),
-            );
-          });
+          Navigator.of(context).pop(); // Close the cropping dialog
+          Navigator.of(context).pop(); // Navigate back to previous screen (media detail)
+          return;
         }
       }
     }
@@ -1414,6 +1612,19 @@ class _CroppingDialogState extends State<_CroppingDialog> {
           ],
         ),
       ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            // Cancel cropping and navigate back to previous screen
+            Navigator.of(context).pop(); // Close the cropping dialog
+            Navigator.of(context).pop(); // Navigate back to previous screen (media detail)
+          },
+          child: Text(
+            'Cancel',
+            style: TextStyle(color: AppTheme.textSecondary),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:vendor_app/config/theme.dart';
 import 'package:vendor_app/models/customer.dart';
-import 'package:vendor_app/services/navigation_service.dart';
 import 'package:vendor_app/services/customer_service.dart';
-import 'package:vendor_app/widgets/error_view.dart' as error;
 import 'package:vendor_app/widgets/loading_view.dart';
 
 class CreateCustomerScreen extends StatefulWidget {
   final String? customerId;
+  final String? initialName;
 
-  const CreateCustomerScreen({super.key, this.customerId});
+  const CreateCustomerScreen({super.key, this.customerId, this.initialName});
 
   @override
   State<CreateCustomerScreen> createState() => _CreateCustomerScreenState();
@@ -32,6 +30,12 @@ class _CreateCustomerScreenState extends State<CreateCustomerScreen> {
   void initState() {
     super.initState();
     _isEditing = widget.customerId != null;
+    
+    // Set initial name if provided
+    if (widget.initialName != null) {
+      _nameController.text = widget.initialName!;
+    }
+    
     if (_isEditing) {
       _loadExistingCustomer();
     }
@@ -79,6 +83,7 @@ class _CreateCustomerScreenState extends State<CreateCustomerScreen> {
 
     try {
       final customerService = context.read<CustomerService>();
+      Customer? createdOrUpdatedCustomer;
 
       if (_isEditing) {
         await customerService.updateCustomer(
@@ -89,8 +94,9 @@ class _CreateCustomerScreenState extends State<CreateCustomerScreen> {
           address: _addressController.text,
           notes: _notesController.text,
         );
+        createdOrUpdatedCustomer = await customerService.fetchCustomer(widget.customerId!);
       } else {
-        await customerService.createCustomer(
+        createdOrUpdatedCustomer = await customerService.createCustomer(
           name: _nameController.text,
           email: _emailController.text,
           phone: _phoneController.text,
@@ -106,7 +112,7 @@ class _CreateCustomerScreenState extends State<CreateCustomerScreen> {
                 'Customer ${_isEditing ? 'updated' : 'created'} successfully'),
           ),
         );
-        Navigator.pop(context);
+        Navigator.pop(context, createdOrUpdatedCustomer);
       }
     } catch (e) {
       if (mounted) {
