@@ -5,6 +5,8 @@ import 'package:vendor_app/services/navigation_service.dart';
 import 'package:vendor_app/services/customer_service.dart';
 import 'package:vendor_app/widgets/error_view.dart' as error;
 import 'package:vendor_app/widgets/loading_view.dart';
+import 'package:vendor_app/widgets/responsive_contact_display.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class CustomerDetailScreen extends StatefulWidget {
   final String customerId;
@@ -124,31 +126,16 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Contact Information',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildInfoRow('Name', _customer!.name),
-                  _buildInfoRow('Email', _customer!.email),
-                  _buildInfoRow('Phone', _customer!.phone),
-                  if (_customer!.address != null &&
-                      _customer!.address!.isNotEmpty)
-                    _buildInfoRow('Address', _customer!.address!),
-                  if (_customer!.notes != null && _customer!.notes!.isNotEmpty)
-                    _buildInfoRow('Notes', _customer!.notes!),
-                ],
-              ),
-            ),
+          ResponsiveContactDisplay(
+            title: 'Contact Information',
+            name: _customer!.name,
+            email: _customer!.email,
+            phone: _customer!.phone,
+            address: _customer!.address,
+            notes: _customer!.notes,
+            showActions: true,
+            onEmailTap: () => _launchEmail(_customer!.email),
+            onPhoneTap: () => _launchPhone(_customer!.phone),
           ),
           const SizedBox(height: 16),
           Card(
@@ -198,28 +185,36 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.grey,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(value),
-          ),
-        ],
-      ),
+  Future<void> _launchEmail(String email) async {
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: email,
     );
+    if (await canLaunchUrl(emailUri)) {
+      await launchUrl(emailUri);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not launch email app for $email')),
+        );
+      }
+    }
+  }
+
+  Future<void> _launchPhone(String phone) async {
+    final Uri phoneUri = Uri(
+      scheme: 'tel',
+      path: phone,
+    );
+    if (await canLaunchUrl(phoneUri)) {
+      await launchUrl(phoneUri);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not launch phone app for $phone')),
+        );
+      }
+    }
   }
 
   Widget _buildMetricRow(String label, String value) {

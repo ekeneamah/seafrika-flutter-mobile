@@ -11,6 +11,8 @@ class InventoryAllocationService {
   /// Allocate inventory items from business to store with atomic transaction
   Future<InventoryAllocationResult> allocateInventoryToStore({
     required String businessId,
+    required String businessName,
+    required String vendorId,
     required String storeId,
     required String storeName,
     required List<InventoryAllocationItem> items,
@@ -92,6 +94,8 @@ class InventoryAllocationService {
                 transaction.set(newStoreInventoryRef, {
                   'id': newStoreInventoryRef.id,
                   'businessId': businessId,
+                  'businessName': businessName, // Added missing field
+                  'vendorId': vendorId, // Added missing field
                   'storeId': storeId,
                   'storeName': storeName,
                   'businessInventoryId': item.businessInventoryId,
@@ -100,9 +104,13 @@ class InventoryAllocationService {
                   'quantity': item.quantity,
                   'minimumQuantity': item.minimumQuantity ?? 1,
                   'unitPrice': businessInv.sellingPrice,
+                  'location': null, // Store location - can be set later
+                  'notes': businessInv.notes, // Copy from business inventory
                   'category': businessInv.category,
                   'displayImageUrl': businessInv.displayImageUrl,
                   'status': 'active',
+                  'isLowStock': (item.quantity <= (item.minimumQuantity ?? 1)), // Added computed field
+                  'totalValue': (item.quantity * businessInv.sellingPrice), // Added computed field
                   'createdAt': FieldValue.serverTimestamp(),
                   'updatedAt': FieldValue.serverTimestamp(),
                   'lastUpdatedBy': businessId,

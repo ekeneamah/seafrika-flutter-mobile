@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:vendor_app/models/customer.dart';
 import 'package:vendor_app/services/customer_service.dart';
 import 'package:vendor_app/widgets/loading_view.dart';
+import 'package:vendor_app/widgets/responsive_contact_form.dart';
 
 class CreateCustomerScreen extends StatefulWidget {
   final String? customerId;
@@ -159,46 +160,10 @@ class _CreateCustomerScreenState extends State<CreateCustomerScreen> {
               },
             ),
             const SizedBox(height: 16),
-            TextFormField(
-              controller: _emailController,
-              decoration: const InputDecoration(
-                labelText: 'Email',
-                border: OutlineInputBorder(),
-              ),
-              keyboardType: TextInputType.emailAddress,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter email';
-                }
-                if (!value.contains('@')) {
-                  return 'Please enter a valid email';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _phoneController,
-              decoration: const InputDecoration(
-                labelText: 'Phone',
-                border: OutlineInputBorder(),
-              ),
-              keyboardType: TextInputType.phone,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter phone number';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _addressController,
-              decoration: const InputDecoration(
-                labelText: 'Address',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 2,
+            ResponsiveContactForm(
+              emailController: _emailController,
+              phoneController: _phoneController,
+              addressController: _addressController,
             ),
             const SizedBox(height: 16),
             TextFormField(

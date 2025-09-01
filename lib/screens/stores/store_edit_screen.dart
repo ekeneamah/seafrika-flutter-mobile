@@ -8,6 +8,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:wechat_assets_picker/wechat_assets_picker.dart';
+import 'package:vendor_app/widgets/responsive_contact_form.dart';
 
 class StoreEditScreen extends ConsumerStatefulWidget {
   final Store? store;
@@ -479,7 +480,7 @@ class _StoreEditScreenState extends ConsumerState<StoreEditScreen>
         backgroundColor: AppTheme.glass,
         elevation: 0,
         title: Text(
-          widget.store == null ? 'Create StoreXX' : 'Edit Store',
+          widget.store == null ? 'Create Store' : 'Edit Store',
           style: TextStyle(
             color: AppTheme.textPrimary,
             fontWeight: FontWeight.w600,
@@ -608,72 +609,17 @@ class _StoreEditScreenState extends ConsumerState<StoreEditScreen>
 
               // Contact Information Section
               _buildModernCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppTheme.accent.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            Icons.contact_phone_outlined,
-                            color: AppTheme.accent,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Contact Information',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: AppTheme.textPrimary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _phoneController,
-                            textInputAction: TextInputAction.next,
-                            keyboardType: TextInputType.phone,
-                            decoration: InputDecoration(
-                              labelText: 'Phone',
-                              hintText: '+234 xxx xxx xxxx',
-                              prefixIcon: Icon(Icons.phone_outlined,
-                                  color: AppTheme.accent),
-                            ),
-                            validator: (v) =>
-                                v == null || v.isEmpty ? 'Enter phone' : null,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _emailController,
-                            textInputAction: TextInputAction.next,
-                            keyboardType: TextInputType.emailAddress,
-                            textCapitalization: TextCapitalization.none,
-                            decoration: InputDecoration(
-                              labelText: 'Email',
-                              hintText: 'store@example.com',
-                              prefixIcon: Icon(Icons.email_outlined,
-                                  color: AppTheme.accent),
-                            ),
-                            validator: (v) =>
-                                v == null || v.isEmpty ? 'Enter email' : null,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                child: ResponsiveContactForm(
+                  title: 'Contact Information',
+                  phoneController: _phoneController,
+                  emailController: _emailController,
+                  accentColor: AppTheme.accent,
+                  phoneValidator: (v) => v == null || v.isEmpty ? 'Enter phone' : null,
+                  emailValidator: (v) => v == null || v.isEmpty ? 'Enter email' : null,
+                  phoneHint: '+234 xxx xxx xxxx',
+                  emailHint: 'store@example.com',
+                  isPhoneRequired: true,
+                  isEmailRequired: true,
                 ),
               ),
 

@@ -1273,6 +1273,8 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen>
                                     // Use InventoryAllocationService for atomic transaction
                                     final result = await _inventoryAllocationService.allocateInventoryToStore(
                                       businessId: businessId,
+                                      businessName: business.name,
+                                      vendorId: business.ownerId,
                                       storeId: selectedStoreId!,
                                       storeName: selectedStore.name,
                                       items: allocationItems,
