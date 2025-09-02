@@ -4,6 +4,8 @@ import 'package:vendor_app/config/theme.dart';
 import 'package:vendor_app/config/routes.dart';
 import 'package:vendor_app/models/store.dart';
 import 'package:vendor_app/models/store_inventory.dart';
+import 'package:vendor_app/models/product.dart';
+import 'package:vendor_app/widgets/product_list_card.dart';
 import 'package:vendor_app/providers/store_inventory_provider.dart';
 import 'package:vendor_app/providers/service_providers.dart';
 import 'package:vendor_app/providers/business_context_provider.dart';
@@ -863,14 +865,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab>
                         else
                           SliverPadding(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
-                            sliver: SliverGrid(
-                              gridDelegate:
-                                  const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                childAspectRatio: 0.75,
-                                crossAxisSpacing: 16,
-                                mainAxisSpacing: 16,
-                              ),
+                            sliver: SliverList(
                               delegate: SliverChildBuilderDelegate(
                                 (context, index) {
                                   final inventory = state.filteredItems[index];
@@ -1096,152 +1091,32 @@ class _StoreInventoryCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final storeService = ref.watch(storeServiceProvider);
-  // Access vars if needed for debugging in future; currently unused.
-  // ignore: unused_local_variable
-  final stores = storeService.stores;
-  // ignore: unused_local_variable
-  final isLoading = storeService.isLoading;
-    return GestureDetector(
+    // Map StoreInventory to Product for display
+    final product = Product(
+      id: inventory.productId,
+      name: inventory.productName,
+      description: inventory.notes ?? '',
+      price: inventory.unitPrice,
+      images: inventory.displayImageUrl != null && inventory.displayImageUrl!.isNotEmpty
+          ? [inventory.displayImageUrl!]
+          : [],
+      stock: inventory.quantity,
+      minQuantity: inventory.minimumQuantity,
+      rating: 0,
+      reviews: 0,
+      category: inventory.category,
+      tags: [],
+      createdAt: inventory.createdAt,
+      updatedAt: inventory.updatedAt,
+      vendorId: inventory.vendorId,
+      businessId: inventory.businessId,
+      unit: null,
+      displayImageUrl: inventory.displayImageUrl,
+    );
+    return ProductListCard(
+      product: product,
       onTap: onTap,
-      onLongPress: onLongPress,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: AppTheme.primary.withOpacity(0.04),
-              blurRadius: 15,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: inventory.displayImageUrl != null &&
-                      inventory.displayImageUrl!.isNotEmpty
-                  ? ClipRRect(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(20),
-                      ),
-                      child: Image.network(
-                        inventory.displayImageUrl!,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        height: double.infinity,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return Container(
-                            color: AppTheme.whiteSmoke,
-                            child: Center(
-                              child: CircularProgressIndicator(
-                                value: loadingProgress.expectedTotalBytes !=
-                                        null
-                                    ? loadingProgress.cumulativeBytesLoaded /
-                                        loadingProgress.expectedTotalBytes!
-                                    : null,
-                                color: AppTheme.primary,
-                                strokeWidth: 2,
-                              ),
-                            ),
-                          );
-                        },
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            decoration: BoxDecoration(
-                              color: AppTheme.whiteSmoke,
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(20),
-                              ),
-                            ),
-                            child: Center(
-                              child: Icon(
-                                Icons.broken_image_outlined,
-                                size: 48,
-                                color: AppTheme.primary.withOpacity(0.5),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    )
-                  : Container(
-                      decoration: BoxDecoration(
-                        color: AppTheme.whiteSmoke,
-                        borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(20),
-                        ),
-                      ),
-                      child: Center(
-                        child: Icon(
-                          Icons.inventory_2_outlined,
-                          size: 48,
-                          color: AppTheme.primary.withOpacity(0.5),
-                        ),
-                      ),
-                    ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    inventory.productName,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textPrimary,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: inventory.quantity <= inventory.minimumQuantity
-                              ? AppTheme.secondary.withOpacity(0.1)
-                              : AppTheme.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          '${inventory.quantity}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color:
-                                inventory.quantity <= inventory.minimumQuantity
-                                    ? AppTheme.secondary
-                                    : AppTheme.primary,
-                          ),
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        'NGN ${inventory.unitPrice.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.textPrimary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+      // Optionally, you can add onEdit/onDelete if needed
     );
   }
 }

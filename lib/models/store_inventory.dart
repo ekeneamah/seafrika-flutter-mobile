@@ -54,26 +54,26 @@ class StoreInventory {
     final data = doc.data()!;
     return StoreInventory(
       id: doc.id,
-      storeId: data['storeId'] as String,
-      productId: data['productId'] as String,
+      storeId: data['storeId'] as String? ?? '',
+      productId: data['productId'] as String? ?? '',
       inventoryId: data['inventoryId'] as String?, // Nullable for backward compatibility
       businessInventoryId: data['businessInventoryId'] as String?, // New field
-      productName: data['productName'] as String,
-      quantity: data['quantity'] as int,
-      minimumQuantity: data['minimumQuantity'] as int,
-      unitPrice: (data['unitPrice'] as num).toDouble(),
+      productName: data['productName'] as String? ?? 'Unknown Product',
+      quantity: data['quantity'] as int? ?? 0,
+      minimumQuantity: data['minimumQuantity'] as int? ?? 0,
+      unitPrice: (data['unitPrice'] as num?)?.toDouble() ?? 0.0,
       location: data['location'] as String?,
       notes: data['notes'] as String?,
       category: data['category'] as String? ?? 'Uncategorized',
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp).toDate(),
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       displayImageUrl: data['displayImageUrl'] as String?,
       isLowStock: data['isLowStock'] as bool? ?? false,
       totalValue: (data['totalValue'] as num?)?.toDouble() ?? 0.0,
       status: data['status'] as String? ?? 'active',
-      businessId: data['businessId'] as String,
-      businessName: data['businessName'] as String,
-      vendorId: data['vendorId'] as String,
+      businessId: data['businessId'] as String? ?? '',
+      businessName: data['businessName'] as String? ?? '',
+      vendorId: data['vendorId'] as String? ?? '',
     );
   }
 

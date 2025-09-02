@@ -21,6 +21,7 @@ import 'package:vendor_app/models/business_inventory.dart';
 import 'package:vendor_app/models/store.dart';
 import 'package:vendor_app/providers/business_inventory_provider.dart' hide businessInventoryServiceProvider;
 import 'package:vendor_app/providers/service_providers.dart';
+import 'package:vendor_app/providers/business_context_provider.dart';
 import 'package:vendor_app/services/inventory_allocation_service.dart';
 import 'package:vendor_app/services/store_inventory_service.dart';
 import 'package:vendor_app/screens/inventory/store_inventory_detail_screen.dart';
@@ -753,6 +754,12 @@ Future<void> _performAllocation(BuildContext context, WidgetRef ref,
     // Get allocation service
     final allocationService = ref.read(inventoryAllocationServiceProvider);
 
+    // Get business context for required fields
+    final business = ref.read(businessContextProvider);
+    if (business == null) {
+      throw Exception('No business context available');
+    }
+
     // Validate business context
     if (businessInventory.businessId.isEmpty) {
       throw Exception('Invalid business context');
@@ -796,6 +803,8 @@ Future<void> _performAllocation(BuildContext context, WidgetRef ref,
     // Perform allocation with timeout
     final result = await allocationService.allocateInventoryToStore(
       businessId: businessInventory.businessId,
+      businessName: business.name,
+      vendorId: business.ownerId,
       storeId: store.id,
       storeName: store.name,
       items: [allocationItem],
