@@ -41,3 +41,38 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+backend/.env
+backend/.env.local
+backend/.env.development
+backend/.env.production
+backend/.env.test
+
+# Backend specific files
+backend/node_modules/
+backend/dist/
+backend/.nyc_output/
+backend/coverage/
+backend/logs/
+backend/*.log
+backend/.firebase/
+backend/.gcloudignore
+
+# Google Cloud credentials
+**/service-account-key.json
+**/google-cloud-key.json
+**/*-credentials.json
+
+# IDE and editor files
+.vscode/settings.json
+.vscode/launch.json
+.vscode/extensions.json
+*.swp
+*.swo
+*~
