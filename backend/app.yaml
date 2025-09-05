@@ -1,0 +1,32 @@
+name: seafrika-api
+runtime: nodejs20
+
+env_variables:
+  NODE_ENV: production
+  FIRESTORE_PROJECT_ID: your-project-id
+  JWT_SECRET: your-jwt-secret-key
+
+# Cloud Function configuration
+functions:
+  seafrikaApi:
+    entry_point: seafrikaApi
+    source: ./dist
+    runtime: nodejs20
+    memory: 256MB
+    timeout: 60s
+    
+# Build configuration
+build:
+  source: .
+  runtime: nodejs20
+  env:
+    - NODE_ENV=production
+
+# Resources
+resources:
+  cpu: 1
+  memory: 256Mi
+
+# Scaling
+min_instances: 0
+max_instances: 10
