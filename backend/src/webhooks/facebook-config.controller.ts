@@ -583,42 +583,48 @@ export class FacebookConfigController {
         status: baseUrl.startsWith('https://'),
         requirement: 'App must be served over HTTPS',
         current_value: baseUrl,
-        is_required: true
+        is_required: true,
+        manual_step: false
       },
       
       oauth_redirect_uri: {
         status: true, // We have this configured
         requirement: 'Valid OAuth Redirect URI configured',
         current_value: `${baseUrl}/api/config/facebook/instagram/oauth/redirect`,
-        is_required: true
+        is_required: true,
+        manual_step: false
       },
       
       deauthorize_callback: {
         status: true, // We have this configured
         requirement: 'Deauthorize Callback URL configured',
         current_value: `${baseUrl}/api/config/facebook/instagram/deauthorize`,
-        is_required: true
+        is_required: true,
+        manual_step: false
       },
       
       data_deletion_request: {
         status: true, // We have this configured
         requirement: 'Data Deletion Request URL configured',
         current_value: `${baseUrl}/api/config/facebook/instagram/data-deletion`,
-        is_required: true
+        is_required: true,
+        manual_step: false
       },
       
       webhook_verification: {
         status: !!process.env.INSTAGRAM_VERIFY_TOKEN,
         requirement: 'Webhook verification token configured',
         current_value: process.env.INSTAGRAM_VERIFY_TOKEN ? 'Configured' : 'Missing',
-        is_required: true
+        is_required: true,
+        manual_step: false
       },
       
       app_credentials: {
         status: !!(process.env.INSTAGRAM_APP_ID && process.env.INSTAGRAM_APP_SECRET),
         requirement: 'Instagram App ID and Secret configured',
         current_value: process.env.INSTAGRAM_APP_ID ? 'Configured' : 'Missing',
-        is_required: true
+        is_required: true,
+        manual_step: false
       },
       
       // Privacy & Policy Requirements
@@ -659,7 +665,8 @@ export class FacebookConfigController {
         status: true, // Our endpoints are configured
         requirement: 'Complete OAuth flow implementation',
         current_value: 'Implemented with redirect handling',
-        is_required: true
+        is_required: true,
+        manual_step: false
       },
       
       permission_justification: {
@@ -703,7 +710,7 @@ export class FacebookConfigController {
         item: key,
         requirement: check.requirement,
         priority: check.is_required ? 'HIGH' : 'MEDIUM',
-        manual_step: check.manual_step || false,
+        manual_step: (check as any).manual_step || false,
         current_value: check.current_value
       }));
     

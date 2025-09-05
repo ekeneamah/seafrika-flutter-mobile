@@ -68,6 +68,8 @@ backend/.gcloudignore
 **/service-account-key.json
 **/google-cloud-key.json
 **/*-credentials.json
+**/sme-afrika-firebase-adminsdk-*.json
+backend/sme-afrika-firebase-adminsdk-fbsvc-347b34067c.json
 
 # IDE and editor files
 .vscode/settings.json

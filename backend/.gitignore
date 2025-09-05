@@ -105,6 +105,8 @@ Thumbs.db
 service-account-key.json
 google-cloud-key.json
 *-credentials.json
+*-adminsdk-*.json
+*firebase-adminsdk*.json
 
 # Firebase
 .firebase/
