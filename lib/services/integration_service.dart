@@ -176,7 +176,7 @@ class IntegrationService {
       };
 
       final docRef = await CollectionReferences
-          .integrationsForBusiness(_businessId)
+          .integrations
           .add(integrationData);
 
       // Fetch the created integration
@@ -209,7 +209,7 @@ class IntegrationService {
 
       // Update last sync time
       await CollectionReferences
-          .integrationsForBusiness(_businessId)
+          .integrations
           .doc(integrationId)
           .update({
             'lastSyncAt': FieldValue.serverTimestamp(),

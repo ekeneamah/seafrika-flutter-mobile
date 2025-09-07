@@ -3,9 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vendor_app/config/theme.dart';
 import 'package:vendor_app/models/integration.dart';
 import 'package:vendor_app/providers/service_providers.dart';
-import 'package:vendor_app/services/integration_service.dart';
-import 'package:vendor_app/widgets/error_view.dart';
-import 'package:vendor_app/widgets/loading_view.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -71,7 +68,7 @@ class _InstagramIntegrationScreenState
       final response = await http.get(
         Uri.parse('https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/config/facebook/instagram/profile'),
         headers: {
-          'Authorization': 'Bearer ${_currentIntegration!.settings.credentials['access_token']}',
+          'Authorization': 'Bearer ${_currentIntegration!.credentials?['access_token']}',
         },
       );
 
@@ -241,11 +238,26 @@ class _InstagramIntegrationScreenState
         elevation: 0,
       ),
       body: _isLoading
-          ? const LoadingView()
+          ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? ErrorView(
-                  message: _error!,
-                  onRetry: _checkExistingIntegration,
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+                      const SizedBox(height: 16),
+                      Text(
+                        _error!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _checkExistingIntegration,
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
                 )
               : _buildContent(),
     );
@@ -593,9 +605,9 @@ class _InstagramIntegrationScreenState
       margin: const EdgeInsets.only(top: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.divider),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -672,9 +684,9 @@ class _InstagramIntegrationScreenState
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.divider),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -739,9 +751,9 @@ class _InstagramIntegrationScreenState
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.divider),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

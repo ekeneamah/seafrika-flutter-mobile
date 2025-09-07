@@ -8,6 +8,7 @@ class Integration {
   final String status;
   final DateTime createdAt;
   final IntegrationSettings settings;
+  final Map<String, dynamic>? credentials;
 
   Integration({
     required this.id,
@@ -17,6 +18,7 @@ class Integration {
     required this.status,
     required this.createdAt,
     required this.settings,
+    this.credentials,
   });
 
   factory Integration.fromMap(Map<String, dynamic> map) {
@@ -29,6 +31,7 @@ class Integration {
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       settings:
           IntegrationSettings.fromMap(map['settings'] as Map<String, dynamic>),
+      credentials: map['credentials'] as Map<String, dynamic>?,
     );
   }
 
@@ -41,6 +44,7 @@ class Integration {
       'status': status,
       'createdAt': createdAt,
       'settings': settings.toMap(),
+      'credentials': credentials,
     };
   }
 }
