@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vendor_app/providers/service_providers.dart';
+import 'package:vendor_app/providers/business_context_provider.dart';
 import 'package:vendor_app/services/integration_service.dart';
 import 'package:vendor_app/widgets/error_view.dart' as error;
 import 'package:vendor_app/widgets/loading_view.dart';
+import 'package:vendor_app/widgets/integration_app_bar.dart';
 
 class AddIntegrationScreen extends ConsumerStatefulWidget {
   const AddIntegrationScreen({super.key});
@@ -19,6 +21,15 @@ class _AddIntegrationScreenState extends ConsumerState<AddIntegrationScreen> {
   String? _selectedPlatform;
   String _selectedCategory = 'ecommerce';
   final Map<String, TextEditingController> _controllers = {};
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  final Map<String, bool> _expandedCategories = {
+    'social': false,
+    'ecommerce': false,
+    'marketplace': false,
+    'payment': false,
+    'reviews': false,
+  };
 
   final Map<String, List<Map<String, dynamic>>> _platformsByCategory = {
     'ecommerce': [
@@ -227,6 +238,7 @@ class _AddIntegrationScreenState extends ConsumerState<AddIntegrationScreen> {
     for (final controller in _controllers.values) {
       controller.dispose();
     }
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -489,6 +501,9 @@ class _AddIntegrationScreenState extends ConsumerState<AddIntegrationScreen> {
 
     try {
       final integrationService = ref.read(integrationServiceProvider);
+      if (integrationService == null) {
+        throw Exception('No business selected');
+      }
       final credentials = {
         for (var entry in _controllers.entries) entry.key: entry.value.text,
       };
@@ -533,200 +548,546 @@ class _AddIntegrationScreenState extends ConsumerState<AddIntegrationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final businessId = ref.watch(selectedBusinessIdProvider);
+    
+    // Show error if no business is selected
+    if (businessId == null) {
+      return Scaffold(
+        appBar: IntegrationAppBar(
+          title: 'Add Integration',
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.business_outlined, size: 64, color: Colors.grey[400]),
+              const SizedBox(height: 16),
+              Text(
+                'No Business Selected',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[700],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Please select a business to add integrations',
+                style: TextStyle(color: Colors.grey[600]),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Go Back'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Add Integration'),
+      appBar: IntegrationAppBar(
+        title: 'Add Integration',
       ),
-      body: _isLoading
-          ? const LoadingView()
-          : _error != null
-              ? error.ErrorView(
-                  message: _error!,
-                  onRetry: () {
-                    setState(() => _error = null);
-                  },
-                )
-              : Form(
-                  key: _formKey,
-                  child: ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Platform Category',
-                                style: Theme.of(context).textTheme.titleLarge,
-                              ),
-                              const SizedBox(height: 16),
-                              SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                child: Row(
-                                  children: _platformsByCategory.keys.map((category) {
-                                    final isSelected = category == _selectedCategory;
-                                    return Padding(
-                                      padding: const EdgeInsets.only(right: 8),
-                                      child: FilterChip(
-                                        label: Text(_getCategoryDisplayName(category)),
-                                        selected: isSelected,
-                                        onSelected: (selected) {
-                                          if (selected) {
-                                            setState(() {
-                                              _selectedCategory = category;
-                                              _selectedPlatform = null; // Reset platform selection
-                                              _controllers.clear(); // Clear form controllers
-                                            });
-                                          }
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header Section
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  offset: const Offset(0, 2),
+                  blurRadius: 4,
+                  color: Colors.black.withOpacity(0.1),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Connect Your Platforms',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Integrate your business with popular platforms to manage everything in one place',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Content Section
+          Expanded(
+            child: _isLoading
+                ? const LoadingView()
+                : _error != null
+                    ? error.ErrorView(
+                        message: _error!,
+                        onRetry: () {
+                          setState(() => _error = null);
+                        },
+                      )
+                    : Column(
+                        children: [
+                          // Search Bar
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            child: TextField(
+                              controller: _searchController,
+                              decoration: InputDecoration(
+                                hintText: 'Search integrations...',
+                                prefixIcon: const Icon(Icons.search),
+                                suffixIcon: _searchQuery.isNotEmpty
+                                    ? IconButton(
+                                        icon: const Icon(Icons.clear),
+                                        onPressed: () {
+                                          _searchController.clear();
+                                          setState(() {
+                                            _searchQuery = '';
+                                          });
                                         },
-                                        selectedColor: Theme.of(context).primaryColor.withOpacity(0.2),
-                                        checkmarkColor: Theme.of(context).primaryColor,
-                                      ),
-                                    );
+                                      )
+                                    : null,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                filled: true,
+                                fillColor: Colors.grey[50],
+                              ),
+                              onChanged: (value) {
+                                setState(() {
+                                  _searchQuery = value;
+                                });
+                              },
+                            ),
+                          ),
+
+                          // Category Accordions
+                          Expanded(
+                            child: SingleChildScrollView(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: Column(
+                                children: [
+                                  // Build accordion for each category
+                                  ..._platformsByCategory.keys.map((category) {
+                                    final platforms = _getCategoryPlatforms(category);
+                                    if (platforms.isEmpty && _searchQuery.isNotEmpty) {
+                                      return const SizedBox.shrink();
+                                    }
+                                    
+                                    return _buildCategoryAccordion(category, platforms);
                                   }).toList(),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                _getCategoryDisplayName(_selectedCategory),
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              const SizedBox(height: 8),
-                              DropdownButtonFormField<String>(
-                                value: _selectedPlatform,
-                                decoration: const InputDecoration(
-                                  labelText: 'Select Platform',
-                                  border: OutlineInputBorder(),
-                                ),
-                                items: _getCurrentCategoryPlatforms().map((platform) {
-                                  return DropdownMenuItem<String>(
-                                    value: platform['id'] as String,
-                                    child: Row(
+                                  
+                                  const SizedBox(height: 24),
+                                  
+                                  // Help Section
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue.shade50,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: Colors.blue.shade200),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Container(
-                                          width: 24,
-                                          height: 24,
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            color: Colors.grey.shade200,
-                                          ),
-                                          child: Icon(
-                                            _getPlatformIcon(platform['id']),
-                                            size: 16,
-                                            color: Colors.grey.shade600,
-                                          ),
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.info_outline,
+                                              color: Colors.blue.shade700,
+                                              size: 20,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              'Need Help?',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.blue.shade700,
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text(
-                                                platform['name'],
-                                                style: const TextStyle(fontWeight: FontWeight.w500),
-                                              ),
-                                              Text(
-                                                platform['description'],
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: Colors.grey.shade600,
-                                                ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ],
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'Each platform requires specific credentials. Click on any platform to see the required information and setup instructions.',
+                                          style: TextStyle(
+                                            color: Colors.blue.shade600,
+                                            fontSize: 13,
                                           ),
                                         ),
                                       ],
                                     ),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedPlatform = value;
-                                    if (value != null) {
-                                      // Handle Instagram specially
-                                      if (value == 'instagram') {
-                                        // Navigate to Instagram integration screen
-                                        Navigator.pushReplacementNamed(
-                                          context,
-                                          '/integrations/instagram',
-                                        );
-                                        return;
-                                      }
-                                      _initializeControllers(value);
-                                    }
-                                  });
-                                },
-                                validator: (value) {
-                                  if (value == null) {
-                                    return 'Please select a platform';
-                                  }
-                                  return null;
-                                },
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      if (_selectedPlatform != null) ...[
-                        const SizedBox(height: 16),
-                        Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Platform Credentials',
-                                  style: Theme.of(context).textTheme.titleLarge,
-                                ),
-                                const SizedBox(height: 16),
-                                ..._getAllPlatforms()
-                                    .firstWhere((p) =>
-                                        p['id'] == _selectedPlatform)['fields']
-                                    .map<Widget>((field) {
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 16),
-                                    child: TextFormField(
-                                      controller: _controllers[field],
-                                      decoration: InputDecoration(
-                                        labelText: _getFieldDisplayName(field),
-                                        hintText: _getFieldHint(field),
-                                        border: const OutlineInputBorder(),
-                                        helperText: _getFieldHelper(field, _selectedPlatform!),
-                                        helperMaxLines: 2,
-                                      ),
-                                      obscureText: _isSecureField(field),
-                                      keyboardType: _getKeyboardType(field),
-                                      validator: (value) {
-                                        if (value?.isEmpty ?? true) {
-                                          return 'This field is required';
-                                        }
-                                        return _validateField(field, value!);
-                                      },
-                                    ),
-                                  );
-                                }).toList(),
-                              ],
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton(
-                          onPressed: _connectPlatform,
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.all(16),
+                        ],
+                      ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Get all platforms from all categories
+  List<Map<String, dynamic>> get _allPlatforms {
+    return _platformsByCategory.values
+        .expand((platforms) => platforms)
+        .toList();
+  }
+
+  // Get filtered platforms based on search query
+  List<Map<String, dynamic>> _getFilteredPlatforms(List<Map<String, dynamic>> platforms) {
+    if (_searchQuery.isEmpty) return platforms;
+    
+    return platforms.where((platform) {
+      final name = platform['name'].toString().toLowerCase();
+      final description = platform['description'].toString().toLowerCase();
+      final query = _searchQuery.toLowerCase();
+      
+      return name.contains(query) || description.contains(query);
+    }).toList();
+  }
+
+  // Get platforms for a specific category with search filter
+  List<Map<String, dynamic>> _getCategoryPlatforms(String category) {
+    final platforms = _platformsByCategory[category] ?? [];
+    return _getFilteredPlatforms(platforms);
+  }
+
+  Widget _buildCategoryAccordion(String category, List<Map<String, dynamic>> platforms) {
+    final isExpanded = _expandedCategories[category] ?? false;
+    final categoryName = _getCategoryDisplayName(category);
+    final categoryIcon = _getCategoryIcon(category);
+    final categoryColor = _getCategoryColor(category);
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          // Category Header
+          InkWell(
+            onTap: () {
+              setState(() {
+                _expandedCategories[category] = !isExpanded;
+              });
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: categoryColor.withOpacity(0.1),
+                borderRadius: isExpanded 
+                    ? const BorderRadius.only(
+                        topLeft: Radius.circular(12),
+                        topRight: Radius.circular(12),
+                      )
+                    : BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: categoryColor.withOpacity(0.2),
+                    ),
+                    child: Icon(
+                      categoryIcon,
+                      color: categoryColor,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          categoryName,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
                           ),
-                          child: const Text('Connect Platform'),
+                        ),
+                        Text(
+                          '${platforms.length} platform${platforms.length != 1 ? 's' : ''}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
                         ),
                       ],
-                    ],
+                    ),
+                  ),
+                  Icon(
+                    isExpanded ? Icons.expand_less : Icons.expand_more,
+                    color: categoryColor,
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Platform Grid (when expanded)
+          if (isExpanded) ...[
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 0.75, // Adjusted for better text visibility
+                ),
+                itemCount: platforms.length,
+                itemBuilder: (context, index) {
+                  return _buildIntegrationCard(platforms[index]);
+                },
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  IconData _getCategoryIcon(String category) {
+    switch (category) {
+      case 'social':
+        return Icons.share;
+      case 'ecommerce':
+        return Icons.store;
+      case 'marketplace':
+        return Icons.shopping_cart;
+      case 'payment':
+        return Icons.payment;
+      case 'reviews':
+        return Icons.star_rate;
+      default:
+        return Icons.category;
+    }
+  }
+
+  Color _getCategoryColor(String category) {
+    switch (category) {
+      case 'social':
+        return const Color(0xFF1877F2); // Facebook blue
+      case 'ecommerce':
+        return const Color(0xFF96BF47); // Shopify green
+      case 'marketplace':
+        return const Color(0xFFFF9900); // Amazon orange
+      case 'payment':
+        return const Color(0xFF635BFF); // Stripe purple
+      case 'reviews':
+        return const Color(0xFF4285F4); // Google blue
+      default:
+        return const Color(0xFF6366F1);
+    }
+  }
+
+  Widget _buildIntegrationCard(Map<String, dynamic> platform) {
+    final String platformId = platform['id'];
+    final String platformName = platform['name'];
+    final String description = platform['description'];
+    
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: InkWell(
+        onTap: () => _navigateToIntegrationScreen(platformId, platformName),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            children: [
+              // Platform Icon
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _getPlatformColor(platformId).withOpacity(0.1),
+                  border: Border.all(
+                    color: _getPlatformColor(platformId).withOpacity(0.3),
+                    width: 2,
                   ),
                 ),
+                child: Icon(
+                  _getPlatformIcon(platformId),
+                  size: 24,
+                  color: _getPlatformColor(platformId),
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Platform Name
+              Text(
+                platformName,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 6),
+              // Platform Description
+              Expanded(
+                child: Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey[600],
+                    height: 1.2,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 4,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(height: 4),
+              // Status indicator or small icon
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _getPlatformColor(platformId).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Connect',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: _getPlatformColor(platformId),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
+  }
+
+  void _navigateToIntegrationScreen(String platformId, String platformName) {
+    // Navigate to specific integration screens
+    switch (platformId) {
+      case 'instagram':
+        Navigator.pushNamed(context, '/integrations/instagram');
+        break;
+      case 'facebook':
+        // You can add Facebook integration screen here
+        _showComingSoonDialog(platformName);
+        break;
+      case 'shopify':
+      case 'woocommerce':
+      case 'magento':
+      case 'amazon':
+      case 'ebay':
+      case 'stripe':
+      case 'paypal':
+      case 'square':
+      default:
+        // For now, show coming soon for other platforms
+        _showComingSoonDialog(platformName);
+        break;
+    }
+  }
+
+  void _showComingSoonDialog(String platformName) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('$platformName Integration'),
+        content: Text(
+          '$platformName integration is coming soon. We\'re working on bringing you the best integration experience.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getPlatformColor(String platformId) {
+    switch (platformId) {
+      case 'instagram':
+        return const Color(0xFFE4405F);
+      case 'facebook':
+        return const Color(0xFF1877F2);
+      case 'twitter':
+        return const Color(0xFF1DA1F2);
+      case 'tiktok':
+        return const Color(0xFF000000);
+      case 'whatsapp_business':
+        return const Color(0xFF25D366);
+      case 'telegram':
+        return const Color(0xFF0088CC);
+      case 'shopify':
+        return const Color(0xFF96BF47);
+      case 'woocommerce':
+        return const Color(0xFF96588A);
+      case 'magento':
+        return const Color(0xFFEE672F);
+      case 'amazon':
+        return const Color(0xFFFF9900);
+      case 'ebay':
+        return const Color(0xFF0064D2);
+      case 'stripe':
+        return const Color(0xFF635BFF);
+      case 'paypal':
+        return const Color(0xFF00457C);
+      case 'square':
+        return const Color(0xFF3E4348);
+      case 'razorpay':
+        return const Color(0xFF528FF0);
+      case 'paystack':
+        return const Color(0xFF00C3F7);
+      case 'flutterwave':
+        return const Color(0xFFFFB000);
+      case 'google_business':
+      case 'google_reviews':
+        return const Color(0xFF4285F4);
+      case 'trustpilot':
+        return const Color(0xFF00B67A);
+      case 'yelp':
+        return const Color(0xFFD32323);
+      case 'tripadvisor':
+        return const Color(0xFF00AF87);
+      default:
+        return const Color(0xFF6366F1);
+    }
   }
 }

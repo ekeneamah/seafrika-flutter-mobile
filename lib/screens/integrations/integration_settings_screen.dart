@@ -24,7 +24,6 @@ class _IntegrationSettingsScreenState extends ConsumerState<IntegrationSettingsS
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = true;
   String? _error;
-  Integration? _integration;
   bool _autoSync = false;
   int _syncInterval = 30;
   bool _syncInventory = true;
@@ -45,11 +44,13 @@ class _IntegrationSettingsScreenState extends ConsumerState<IntegrationSettingsS
 
     try {
       final integrationService = ref.read(integrationServiceProvider);
+      if (integrationService == null) {
+        throw Exception('No business selected');
+      }
       final integration =
           await integrationService.fetchIntegration(widget.integrationId);
       if (mounted) {
         setState(() {
-          _integration = integration;
           _autoSync = integration.settings.autoSync;
           _syncInterval = integration.settings.syncInterval;
           _syncInventory = integration.settings.syncInventory;
@@ -82,6 +83,9 @@ class _IntegrationSettingsScreenState extends ConsumerState<IntegrationSettingsS
 
     try {
       final integrationService = ref.read(integrationServiceProvider);
+      if (integrationService == null) {
+        throw Exception('No business selected');
+      }
       await integrationService.updateIntegrationSettings(
         integrationId: widget.integrationId,
         settings: IntegrationSettings(

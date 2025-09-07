@@ -5,6 +5,7 @@ import { ProductsModule } from './products/products.module';
 import { FirebaseModule } from './firebase/firebase.module';
 import { FirestoreModule } from './firestore/firestore.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
+import { PrivacyModule } from './privacy/privacy.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import configuration from './config/configuration';
@@ -21,6 +22,7 @@ import configuration from './config/configuration';
     AuthModule,
     ProductsModule,
     WebhooksModule,
+    PrivacyModule,
   ],
   controllers: [AppController],
   providers: [AppService],

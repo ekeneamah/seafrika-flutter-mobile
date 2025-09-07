@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vendor_app/models/integration.dart';
 import 'package:vendor_app/providers/service_providers.dart';
+import 'package:vendor_app/providers/business_context_provider.dart';
 import 'package:vendor_app/services/integration_service.dart';
 import 'package:vendor_app/services/navigation_service.dart';
 import 'package:vendor_app/widgets/error_view.dart' as error;
 import 'package:vendor_app/widgets/empty_view.dart';
+import 'package:vendor_app/widgets/integration_app_bar.dart';
+import 'package:vendor_app/config/routes.dart';
 
 class IntegrationManagementScreen extends ConsumerStatefulWidget {
   const IntegrationManagementScreen({super.key});
@@ -35,6 +38,9 @@ class _IntegrationManagementScreenState
 
     try {
       final integrationService = ref.read(integrationServiceProvider);
+      if (integrationService == null) {
+        throw Exception('No business selected');
+      }
       final integrations = await integrationService.fetchIntegrations();
       if (mounted) {
         setState(() {
@@ -84,6 +90,9 @@ class _IntegrationManagementScreenState
 
       try {
         final integrationService = ref.read(integrationServiceProvider);
+        if (integrationService == null) {
+          throw Exception('No business selected');
+        }
         await integrationService.disconnectIntegration(integration.id);
         await _loadIntegrations();
 
@@ -124,6 +133,9 @@ class _IntegrationManagementScreenState
 
     try {
       final integrationService = ref.read(integrationServiceProvider);
+      if (integrationService == null) {
+        throw Exception('No business selected');
+      }
       await integrationService.syncIntegration(integration.id);
       await _loadIntegrations();
 
@@ -198,6 +210,9 @@ class _IntegrationManagementScreenState
 
       try {
         final integrationService = ref.read(integrationServiceProvider);
+        if (integrationService == null) {
+          throw Exception('No business selected');
+        }
         await integrationService.deleteIntegration(integration.id);
         await _loadIntegrations();
 
@@ -239,9 +254,48 @@ class _IntegrationManagementScreenState
 
   @override
   Widget build(BuildContext context) {
+    final businessId = ref.watch(selectedBusinessIdProvider);
+    
+    // Show error if no business is selected
+    if (businessId == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Integrations'),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.business_outlined, size: 64, color: Colors.grey[400]),
+              const SizedBox(height: 16),
+              Text(
+                'No Business Selected',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[700],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Please select a business to manage integrations',
+                style: TextStyle(color: Colors.grey[600]),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Go Back'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Integrations'),
+      appBar: IntegrationAppBar(
+        title: 'Integrations',
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -286,27 +340,27 @@ class _IntegrationManagementScreenState
                               if (integration.platformId == 'instagram') {
                                 Navigator.pushNamed(
                                   context,
-                                  '/integrations/instagram',
+                                  AppRoutes.instagramIntegration,
                                 );
                               }
                             },
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                if (integration.status == 'connected')
+                                if (integration.status == 'connected' || integration.status == 'active')
                                   IconButton(
                                     icon: const Icon(Icons.sync),
                                     tooltip: 'Sync Now',
                                     onPressed: () => _syncIntegration(integration),
                                   ),
-                                if (integration.platformId == 'instagram' && integration.status == 'connected')
+                                if (integration.platformId == 'instagram' && (integration.status == 'connected' || integration.status == 'active'))
                                   IconButton(
                                     icon: const Icon(Icons.analytics),
                                     tooltip: 'Analytics',
                                     onPressed: () {
                                       Navigator.pushNamed(
                                         context,
-                                        '/integrations/instagram/analytics',
+                                        AppRoutes.instagramAnalytics,
                                         arguments: {'integrationId': integration.id},
                                       );
                                     },
@@ -320,7 +374,7 @@ class _IntegrationManagementScreenState
                                             integration.id);
                                   },
                                 ),
-                                if (integration.status == 'connected')
+                                if (integration.status == 'connected' || integration.status == 'active')
                                   IconButton(
                                     icon: const Icon(Icons.link_off),
                                     tooltip: 'Disconnect',
@@ -352,6 +406,7 @@ class _IntegrationManagementScreenState
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'connected':
+      case 'active':
         return Colors.green;
       case 'disconnected':
         return Colors.red;

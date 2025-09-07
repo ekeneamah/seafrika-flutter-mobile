@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vendor_app/config/theme.dart';
 import 'package:vendor_app/providers/service_providers.dart';
+import 'package:vendor_app/widgets/integration_app_bar.dart';
 
 class InstagramAnalyticsScreen extends ConsumerStatefulWidget {
   final String integrationId;
@@ -36,6 +37,9 @@ class _InstagramAnalyticsScreenState
 
     try {
       final integrationService = ref.read(integrationServiceProvider);
+      if (integrationService == null) {
+        throw Exception('No business selected');
+      }
       final analytics = await integrationService.getInstagramAnalytics(widget.integrationId);
       
       if (mounted) {
@@ -57,11 +61,8 @@ class _InstagramAnalyticsScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Instagram Analytics'),
-        backgroundColor: AppTheme.primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
+      appBar: IntegrationAppBar(
+        title: 'Instagram Analytics',
         actions: [
           IconButton(
             onPressed: _loadAnalytics,

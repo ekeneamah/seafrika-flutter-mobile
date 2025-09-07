@@ -78,6 +78,9 @@ class _StoreEditScreenState extends ConsumerState<StoreEditScreen>
 
     try {
       final integrationService = ref.read(integrationServiceProvider);
+      if (integrationService == null) {
+        throw Exception('No business selected');
+      }
       final platforms = await integrationService.getSupportedPlatforms();
       
       setState(() {
@@ -878,6 +881,9 @@ class _StoreEditScreenState extends ConsumerState<StoreEditScreen>
   Future<bool> _checkIntegrationKeys(String platform) async {
     try {
       final integrationService = ref.read(integrationServiceProvider);
+      if (integrationService == null) {
+        return false; // No business selected, cannot check integration
+      }
       final hasIntegration = await integrationService.hasIntegrationForPlatform(platform);
       
       if (hasIntegration) {

@@ -117,9 +117,12 @@ class IntegrationService {
 
   /// Validates business ID is not empty
   void _validateBusinessId() {
+    print('🔍 DEBUG: Validating business ID: "$_businessId"');
     if (_businessId.isEmpty) {
+      print('❌ DEBUG: Business ID validation failed - empty business ID');
       throw IntegrationException('Business ID is required for integration operations', 'INVALID_BUSINESS_ID');
     }
+    print('✅ DEBUG: Business ID validation passed');
   }
 
   Future<List<Integration>> fetchIntegrations() async {
@@ -153,7 +156,14 @@ class IntegrationService {
     required Map<String, dynamic> profileData,
     int? expiresIn,
   }) async {
+    print('🏭 DEBUG: createInstagramIntegration called with:');
+    print('   - userId: $userId');
+    print('   - profileData keys: ${profileData.keys.toList()}');
+    print('   - expiresIn: $expiresIn');
+    print('   - businessId: $_businessId');
+    
     _validateBusinessId();
+    print('✅ DEBUG: Business ID validation passed');
 
     try {
       final integrationData = {
@@ -175,19 +185,27 @@ class IntegrationService {
         'syncStatus': 'pending',
       };
 
+      print('📦 DEBUG: Integration data prepared, adding to Firestore...');
       final docRef = await CollectionReferences
           .integrations
           .add(integrationData);
+
+      print('✅ DEBUG: Document added with ID: ${docRef.id}');
 
       // Fetch the created integration
       final doc = await docRef.get();
       final data = doc.data() as Map<String, dynamic>;
       data['id'] = doc.id;
       
-      return Integration.fromMap(data);
+      final integration = Integration.fromMap(data);
+      print('🎉 DEBUG: Integration created successfully: ${integration.id}');
+      
+      return integration;
     } on FirebaseException catch (e) {
+      print('❌ DEBUG: FirebaseException in createInstagramIntegration: ${e.message}');
       throw IntegrationException('Failed to create Instagram integration: ${e.message}', 'FIRESTORE_ERROR');
     } catch (e) {
+      print('❌ DEBUG: Unexpected error in createInstagramIntegration: $e');
       throw IntegrationException('Unexpected error while creating Instagram integration', 'UNKNOWN_ERROR');
     }
   }

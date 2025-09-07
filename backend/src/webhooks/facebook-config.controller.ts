@@ -4,6 +4,7 @@ import {
   Post,
   Query,
   Body,
+  Headers,
   HttpException,
   HttpStatus,
   Logger,
@@ -44,6 +45,7 @@ export class FacebookConfigController {
   async getInstagramAuthUrl(
     @Query('redirect_uri') redirectUri: string,
     @Query('state') state?: string,
+    @Headers('Business-ID') businessId?: string,
   ) {
     if (!redirectUri) {
       throw new HttpException(
@@ -53,15 +55,21 @@ export class FacebookConfigController {
     }
 
     try {
+      // Include business ID in state parameter if provided
+      const stateWithBusinessId = businessId 
+        ? `${state || 'auth'}_business_${businessId}`
+        : state;
+        
       const authUrl = this.facebookConfigService.generateInstagramAuthUrl(
         redirectUri,
-        state,
+        stateWithBusinessId,
       );
       
       return {
         auth_url: authUrl,
         redirect_uri: redirectUri,
-        state: state || null,
+        state: stateWithBusinessId || null,
+        business_id: businessId || null,
       };
     } catch (error) {
       this.logger.error('Failed to generate auth URL:', error);
@@ -108,6 +116,15 @@ export class FacebookConfigController {
 
     // If there's a code, process the authentication
     if (code) {
+      // Extract business ID from state parameter first
+      let businessId = null;
+      if (state && state.includes('_business_')) {
+        const parts = state.split('_business_');
+        if (parts.length > 1) {
+          businessId = parts[1];
+        }
+      }
+
       try {
         // Use the current URL as redirect_uri for token exchange
         const baseUrl = process.env.BASE_URL || 'https://seafrikaapi-u53tcgosiq-uc.a.run.app';
@@ -116,6 +133,7 @@ export class FacebookConfigController {
         const tokenData = await this.facebookConfigService.exchangeCodeForToken(
           code,
           redirectUri,
+          businessId, // Pass business ID for logging
         );
 
         // Get long-lived token
@@ -123,9 +141,20 @@ export class FacebookConfigController {
           tokenData.access_token,
         );
 
+        // Store credentials if business ID is available
+        if (businessId) {
+          await this.facebookConfigService.storeInstagramCredentials(businessId, {
+            access_token: longLivedToken.access_token,
+            user_id: tokenData.user_id,
+            expires_in: longLivedToken.expires_in,
+          });
+          this.logger.log(`Instagram credentials stored for business: ${businessId}`);
+        }
+
         // Store the token securely (you might want to save this in your database)
         this.logger.log('Instagram authentication successful', { 
           userId: tokenData.user_id,
+          businessId: businessId,
           hasLongLivedToken: !!longLivedToken.access_token 
         });
 
@@ -143,10 +172,23 @@ export class FacebookConfigController {
         };
       } catch (error) {
         this.logger.error('Failed to process Instagram OAuth code:', error);
+        
+        // Log detailed error for debugging
+        if (businessId) {
+          await this.facebookConfigService.logInstagramActivity(businessId, 'oauth_callback_error', {
+            error: error.message,
+            error_stack: error.stack,
+            code_provided: !!code,
+            state_provided: !!state,
+            redirect_uri_used: `${process.env.BASE_URL || 'https://seafrikaapi-u53tcgosiq-uc.a.run.app'}/api/config/facebook/instagram/oauth/redirect`,
+          });
+        }
+        
         return {
           success: false,
           error: 'token_exchange_failed',
           message: 'Failed to exchange authorization code for access token',
+          details: process.env.NODE_ENV === 'development' ? error.message : undefined,
           redirect_to: process.env.FRONTEND_URL || 'https://your-app.com/auth/error'
         };
       }
@@ -432,6 +474,29 @@ export class FacebookConfigController {
       this.logger.error('Failed to get Instagram profile:', error);
       throw new HttpException(
         'Failed to fetch Instagram profile',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  @Get('instagram/business-profile')
+  @ApiOperation({ summary: 'Get Instagram profile for business using stored credentials' })
+  @ApiResponse({ status: 200, description: 'Instagram profile retrieved' })
+  async getInstagramBusinessProfile(@Headers('Business-ID') businessId: string) {
+    if (!businessId) {
+      throw new HttpException(
+        'Business-ID header is required',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    try {
+      const profile = await this.facebookConfigService.getInstagramBusinessProfile(businessId);
+      return profile;
+    } catch (error) {
+      this.logger.error('Failed to get Instagram business profile:', error);
+      throw new HttpException(
+        'Failed to fetch Instagram business profile',
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -801,5 +866,37 @@ export class FacebookConfigController {
         setup_guide: `${baseUrl}/api/config/facebook/setup-guide`
       }
     };
+  }
+
+  @Get('instagram/integration-logs')
+  @ApiOperation({ summary: 'Get Instagram integration logs for debugging' })
+  @ApiResponse({ status: 200, description: 'Integration logs retrieved' })
+  async getInstagramIntegrationLogs(
+    @Headers('Business-ID') businessId?: string,
+    @Headers('User-ID') userId?: string,
+  ) {
+    try {
+      const logs = await this.facebookConfigService.getInstagramIntegrationLogs(businessId, userId);
+      return {
+        success: true,
+        business_id: businessId || null,
+        user_id: userId || null,
+        timestamp: new Date().toISOString(),
+        logs: logs,
+        summary: {
+          total_logs: logs.length,
+          has_credentials: logs.some(log => log.type === 'credentials_stored'),
+          has_oauth_completion: logs.some(log => log.type === 'oauth_completed'),
+          has_profile_fetch: logs.some(log => log.type === 'profile_fetched'),
+          latest_activity: logs.length > 0 ? logs[0].timestamp : null,
+        }
+      };
+    } catch (error) {
+      this.logger.error('Failed to get Instagram integration logs:', error);
+      throw new HttpException(
+        'Failed to fetch integration logs',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }

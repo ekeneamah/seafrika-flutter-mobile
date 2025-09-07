@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vendor_app/config/theme.dart';
 import 'package:vendor_app/providers/service_providers.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:vendor_app/widgets/integration_app_bar.dart';
 
 class InstagramPostsScreen extends ConsumerStatefulWidget {
   final String integrationId;
@@ -36,6 +37,9 @@ class _InstagramPostsScreenState extends ConsumerState<InstagramPostsScreen> {
 
     try {
       final integrationService = ref.read(integrationServiceProvider);
+      if (integrationService == null) {
+        throw Exception('No business selected');
+      }
       final posts = await integrationService.getInstagramMedia(widget.integrationId);
       
       if (mounted) {
@@ -57,11 +61,8 @@ class _InstagramPostsScreenState extends ConsumerState<InstagramPostsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Instagram Posts'),
-        backgroundColor: AppTheme.primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
+      appBar: IntegrationAppBar(
+        title: 'Instagram Posts',
         actions: [
           IconButton(
             onPressed: _loadPosts,

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vendor_app/config/theme.dart';
 import 'package:vendor_app/widgets/custom_text_field.dart';
-import 'package:vendor_app/services/integration_service.dart';
 import 'package:vendor_app/providers/service_providers.dart';
 
 class CreateStoreScreen extends ConsumerStatefulWidget {
@@ -62,6 +61,9 @@ class _CreateStoreScreenState extends ConsumerState<CreateStoreScreen>
 
     try {
       final integrationService = ref.read(integrationServiceProvider);
+      if (integrationService == null) {
+        throw Exception('No business selected');
+      }
       final platforms = await integrationService.getSupportedPlatforms();
       
       setState(() {

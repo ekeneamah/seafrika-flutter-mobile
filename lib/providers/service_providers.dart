@@ -246,10 +246,14 @@ final businessServiceProvider = Provider<BusinessService>((ref) {
   return BusinessService();
 });
 
-final integrationServiceProvider = Provider<IntegrationService>((ref) {
+final integrationServiceProvider = Provider<IntegrationService?>((ref) {
+  final businessId = ref.watch(selectedBusinessIdProvider);
+  if (businessId == null) {
+    return null; // Return null when no business is selected
+  }
   return IntegrationService(
     firestore: ref.watch(firebaseFirestoreProvider),
-    businessId: ref.watch(vendorIdSyncProvider), // Using vendorId as businessId for compatibility
+    businessId: businessId,
   );
 });
 
