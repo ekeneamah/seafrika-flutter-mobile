@@ -146,6 +146,165 @@ class IntegrationService {
     }
   }
 
+  /// Create Instagram integration after successful OAuth
+  Future<Integration> createInstagramIntegration({
+    required String accessToken,
+    required String userId,
+    required Map<String, dynamic> profileData,
+    int? expiresIn,
+  }) async {
+    _validateBusinessId();
+
+    try {
+      final integrationData = {
+        'platformId': 'instagram',
+        'platformName': 'Instagram Business',
+        'platformIcon': 'instagram',
+        'status': 'connected',
+        'createdAt': FieldValue.serverTimestamp(),
+        'settings': _createDefaultSettings('social').toMap(),
+        'credentials': {
+          'access_token': _encryptCredential(accessToken),
+          'user_id': userId,
+          'expires_in': expiresIn,
+          'created_at': DateTime.now().toIso8601String(),
+        },
+        'profile': profileData,
+        'businessId': _businessId,
+        'lastSyncAt': null,
+        'syncStatus': 'pending',
+      };
+
+      final docRef = await CollectionReferences
+          .integrationsForBusiness(_businessId)
+          .add(integrationData);
+
+      // Fetch the created integration
+      final doc = await docRef.get();
+      final data = doc.data() as Map<String, dynamic>;
+      data['id'] = doc.id;
+      
+      return Integration.fromMap(data);
+    } on FirebaseException catch (e) {
+      throw IntegrationException('Failed to create Instagram integration: ${e.message}', 'FIRESTORE_ERROR');
+    } catch (e) {
+      throw IntegrationException('Unexpected error while creating Instagram integration', 'UNKNOWN_ERROR');
+    }
+  }
+
+  /// Sync Instagram products
+  Future<Map<String, dynamic>> syncInstagramProducts(String integrationId) async {
+    _validateBusinessId();
+
+    try {
+      final integration = await fetchIntegration(integrationId);
+      
+      if (integration.platformId != 'instagram') {
+        throw IntegrationException('Integration is not an Instagram integration', 'INVALID_PLATFORM');
+      }
+
+      // Here you would implement the actual sync logic
+      // For now, we'll simulate the sync process
+      await Future.delayed(const Duration(seconds: 2));
+
+      // Update last sync time
+      await CollectionReferences
+          .integrationsForBusiness(_businessId)
+          .doc(integrationId)
+          .update({
+            'lastSyncAt': FieldValue.serverTimestamp(),
+            'syncStatus': 'completed',
+          });
+
+      return {
+        'success': true,
+        'syncedProducts': 0, // This would be the actual count
+        'errors': [],
+        'timestamp': DateTime.now().toIso8601String(),
+      };
+    } on IntegrationException {
+      rethrow;
+    } on FirebaseException catch (e) {
+      throw IntegrationException('Failed to sync Instagram products: ${e.message}', 'FIRESTORE_ERROR');
+    } catch (e) {
+      throw IntegrationException('Unexpected error during Instagram sync', 'UNKNOWN_ERROR');
+    }
+  }
+
+  /// Get Instagram analytics data
+  Future<Map<String, dynamic>> getInstagramAnalytics(String integrationId) async {
+    _validateBusinessId();
+
+    try {
+      final integration = await fetchIntegration(integrationId);
+      
+      if (integration.platformId != 'instagram') {
+        throw IntegrationException('Integration is not an Instagram integration', 'INVALID_PLATFORM');
+      }
+
+      // Here you would call the Instagram API to get analytics
+      // For now, we'll return mock data
+      return {
+        'followers_count': 1250,
+        'following_count': 180,
+        'media_count': 45,
+        'engagement_rate': 3.2,
+        'reach': 8500,
+        'impressions': 12300,
+        'profile_views': 890,
+        'website_clicks': 45,
+        'period': 'last_30_days',
+      };
+    } on IntegrationException {
+      rethrow;
+    } catch (e) {
+      throw IntegrationException('Failed to get Instagram analytics', 'UNKNOWN_ERROR');
+    }
+  }
+
+  /// Get Instagram posts/media
+  Future<List<Map<String, dynamic>>> getInstagramMedia(String integrationId) async {
+    _validateBusinessId();
+
+    try {
+      final integration = await fetchIntegration(integrationId);
+      
+      if (integration.platformId != 'instagram') {
+        throw IntegrationException('Integration is not an Instagram integration', 'INVALID_PLATFORM');
+      }
+
+      // Here you would call the Instagram API to get media
+      // For now, we'll return mock data
+      return [
+        {
+          'id': 'media_1',
+          'media_type': 'IMAGE',
+          'media_url': 'https://example.com/image1.jpg',
+          'caption': 'Check out our latest product!',
+          'timestamp': DateTime.now().subtract(const Duration(days: 1)).toIso8601String(),
+          'like_count': 45,
+          'comments_count': 8,
+          'permalink': 'https://instagram.com/p/xyz123',
+        },
+        {
+          'id': 'media_2',
+          'media_type': 'VIDEO',
+          'media_url': 'https://example.com/video1.mp4',
+          'thumbnail_url': 'https://example.com/thumb1.jpg',
+          'caption': 'Behind the scenes of our manufacturing process',
+          'timestamp': DateTime.now().subtract(const Duration(days: 3)).toIso8601String(),
+          'like_count': 78,
+          'comments_count': 12,
+          'permalink': 'https://instagram.com/p/abc456',
+        },
+      ];
+    } on IntegrationException {
+      rethrow;
+    } catch (e) {
+      throw IntegrationException('Failed to get Instagram media', 'UNKNOWN_ERROR');
+    }
+  }
+
   Future<Integration> fetchIntegration(String integrationId) async {
     _validateBusinessId();
     

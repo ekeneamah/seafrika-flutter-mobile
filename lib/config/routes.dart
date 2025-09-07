@@ -30,6 +30,9 @@ import 'package:vendor_app/screens/invoices/create_invoice_screen.dart';
 import 'package:vendor_app/screens/integrations/integration_management_screen.dart';
 import 'package:vendor_app/screens/integrations/add_integration_screen.dart';
 import 'package:vendor_app/screens/integrations/integration_settings_screen.dart';
+import 'package:vendor_app/screens/integrations/instagram_integration_screen.dart';
+import 'package:vendor_app/screens/integrations/instagram_analytics_screen.dart';
+import 'package:vendor_app/screens/integrations/instagram_posts_screen.dart';
 import 'package:vendor_app/screens/tasks/task_list_screen.dart';
 import 'package:vendor_app/screens/tasks/create_task_screen.dart';
 import 'package:vendor_app/screens/tasks/task_detail_screen.dart';
@@ -111,6 +114,9 @@ class AppRoutes {
   static const String integrationManagement = '/integrations';
   static const String addIntegration = '/integrations/add';
   static const String integrationSettings = '/integrations/settings';
+  static const String instagramIntegration = '/integrations/instagram';
+  static const String instagramAnalytics = '/integrations/instagram/analytics';
+  static const String instagramPosts = '/integrations/instagram/posts';
   static const String taskList = '/tasks';
   static const String createTask = '/create-task';
   static const String taskDetail = '/task-detail';
@@ -294,6 +300,24 @@ class AppRoutes {
         final args = settings.arguments as Map<String, dynamic>;
         return MaterialPageRoute(
           builder: (context) => IntegrationSettingsScreen(
+            integrationId: args['integrationId'],
+          ),
+        );
+      case instagramIntegration:
+        return MaterialPageRoute(
+          builder: (context) => const InstagramIntegrationScreen(),
+        );
+      case instagramAnalytics:
+        final args = settings.arguments as Map<String, dynamic>;
+        return MaterialPageRoute(
+          builder: (context) => InstagramAnalyticsScreen(
+            integrationId: args['integrationId'],
+          ),
+        );
+      case instagramPosts:
+        final args = settings.arguments as Map<String, dynamic>;
+        return MaterialPageRoute(
+          builder: (context) => InstagramPostsScreen(
             integrationId: args['integrationId'],
           ),
         );

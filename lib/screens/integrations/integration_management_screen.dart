@@ -281,6 +281,15 @@ class _IntegrationManagementScreenState
                                 color: _getStatusColor(integration.status),
                               ),
                             ),
+                            onTap: () {
+                              // Navigate to Instagram integration screen for Instagram
+                              if (integration.platformId == 'instagram') {
+                                Navigator.pushNamed(
+                                  context,
+                                  '/integrations/instagram',
+                                );
+                              }
+                            },
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -289,6 +298,18 @@ class _IntegrationManagementScreenState
                                     icon: const Icon(Icons.sync),
                                     tooltip: 'Sync Now',
                                     onPressed: () => _syncIntegration(integration),
+                                  ),
+                                if (integration.platformId == 'instagram' && integration.status == 'connected')
+                                  IconButton(
+                                    icon: const Icon(Icons.analytics),
+                                    tooltip: 'Analytics',
+                                    onPressed: () {
+                                      Navigator.pushNamed(
+                                        context,
+                                        '/integrations/instagram/analytics',
+                                        arguments: {'integrationId': integration.id},
+                                      );
+                                    },
                                   ),
                                 IconButton(
                                   icon: const Icon(Icons.settings),

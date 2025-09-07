@@ -648,6 +648,15 @@ class _AddIntegrationScreenState extends ConsumerState<AddIntegrationScreen> {
                                   setState(() {
                                     _selectedPlatform = value;
                                     if (value != null) {
+                                      // Handle Instagram specially
+                                      if (value == 'instagram') {
+                                        // Navigate to Instagram integration screen
+                                        Navigator.pushReplacementNamed(
+                                          context,
+                                          '/integrations/instagram',
+                                        );
+                                        return;
+                                      }
                                       _initializeControllers(value);
                                     }
                                   });
