@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:vendor_app/models/integration.dart';
 import 'package:crypto/crypto.dart';
 import 'package:vendor_app/config/collection_references.dart';
@@ -127,24 +128,28 @@ class IntegrationService {
 
   Future<List<Integration>> fetchIntegrations() async {
     _validateBusinessId();
-    
+    debugPrint('[IntegrationService] fetchIntegrations called for businessId=$_businessId');
     try {
-      final snapshot = await CollectionReferences
+      final query = CollectionReferences
           .integrationsForBusiness(_businessId)
-          .where('status', isNotEqualTo: 'deleted') // Exclude soft-deleted integrations
-          .orderBy('createdAt', descending: true)
-          .get();
-
-      return snapshot.docs
-          .map((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            data['id'] = doc.id;
-            return Integration.fromMap(data);
-          })
-          .toList();
+          .where('status', isNotEqualTo: 'deleted')
+          .orderBy('createdAt', descending: true);
+      debugPrint('[IntegrationService] Firestore query: $query');
+      final snapshot = await query.get();
+      debugPrint('[IntegrationService] Query returned ${snapshot.docs.length} docs');
+      final integrations = snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+        debugPrint('[IntegrationService] Integration doc: id=${doc.id}, data=$data');
+        return Integration.fromMap(data);
+      }).toList();
+      debugPrint('[IntegrationService] Returning ${integrations.length} integrations');
+      return integrations;
     } on FirebaseException catch (e) {
+      debugPrint('[IntegrationService] FirebaseException: ${e.message}');
       throw IntegrationException('Failed to fetch integrations: ${e.message}', 'FIRESTORE_ERROR');
     } catch (e) {
+      debugPrint('[IntegrationService] Unexpected error: $e');
       throw IntegrationException('Unexpected error while fetching integrations', 'UNKNOWN_ERROR');
     }
   }

@@ -135,10 +135,20 @@ class _InstagramIntegrationScreenState
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
+        debugPrint('Raw backend response: $responseData');
+        
+        final profile = responseData['profile'];
+        
         setState(() {
-          _instagramProfile = responseData['profile'];
+          _instagramProfile = profile;
         });
-        debugPrint('Instagram profile loaded successfully: ${_instagramProfile?['username']}');
+        debugPrint('Profile loaded: ${_instagramProfile?['username']}');
+        debugPrint('Profile name: ${_instagramProfile?['name']}');
+        debugPrint('Profile username: ${_instagramProfile?['username']}');
+        debugPrint('Profile picture: ${_instagramProfile?['profile_picture_url']}');
+        debugPrint('Account type: ${_instagramProfile?['account_type']}');
+        debugPrint('API type: ${_instagramProfile?['api_type']}');
+        debugPrint('Full profile data: $_instagramProfile');
       } else {
         final errorBody = json.decode(response.body);
         if (response.statusCode == 400 && 
@@ -218,6 +228,13 @@ class _InstagramIntegrationScreenState
             };
           });
           debugPrint('Instagram Business profile loaded: ${instagramData['username']}');
+          debugPrint('Instagram name: ${instagramData['name']}');
+          debugPrint('Instagram username: ${instagramData['username']}');
+          debugPrint('Instagram picture: ${instagramData['profile_picture_url']}');
+          debugPrint('Instagram followers: ${instagramData['followers_count']}');
+          debugPrint('Facebook page name: ${pageWithInstagram['name']}');
+          debugPrint('Full Instagram data: $instagramData');
+          debugPrint('Final profile data: $_instagramProfile');
         } else {
           debugPrint('Instagram account API failed: ${instagramResponse.statusCode} - ${instagramResponse.body}');
           throw Exception('Failed to get Instagram account details');
@@ -915,6 +932,62 @@ class _InstagramIntegrationScreenState
                               ),
                             ),
                             const SizedBox(width: 12),
+                          ] else if (_error!.contains('No Instagram Business Account found')) ...[
+                            Column(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  margin: const EdgeInsets.symmetric(horizontal: 20),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.shade50,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.blue.shade200),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Icon(Icons.info_outline, color: Colors.blue.shade600, size: 24),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Instagram Business Account Required',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.blue.shade800,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'To connect Instagram, you need:\n'
+                                        '1. An Instagram Business or Creator account\n'
+                                        '2. A Facebook page connected to your Instagram\n'
+                                        '3. Admin access to the Facebook page',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: Colors.blue.shade700,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                ElevatedButton(
+                                  onPressed: _startInstagramConnection,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF833AB4),
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.refresh, size: 16),
+                                      SizedBox(width: 8),
+                                      Text('Try Again'),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ],
                           ElevatedButton(
                             onPressed: _checkExistingIntegration,
@@ -1027,7 +1100,73 @@ class _InstagramIntegrationScreenState
 
           const SizedBox(height: 32),
 
-          // Connection requirements
+          // Connection options
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.blue.shade200),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.lightbulb_outline, color: Colors.blue.shade600, size: 24),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Choose Your Connection Type',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue.shade800,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                
+                // Business Account Option
+                _buildConnectionOption(
+                  icon: Icons.business,
+                  title: 'Instagram Business Account',
+                  subtitle: 'Full features including analytics, content publishing, and comments management',
+                  requirements: [
+                    'Instagram Business/Creator account',
+                    'Connected Facebook Page you manage',
+                    'Advanced analytics and insights',
+                  ],
+                  buttonText: 'Connect Business Account',
+                  buttonColor: const Color(0xFF833AB4),
+                  onPressed: _startInstagramConnection,
+                  recommended: true,
+                ),
+                
+                const SizedBox(height: 20),
+                
+                // Personal Account Option
+                _buildConnectionOption(
+                  icon: Icons.person,
+                  title: 'Personal Instagram Account',
+                  subtitle: 'Basic profile and media access without requiring Facebook page management',
+                  requirements: [
+                    'Any Instagram account (personal/business)',
+                    'No Facebook page required',
+                    'Basic profile and media viewing only',
+                  ],
+                  buttonText: 'Connect Personal Account',
+                  buttonColor: Colors.green.shade600,
+                  onPressed: _startInstagramBasicConnection,
+                  recommended: false,
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // Requirements info
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -1049,7 +1188,7 @@ class _InstagramIntegrationScreenState
                     ),
                     const SizedBox(width: 8),
                     const Text(
-                      'Requirements',
+                      'Don\'t have a Facebook page?',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -1058,43 +1197,13 @@ class _InstagramIntegrationScreenState
                   ],
                 ),
                 const SizedBox(height: 12),
-                const Text('• Instagram Business or Creator account'),
-                const Text('• Connected Facebook Page'),
-                const Text('• Valid business information'),
-                const Text('• Compliance with Instagram policies'),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 32),
-
-          // Connect button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _startInstagramConnection,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF833AB4),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                const Text(
+                  'No problem! You can use the Personal Account option above. '
+                  'It connects directly to your Instagram account without requiring '
+                  'Facebook page management permissions.',
+                  style: TextStyle(fontSize: 14),
                 ),
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.camera_alt),
-                  SizedBox(width: 8),
-                  Text(
-                    'Connect Instagram Business',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
+              ],
             ),
           ),
 
@@ -1127,6 +1236,11 @@ class _InstagramIntegrationScreenState
   }
 
   Widget _buildConnectedScreen() {
+    // Check if this is a Facebook fallback profile instead of a real Instagram account
+    if (_instagramProfile != null && _isFacebookFallbackProfile()) {
+      return _buildFacebookFallbackScreen();
+    }
+    
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -1273,6 +1387,273 @@ class _InstagramIntegrationScreenState
     );
   }
 
+  Widget _buildFacebookFallbackScreen() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Warning status
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.orange.shade200),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.warning,
+                    color: Colors.white,
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Instagram Business Account Required',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Facebook profile connected instead of Instagram',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.orange.shade700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Current profile info (Facebook fallback)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.facebook, color: Colors.blue.shade600, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Currently Connected Facebook Profile',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 25,
+                      backgroundImage: _instagramProfile!['profile_picture_url'] != null
+                          ? NetworkImage(_instagramProfile!['profile_picture_url'])
+                          : null,
+                      backgroundColor: Colors.grey.shade300,
+                      child: _instagramProfile!['profile_picture_url'] == null
+                          ? Icon(Icons.person, size: 20, color: Colors.grey.shade600)
+                          : null,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _instagramProfile!['name'] ?? 'Unknown',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            '@${_instagramProfile!['username'] ?? 'unknown'}',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Instructions
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.blue.shade200),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.lightbulb_outline, color: Colors.blue.shade600, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'How to Connect Instagram Business',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue.shade800,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _buildInstructionStep(
+                  '1',
+                  'Convert to Business Account',
+                  'Switch your Instagram account to a Business or Creator account in Instagram settings.',
+                ),
+                _buildInstructionStep(
+                  '2',
+                  'Connect to Facebook Page',
+                  'Link your Instagram Business account to a Facebook page you manage.',
+                ),
+                _buildInstructionStep(
+                  '3',
+                  'Try Connection Again',
+                  'Return here and attempt the connection process again.',
+                ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Action buttons
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: _startInstagramConnection,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF833AB4),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.refresh, size: 20),
+                      SizedBox(width: 8),
+                      Text('Try Again', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _disconnectInstagram,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    side: const BorderSide(color: Colors.red),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.logout, size: 20),
+                      SizedBox(width: 8),
+                      Text('Disconnect', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInstructionStep(String number, String title, String description) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: Colors.blue.shade600,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Center(
+              child: Text(
+                number,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue.shade800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.blue.shade700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBenefitItem(IconData icon, String title, String description) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -1410,16 +1791,10 @@ class _InstagramIntegrationScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header with status and refresh
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Connected Instagram Account',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              Spacer(),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -1461,8 +1836,11 @@ class _InstagramIntegrationScreenState
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
+          
+          // Profile picture and basic info
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 decoration: BoxDecoration(
@@ -1470,13 +1848,13 @@ class _InstagramIntegrationScreenState
                   border: Border.all(color: AppTheme.primary.withOpacity(0.3), width: 2),
                 ),
                 child: CircleAvatar(
-                  radius: 35,
+                  radius: 30,
                   backgroundImage: _instagramProfile!['profile_picture_url'] != null
                       ? NetworkImage(_instagramProfile!['profile_picture_url'])
                       : null,
                   backgroundColor: AppTheme.primary.withOpacity(0.1),
                   child: _instagramProfile!['profile_picture_url'] == null
-                      ? Icon(Icons.person, size: 30, color: AppTheme.primary)
+                      ? Icon(Icons.person, size: 24, color: AppTheme.primary)
                       : null,
                 ),
               ),
@@ -1488,47 +1866,52 @@ class _InstagramIntegrationScreenState
                     Text(
                       _instagramProfile!['name'] ?? 'Unknown',
                       style: const TextStyle(
-                        fontSize: 18,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
                       '@${_instagramProfile!['username'] ?? 'unknown'}',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 14,
                         color: AppTheme.primary,
                         fontWeight: FontWeight.w500,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 8),
+                    
+                    // Stats in a more compact grid layout
                     Row(
                       children: [
-                        if (_instagramProfile!['followers_count'] != null) ...[
-                          Icon(Icons.people, size: 16, color: AppTheme.textSecondary),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${_formatCount(_instagramProfile!['followers_count'])} followers',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: AppTheme.textSecondary,
-                              fontWeight: FontWeight.w500,
+                        if (_instagramProfile!['followers_count'] != null)
+                          Expanded(
+                            child: _buildStatItem(
+                              Icons.people, 
+                              _formatCount(_instagramProfile!['followers_count']), 
+                              'Followers'
                             ),
                           ),
-                        ],
-                        if (_instagramProfile!['media_count'] != null) ...[
-                          const SizedBox(width: 16),
-                          Icon(Icons.photo_library, size: 16, color: AppTheme.textSecondary),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${_instagramProfile!['media_count']} posts',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: AppTheme.textSecondary,
-                              fontWeight: FontWeight.w500,
+                        if (_instagramProfile!['follows_count'] != null)
+                          Expanded(
+                            child: _buildStatItem(
+                              Icons.person_add, 
+                              _formatCount(_instagramProfile!['follows_count']), 
+                              'Following'
                             ),
                           ),
-                        ],
+                        if (_instagramProfile!['media_count'] != null)
+                          Expanded(
+                            child: _buildStatItem(
+                              Icons.photo_library, 
+                              _instagramProfile!['media_count'].toString(), 
+                              'Posts'
+                            ),
+                          ),
                       ],
                     ),
                   ],
@@ -1536,6 +1919,75 @@ class _InstagramIntegrationScreenState
               ),
             ],
           ),
+          
+          // Biography if available
+          if (_instagramProfile!['biography'] != null && _instagramProfile!['biography'].toString().isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withOpacity(0.03),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppTheme.primary.withOpacity(0.1)),
+              ),
+              child: Text(
+                _instagramProfile!['biography'],
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppTheme.textSecondary,
+                  height: 1.3,
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+          
+          // Website link if available
+          if (_instagramProfile!['website'] != null && _instagramProfile!['website'].toString().isNotEmpty) ...[
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: () async {
+                final url = _instagramProfile!['website'];
+                if (await canLaunchUrl(Uri.parse(url))) {
+                  await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppTheme.primary.withOpacity(0.2)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.link,
+                      size: 16,
+                      color: AppTheme.primary,
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        _instagramProfile!['website'],
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppTheme.primary,
+                          fontWeight: FontWeight.w500,
+                          decoration: TextDecoration.underline,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
           if (_instagramProfile!['account_type'] != null) ...[
             const SizedBox(height: 12),
             Container(
@@ -1556,18 +2008,99 @@ class _InstagramIntegrationScreenState
                     color: AppTheme.primary,
                   ),
                   const SizedBox(width: 8),
-                  Text(
-                    '${_instagramProfile!['account_type']} Account',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppTheme.primary,
-                      fontWeight: FontWeight.w500,
+                  Expanded(
+                    child: Text(
+                      '${_instagramProfile!['account_type']} Account',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppTheme.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
               ),
             ),
           ],
+          
+          // Features section
+          if (_instagramProfile!['features'] != null) ...[
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.star, size: 18, color: Colors.green.shade600),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Available Features',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green.shade800,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      if (_instagramProfile!['features']['view_profile'] == true)
+                        _buildFeatureChip('Profile Access', Icons.person, Colors.blue),
+                      if (_instagramProfile!['features']['view_media'] == true)
+                        _buildFeatureChip('Media Access', Icons.photo_library, Colors.purple),
+                      if (_instagramProfile!['features']['basic_insights'] == true)
+                        _buildFeatureChip('Basic Analytics', Icons.analytics, Colors.orange),
+                      if (_instagramProfile!['features']['publish_content'] == true)
+                        _buildFeatureChip('Content Publishing', Icons.publish, Colors.green),
+                      if (_instagramProfile!['features']['manage_comments'] == true)
+                        _buildFeatureChip('Comment Management', Icons.comment, Colors.indigo),
+                      if (_instagramProfile!['features']['advanced_analytics'] == true)
+                        _buildFeatureChip('Advanced Analytics', Icons.trending_up, Colors.red),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeatureChip(String label, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: color,
+            ),
+          ),
         ],
       ),
     );
@@ -1580,6 +2113,43 @@ class _InstagramIntegrationScreenState
       return '${(count / 1000).toStringAsFixed(1)}K';
     }
     return count.toString();
+  }
+
+  bool _isFacebookFallbackProfile() {
+    if (_instagramProfile == null) return false;
+    return _instagramProfile!['account_type'] == 'FACEBOOK_USER' || 
+           _instagramProfile!['api_type'] == 'Facebook Graph API';
+  }
+
+  Widget _buildStatItem(IconData icon, String count, String label) {
+    return Column(
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: AppTheme.textSecondary),
+            const SizedBox(width: 4),
+            Text(
+              count,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: AppTheme.textSecondary,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildReconnectProfileState() {
@@ -1872,6 +2442,249 @@ class _InstagramIntegrationScreenState
       context,
       AppRoutes.integrationSettings,
       arguments: {'integrationId': _currentIntegration?.id},
+    );
+  }
+
+  Widget _buildConnectionOption({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required List<String> requirements,
+    required String buttonText,
+    required Color buttonColor,
+    required VoidCallback onPressed,
+    required bool recommended,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: recommended ? buttonColor.withOpacity(0.3) : Colors.grey.shade300,
+          width: recommended ? 2 : 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: buttonColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: buttonColor, size: 24),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        if (recommended) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade100,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'RECOMMENDED',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green.shade700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...requirements.map((req) => Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.check_circle_outline, size: 16, color: Colors.green.shade600),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    req,
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+          )).toList(),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: onPressed,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: buttonColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text(
+                buttonText,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _startInstagramBasicConnection() async {
+    final businessId = ref.read(selectedBusinessIdProvider);
+    if (businessId == null) {
+      setState(() {
+        _error = 'No business selected';
+        _isLoading = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      // Get Instagram Basic Display auth URL from backend
+      final authService = ref.read(authServiceProvider);
+      final response = await http.get(
+        Uri.parse(
+          'https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/config/facebook/instagram/basic-auth-url'
+          '?redirect_uri=${Uri.encodeComponent('https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/config/facebook/instagram/oauth/redirect')}'
+          '&state=${Uri.encodeComponent('basic_${DateTime.now().millisecondsSinceEpoch}')}',
+        ),
+        headers: {
+          'Content-Type': 'application/json',
+          'Business-ID': businessId,
+          'User-ID': authService.currentUser?.id ?? '',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final authUrl = data['auth_url'];
+
+        // Launch Instagram Basic Display OAuth URL
+        try {
+          final uri = Uri.parse(authUrl);
+          
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(
+              uri,
+              mode: LaunchMode.externalApplication,
+            );
+          } else {
+            await launchUrl(
+              uri,
+              mode: LaunchMode.inAppWebView,
+            );
+          }
+          
+          // Show instructions for Basic Display
+          _showBasicAuthInstructions();
+        } catch (launchError) {
+          try {
+            await launchUrl(
+              Uri.parse(authUrl),
+              mode: LaunchMode.platformDefault,
+            );
+            _showBasicAuthInstructions();
+          } catch (fallbackError) {
+            setState(() {
+              _error = 'Failed to open Instagram authorization page. Please try again.';
+            });
+          }
+        }
+      } else {
+        final errorData = json.decode(response.body);
+        setState(() {
+          _error = 'Failed to generate authorization URL: ${errorData['message'] ?? 'Unknown error'}';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to start Instagram Basic connection: $e';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _showBasicAuthInstructions() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Instagram Basic Authorization'),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Please complete the authorization in the opened browser:',
+                style: TextStyle(fontWeight: FontWeight.w500),
+              ),
+              SizedBox(height: 12),
+              Text('1. Log in to your Instagram account'),
+              Text('2. Review and accept the permissions'),
+              Text('3. You will be redirected back automatically'),
+              SizedBox(height: 12),
+              Text(
+                'This will connect your personal Instagram account with basic access to profile and media.',
+                style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Got it'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

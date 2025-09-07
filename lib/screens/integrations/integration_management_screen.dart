@@ -9,6 +9,9 @@ import 'package:vendor_app/widgets/error_view.dart' as error;
 import 'package:vendor_app/widgets/empty_view.dart';
 import 'package:vendor_app/widgets/integration_app_bar.dart';
 import 'package:vendor_app/config/routes.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'dart:async';
 
 class IntegrationManagementScreen extends ConsumerStatefulWidget {
   const IntegrationManagementScreen({super.key});
@@ -23,11 +26,13 @@ class _IntegrationManagementScreenState
   bool _isLoading = true;
   String? _error;
   List<Integration> _integrations = [];
+  StreamSubscription<QuerySnapshot>? _integrationsSubscription;
 
   @override
   void initState() {
     super.initState();
     _loadIntegrations();
+    _setupIntegrationsListener();
   }
 
   Future<void> _loadIntegrations() async {
@@ -41,7 +46,12 @@ class _IntegrationManagementScreenState
       if (integrationService == null) {
         throw Exception('No business selected');
       }
+      debugPrint('[IntegrationScreen] Calling fetchIntegrations...');
       final integrations = await integrationService.fetchIntegrations();
+      debugPrint('[IntegrationScreen] Integrations loaded:');
+      for (final integration in integrations) {
+        debugPrint('  Integration: id=${integration.id}, platform=${integration.platformName}, icon=${integration.platformIcon}, status=${integration.status}, error=${integration.errorMessage}');
+      }
       if (mounted) {
         setState(() {
           _integrations = integrations;
@@ -49,6 +59,7 @@ class _IntegrationManagementScreenState
         });
       }
     } on IntegrationException catch (e) {
+      debugPrint('[IntegrationScreen] IntegrationException: ${e.message}');
       if (mounted) {
         setState(() {
           _error = e.message;
@@ -56,6 +67,7 @@ class _IntegrationManagementScreenState
         });
       }
     } catch (e) {
+      debugPrint('[IntegrationScreen] Unexpected error: $e');
       if (mounted) {
         setState(() {
           _error = 'Failed to load integrations';
@@ -63,6 +75,182 @@ class _IntegrationManagementScreenState
         });
       }
     }
+  }
+
+  void _setupIntegrationsListener() {
+    final businessId = ref.read(selectedBusinessIdProvider);
+    if (businessId != null) {
+      debugPrint('[IntegrationScreen] Setting up Firestore listener for businessId: $businessId');
+      // Listen to integrations collection for real-time updates
+      _integrationsSubscription = FirebaseFirestore.instance
+          .collection('integrations')
+          .where('businessId', isEqualTo: businessId)
+          .snapshots()
+          .listen(
+        (snapshot) {
+          debugPrint('[IntegrationScreen] Firestore listener triggered with ${snapshot.docs.length} docs');
+          // Update integrations list when changes occur
+          final integrations = snapshot.docs.map((doc) {
+            final data = doc.data();
+            data['id'] = doc.id;
+            debugPrint('[IntegrationScreen] Processing doc: id=${doc.id}, data=$data');
+            return Integration.fromMap(data);
+          }).toList();
+          
+          debugPrint('[IntegrationScreen] Processed ${integrations.length} integrations');
+          
+          // Check for new integrations with errors
+          for (final integration in integrations) {
+            if (integration.status == 'incomplete' && 
+                integration.errorMessage != null && 
+                integration.errorMessage!.isNotEmpty) {
+              debugPrint('[IntegrationScreen] Found incomplete integration: ${integration.id}');
+              // Show error dialog for incomplete integrations
+              _showRetryDialog(integration);
+            }
+          }
+          
+          if (mounted) {
+            setState(() {
+              _integrations = integrations;
+              _isLoading = false;
+              _error = null;
+            });
+          }
+        },
+        onError: (error) {
+          debugPrint('[IntegrationScreen] Firestore listener error: $error');
+          if (mounted) {
+            setState(() {
+              _error = 'Failed to load integrations: $error';
+              _isLoading = false;
+            });
+          }
+        },
+      );
+    } else {
+      debugPrint('[IntegrationScreen] No businessId available, cannot setup listener');
+    }
+  }
+
+  void _showRetryDialog(Integration integration) {
+    // Avoid showing multiple dialogs for the same integration
+    if (_hasShownRetryDialog(integration.id)) return;
+    _markRetryDialogShown(integration.id);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+                SizedBox(width: 12),
+                Text('Connection Failed'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'There was an issue connecting your ${integration.platformName} account.',
+                  style: TextStyle(fontSize: 16),
+                ),
+                SizedBox(height: 12),
+                Text(
+                  'This could happen due to network issues, permissions, or temporary service problems.',
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'Would you like to try connecting again?',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _deleteIntegration(integration);
+                },
+                child: Text('Cancel', style: TextStyle(color: Colors.grey[600])),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _retryIntegration(integration);
+                },
+                child: Text('Retry Connection'),
+              ),
+            ],
+          ),
+        );
+      }
+    });
+  }
+
+  // Track shown dialogs to avoid duplicates
+  final Set<String> _shownRetryDialogs = {};
+  
+  bool _hasShownRetryDialog(String integrationId) {
+    return _shownRetryDialogs.contains(integrationId);
+  }
+  
+  void _markRetryDialogShown(String integrationId) {
+    _shownRetryDialogs.add(integrationId);
+  }
+
+  Future<void> _retryIntegration(Integration integration) async {
+    // Open the OAuth URL again for retry
+    final businessId = ref.read(selectedBusinessIdProvider);
+    if (businessId == null) return;
+
+    try {
+      // For Instagram, use the auth URL endpoint
+      String authUrl;
+      if (integration.platformId.toLowerCase() == 'instagram') {
+        authUrl = 'https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/config/facebook/instagram/auth-url?state=vendor_${DateTime.now().millisecondsSinceEpoch}_business_$businessId';
+      } else {
+        // For other platforms, they would have their own OAuth endpoints
+        authUrl = 'https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/config/${integration.platformId}/auth?business_id=$businessId';
+      }
+
+      // Launch the auth URL
+      final uri = Uri.parse(authUrl);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Opening ${integration.platformName} authentication. Please complete the setup in your browser.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Unable to open ${integration.platformName} authentication'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error opening ${integration.platformName} authentication: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _integrationsSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _disconnectIntegration(Integration integration) async {
@@ -324,18 +512,47 @@ class _IntegrationManagementScreenState
                         final integration = _integrations[index];
                         return Card(
                           child: ListTile(
-                            leading: CircleAvatar(
-                              backgroundImage:
-                                  NetworkImage(integration.platformIcon),
+                            leading: Builder(
+                              builder: (context) {
+                                if (integration.platformIcon.startsWith('http')) {
+                                  debugPrint('[IntegrationScreen] Using NetworkImage for icon: ${integration.platformIcon}');
+                                  return CircleAvatar(
+                                    backgroundImage: NetworkImage(integration.platformIcon),
+                                  );
+                                } else {
+                                  debugPrint('[IntegrationScreen] Using AssetImage for icon: ${integration.platformIcon}');
+                                  return CircleAvatar(
+                                    backgroundImage: AssetImage(integration.platformIcon),
+                                  );
+                                }
+                              },
                             ),
                             title: Text(integration.platformName),
-                            subtitle: Text(
-                              'Status: ${integration.status}',
-                              style: TextStyle(
-                                color: _getStatusColor(integration.status),
-                              ),
-                            ),
+                            subtitle: integration.status == 'incomplete'
+                                ? Row(
+                                    children: [
+                                      Icon(Icons.warning_amber_rounded, 
+                                           size: 16, color: Colors.orange),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'Setup incomplete - Tap to retry',
+                                        style: TextStyle(color: Colors.orange),
+                                      ),
+                                    ],
+                                  )
+                                : Text(
+                                    'Status: ${integration.status}',
+                                    style: TextStyle(
+                                      color: _getStatusColor(integration.status),
+                                    ),
+                                  ),
                             onTap: () {
+                              // If integration is incomplete, show retry dialog
+                              if (integration.status == 'incomplete') {
+                                _showRetryDialog(integration);
+                                return;
+                              }
+                              
                               // Navigate to Instagram integration screen for Instagram
                               if (integration.platformId == 'instagram') {
                                 Navigator.pushNamed(
@@ -411,6 +628,8 @@ class _IntegrationManagementScreenState
       case 'disconnected':
         return Colors.red;
       case 'pending':
+        return Colors.orange;
+      case 'incomplete':
         return Colors.orange;
       default:
         return Colors.grey;

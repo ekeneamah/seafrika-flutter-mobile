@@ -9,6 +9,7 @@ class Integration {
   final DateTime createdAt;
   final IntegrationSettings settings;
   final Map<String, dynamic>? credentials;
+  final String? errorMessage;
 
   Integration({
     required this.id,
@@ -19,19 +20,39 @@ class Integration {
     required this.createdAt,
     required this.settings,
     this.credentials,
+    this.errorMessage,
   });
 
   factory Integration.fromMap(Map<String, dynamic> map) {
+  return Integration(
+    id: map['id'] as String,
+    platformId: map['platformId'] as String,
+    platformName: map['platformName'] as String,
+    platformIcon: map['platformIcon'] as String,
+    status: map['status'] as String,
+    createdAt: map['createdAt'] is Timestamp
+      ? (map['createdAt'] as Timestamp).toDate()
+      : DateTime.parse(map['createdAt'] as String),
+    settings:
+      IntegrationSettings.fromMap(map['settings'] as Map<String, dynamic>),
+    credentials: map['credentials'] as Map<String, dynamic>?,
+    errorMessage: map['error_message'] as String?,
+  );
+  }
+
+  factory Integration.fromJson(Map<String, dynamic> json) {
     return Integration(
-      id: map['id'] as String,
-      platformId: map['platformId'] as String,
-      platformName: map['platformName'] as String,
-      platformIcon: map['platformIcon'] as String,
-      status: map['status'] as String,
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
-      settings:
-          IntegrationSettings.fromMap(map['settings'] as Map<String, dynamic>),
-      credentials: map['credentials'] as Map<String, dynamic>?,
+      id: json['id'] as String,
+      platformId: json['platformId'] as String,
+      platformName: json['platformName'] as String,
+      platformIcon: json['platformIcon'] as String,
+      status: json['status'] as String,
+      createdAt: json['createdAt'] is Timestamp 
+          ? (json['createdAt'] as Timestamp).toDate()
+          : DateTime.parse(json['createdAt'] as String),
+      settings: IntegrationSettings.fromMap(json['settings'] as Map<String, dynamic>),
+      credentials: json['credentials'] as Map<String, dynamic>?,
+      errorMessage: json['error_message'] as String?,
     );
   }
 
@@ -45,6 +66,7 @@ class Integration {
       'createdAt': createdAt,
       'settings': settings.toMap(),
       'credentials': credentials,
+      'error_message': errorMessage,
     };
   }
 }

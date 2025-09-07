@@ -118,11 +118,34 @@ export class FacebookConfigService {
   }
 
   /**
+   * Generate Instagram Basic Display authorization URL (for personal accounts)
+   */
+  generateInstagramBasicAuthUrl(redirectUri: string, state?: string): string {
+    const clientId = this.configService.get('INSTAGRAM_APP_ID') || this.configService.get('FACEBOOK_APP_ID');
+    const baseUrl = 'https://api.instagram.com/oauth/authorize';
+    
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      scope: 'user_profile,user_media',
+      response_type: 'code',
+    });
+
+    if (state) {
+      params.append('state', state);
+    }
+
+    return `${baseUrl}?${params.toString()}`;
+  }
+
+  /**
    * Exchange authorization code for access token (using Facebook Graph API)
    */
   async exchangeCodeForToken(code: string, redirectUri: string, businessId?: string): Promise<{
     access_token: string;
     user_id: string;
+    token_type?: string;
+    expires_in?: number;
   }> {
     const clientId = this.configService.get('FACEBOOK_APP_ID'); // Use Facebook App ID
     const clientSecret = this.configService.get('FACEBOOK_APP_SECRET'); // Use Facebook App Secret
@@ -151,17 +174,36 @@ export class FacebookConfigService {
         },
       });
 
+      // Get user information with the access token
+      let userId = 'unknown';
+      try {
+        const userResponse = await axios.get('https://graph.facebook.com/v21.0/me', {
+          params: {
+            access_token: response.data.access_token,
+            fields: 'id,name'
+          }
+        });
+        userId = userResponse.data.id;
+      } catch (userError) {
+        this.logger.warn('Failed to get user info, using default user_id:', userError.message);
+      }
+
       // Log successful token exchange
       if (businessId) {
         await this.logInstagramActivity(businessId, 'token_exchange_success', {
-          user_id: response.data.user_id,
+          user_id: userId,
           has_access_token: !!response.data.access_token,
           token_type: response.data.token_type,
           expires_in: response.data.expires_in,
         });
       }
 
-      return response.data;
+      return {
+        access_token: response.data.access_token,
+        user_id: userId,
+        token_type: response.data.token_type,
+        expires_in: response.data.expires_in,
+      };
     } catch (error) {
       // Log the error
       if (businessId) {
@@ -247,45 +289,178 @@ export class FacebookConfigService {
    */
   async getInstagramProfile(accessToken: string): Promise<any> {
     try {
-      // First, get the user's Facebook pages
-      const pagesResponse = await axios.get('https://graph.facebook.com/v21.0/me/accounts', {
-        params: {
-          fields: 'id,name,instagram_business_account',
-          access_token: accessToken,
-        },
-      });
-
-      this.logger.log('Facebook pages response:', pagesResponse.data);
-
-      // Find a page with an Instagram Business Account
-      const pageWithInstagram = pagesResponse.data.data.find(
-        (page: any) => page.instagram_business_account
-      );
-
-      if (!pageWithInstagram) {
-        throw new Error('No Instagram Business Account found connected to Facebook pages');
+      // Strategy 1: Try Instagram Business Account via Facebook pages
+      try {
+        return await this.getInstagramBusinessProfile(accessToken);
+      } catch (businessError) {
+        this.logger.warn('Instagram Business Account not found, trying Basic Display:', businessError.message);
       }
 
-      const instagramAccountId = pageWithInstagram.instagram_business_account.id;
+      // Strategy 2: Try Instagram Basic Display API
+      try {
+        return await this.getInstagramBasicProfile(accessToken);
+      } catch (basicError) {
+        this.logger.warn('Instagram Basic Display failed:', basicError.message);
+      }
 
-      // Get Instagram Business Account details
-      const instagramResponse = await axios.get(`https://graph.facebook.com/v21.0/${instagramAccountId}`, {
+      // Strategy 3: Get basic user info if Instagram-specific APIs fail
+      try {
+        return await this.getFacebookUserProfile(accessToken);
+      } catch (userError) {
+        this.logger.error('All profile strategies failed:', userError.message);
+      }
+
+      throw new Error('Unable to fetch any profile information');
+    } catch (error) {
+      this.logger.error('Failed to get Instagram profile:', error.message);
+      throw new Error(`Failed to fetch Instagram profile: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get Instagram Business Account profile via Facebook pages
+   */
+  private async getInstagramBusinessProfile(accessToken: string): Promise<any> {
+    // First, get the user's Facebook pages
+    const pagesResponse = await axios.get('https://graph.facebook.com/v21.0/me/accounts', {
+      params: {
+        fields: 'id,name,instagram_business_account',
+        access_token: accessToken,
+      },
+    });
+
+    this.logger.log('Facebook pages response:', pagesResponse.data);
+
+    // Find a page with an Instagram Business Account
+    const pageWithInstagram = pagesResponse.data.data.find(
+      (page: any) => page.instagram_business_account
+    );
+
+    if (!pageWithInstagram) {
+      throw new Error('No Instagram Business Account found connected to Facebook pages');
+    }
+
+    const instagramAccountId = pageWithInstagram.instagram_business_account.id;
+
+    // Get Instagram Business Account details
+    const instagramResponse = await axios.get(`https://graph.facebook.com/v21.0/${instagramAccountId}`, {
+      params: {
+        fields: 'id,username,name,biography,followers_count,follows_count,media_count,profile_picture_url,website',
+        access_token: accessToken,
+      },
+    });
+
+    this.logger.log('Instagram Business Account response:', instagramResponse.data);
+    this.logger.log('Facebook page info:', {
+      id: pageWithInstagram.id,
+      name: pageWithInstagram.name,
+    });
+
+    const result = {
+      ...instagramResponse.data,
+      facebook_page_id: pageWithInstagram.id,
+      facebook_page_name: pageWithInstagram.name,
+      account_type: 'BUSINESS',
+      api_type: 'Instagram Business API',
+      features: {
+        view_profile: true,
+        view_media: true,
+        basic_insights: true,
+        publish_content: true,
+        manage_comments: true,
+        advanced_analytics: true,
+      },
+    };
+
+    this.logger.log('Final Instagram profile result:', result);
+
+    return result;
+  }
+
+  /**
+   * Get Instagram Basic Display profile
+   */
+  private async getInstagramBasicProfile(accessToken: string): Promise<any> {
+    try {
+      // Get basic Instagram user info via Basic Display API
+      const response = await axios.get('https://graph.instagram.com/me', {
         params: {
-          fields: 'id,username,name,biography,followers_count,follows_count,media_count,profile_picture_url,website',
+          fields: 'id,username,account_type,media_count',
           access_token: accessToken,
         },
       });
 
-      return {
-        ...instagramResponse.data,
-        facebook_page_id: pageWithInstagram.id,
-        facebook_page_name: pageWithInstagram.name,
-        account_type: 'BUSINESS', // Instagram Business Account
+      this.logger.log('Instagram Basic Display response:', response.data);
+
+      // Try to get additional profile information if available
+      let profilePicture = null;
+      try {
+        const mediaResponse = await axios.get('https://graph.instagram.com/me/media', {
+          params: {
+            fields: 'id',
+            limit: 1,
+            access_token: accessToken,
+          },
+        });
+        
+        if (mediaResponse.data.data.length > 0) {
+          // Get user's profile picture from their latest media (if available)
+          const userResponse = await axios.get(`https://graph.instagram.com/${response.data.id}`, {
+            params: {
+              fields: 'profile_picture_url',
+              access_token: accessToken,
+            },
+          });
+          profilePicture = userResponse.data.profile_picture_url;
+        }
+      } catch (profileError) {
+        this.logger.warn('Could not fetch profile picture from Basic Display:', profileError.message);
+      }
+
+      const result = {
+        ...response.data,
+        name: response.data.username, // Use username as name for basic accounts
+        profile_picture_url: profilePicture,
+        account_type: response.data.account_type || 'PERSONAL',
+        api_type: 'Instagram Basic Display API',
+        features: {
+          view_profile: true,
+          view_media: true,
+          basic_insights: false,
+          publish_content: false,
+          manage_comments: false,
+          advanced_analytics: false,
+        },
       };
+
+      this.logger.log('Instagram Basic Display result:', result);
+      return result;
     } catch (error) {
-      this.logger.error('Failed to get Instagram profile:', error.response?.data);
-      throw new Error('Failed to fetch Instagram profile');
+      this.logger.error('Instagram Basic Display API error:', error.response?.data || error.message);
+      throw new Error(`Instagram Basic Display API failed: ${error.response?.data?.error?.message || error.message}`);
     }
+  }
+
+  /**
+   * Get Facebook user profile as fallback
+   */
+  private async getFacebookUserProfile(accessToken: string): Promise<any> {
+    const response = await axios.get('https://graph.facebook.com/v21.0/me', {
+      params: {
+        fields: 'id,name,email,picture',
+        access_token: accessToken,
+      },
+    });
+
+    return {
+      id: response.data.id,
+      username: response.data.name?.replace(/\s+/g, '').toLowerCase() || `user_${response.data.id}`,
+      name: response.data.name,
+      email: response.data.email,
+      profile_picture_url: response.data.picture?.data?.url,
+      account_type: 'FACEBOOK_USER',
+      api_type: 'Facebook Graph API',
+    };
   }
 
   /**
@@ -357,7 +532,73 @@ export class FacebookConfigService {
   }
 
   /**
-   * Store Instagram credentials for a business
+   * Store integration with error status when OAuth fails
+   */
+  async storeIntegrationError(businessId: string, platform: string, errorMessage: string): Promise<void> {
+    try {
+      const integrationsCollection = this.firestoreService.collection('integrations');
+      const now = new Date().toISOString();
+      
+      // Check if incomplete integration already exists for this platform
+      const existingQuery = await integrationsCollection
+        .where('businessId', '==', businessId)
+        .where('platformId', '==', platform)
+        .where('status', 'in', ['incomplete', 'error'])
+        .get();
+
+      const integrationData: any = {
+        businessId: businessId,
+        platformId: platform,
+        platformName: this.getPlatformDisplayName(platform),
+        platformIcon: `assets/icons/${platform}.png`,
+        status: 'incomplete',
+        error_message: errorMessage,
+        updatedAt: now,
+        settings: {
+          autoSync: false,
+          syncInterval: 60,
+          syncInventory: false,
+          syncOrders: false,
+          syncProducts: true,
+        }
+      };
+
+      if (!existingQuery.empty) {
+        // Update existing incomplete integration
+        const existingDoc = existingQuery.docs[0];
+        await existingDoc.ref.update({
+          ...integrationData,
+          id: existingDoc.id, // Include document ID
+          createdAt: existingDoc.data().createdAt, // Keep original creation time
+        });
+      } else {
+        // Create new incomplete integration
+        integrationData.createdAt = now;
+        const docRef = await integrationsCollection.add(integrationData);
+        // Update the document to include its own ID
+        await docRef.update({ id: docRef.id });
+      }
+      
+      this.logger.log(`Integration error stored for ${platform} - Business: ${businessId}`);
+    } catch (error) {
+      this.logger.error(`Failed to store integration error for ${platform}:`, error);
+    }
+  }
+
+  private getPlatformDisplayName(platform: string): string {
+    const platformNames: Record<string, string> = {
+      instagram: 'Instagram',
+      shopify: 'Shopify',
+      woocommerce: 'WooCommerce',
+      square: 'Square',
+      paypal: 'PayPal',
+      stripe: 'Stripe'
+    };
+    return platformNames[platform.toLowerCase()] || platform;
+  }
+
+  /**
+   * Store Instagram integration for a business
    */
   async storeInstagramCredentials(businessId: string, credentials: {
     access_token: string;
@@ -365,35 +606,91 @@ export class FacebookConfigService {
     expires_in?: number;
   }): Promise<void> {
     try {
-      const docRef = this.firestoreService.collection('instagram_credentials').doc(businessId);
-      await docRef.set({
-        ...credentials,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      });
+      // Validate required fields
+      if (!credentials.access_token || !credentials.user_id) {
+        throw new Error('Access token and user_id are required');
+      }
+
+      // Check if Instagram integration already exists for this business
+      const integrationsCollection = this.firestoreService.collection('integrations');
+      const existingQuery = await integrationsCollection
+        .where('businessId', '==', businessId)
+        .where('platformId', '==', 'instagram')
+        .where('status', '!=', 'deleted')
+        .get();
+
+      const now = new Date().toISOString();
+      const integrationData = {
+        businessId: businessId,
+        platformId: 'instagram',
+        platformName: 'Instagram',
+        platformIcon: 'assets/icons/instagram.png',
+        status: 'active',
+        createdAt: now,
+        updatedAt: now,
+        settings: {
+          autoSync: false,
+          syncInterval: 60,
+          syncInventory: false,
+          syncOrders: false,
+          syncProducts: true,
+          syncReviews: false,
+          syncRatings: false,
+          autoRespondReviews: false,
+          notifyNewReviews: false,
+          syncCustomerFeedback: false,
+        },
+        credentials: {
+          access_token: credentials.access_token,
+          user_id: credentials.user_id,
+          expires_in: credentials.expires_in || null,
+          token_type: 'Bearer',
+          created_at: now,
+          updated_at: now,
+        }
+      };
+
+      if (!existingQuery.empty) {
+        // Update existing integration
+        const existingDoc = existingQuery.docs[0];
+        await existingDoc.ref.update({
+          ...integrationData,
+          id: existingDoc.id, // Include document ID
+          createdAt: existingDoc.data().createdAt, // Keep original creation time
+        });
+        this.logger.log(`Instagram integration updated for business: ${businessId}`);
+      } else {
+        // Create new integration
+        const docRef = await integrationsCollection.add(integrationData);
+        // Update the document to include its own ID
+        await docRef.update({ id: docRef.id });
+        this.logger.log(`Instagram integration created for business: ${businessId}`);
+      }
       
       // Log the activity
-      await this.logInstagramActivity(businessId, 'credentials_stored', {
+      await this.logInstagramActivity(businessId, 'integration_stored', {
         user_id: credentials.user_id,
         has_access_token: !!credentials.access_token,
-        expires_in: credentials.expires_in,
+        expires_in: credentials.expires_in || null,
+        action: !existingQuery.empty ? 'updated' : 'created',
       });
       
-      this.logger.log(`Instagram credentials stored for business: ${businessId}`);
     } catch (error) {
       // Log the error
-      await this.logInstagramActivity(businessId, 'credentials_store_error', {
+      await this.logInstagramActivity(businessId, 'integration_store_error', {
         error: error.message,
+        has_access_token: !!credentials?.access_token,
+        has_user_id: !!credentials?.user_id,
       });
-      this.logger.error('Failed to store Instagram credentials:', error);
-      throw new Error('Failed to store Instagram credentials');
+      this.logger.error('Failed to store Instagram integration:', error);
+      throw new Error('Failed to store Instagram integration');
     }
   }
 
   /**
    * Get Instagram business profile using stored credentials
    */
-  async getInstagramBusinessProfile(businessId: string): Promise<any> {
+  async getStoredInstagramProfile(businessId: string): Promise<any> {
     try {
       // Log the profile fetch attempt
       await this.logInstagramActivity(businessId, 'profile_fetch_attempt', {
@@ -401,17 +698,33 @@ export class FacebookConfigService {
         using_facebook_graph_api: true,
       });
 
-      // Get stored credentials
-      const credDoc = await this.firestoreService.collection('instagram_credentials').doc(businessId).get();
+      // Get stored integration
+      const integrationsCollection = this.firestoreService.collection('integrations');
+      const integrationQuery = await integrationsCollection
+        .where('businessId', '==', businessId)
+        .where('platformId', '==', 'instagram')
+        .where('status', '==', 'active')
+        .limit(1)
+        .get();
       
-      if (!credDoc.exists) {
+      if (integrationQuery.empty) {
         await this.logInstagramActivity(businessId, 'profile_fetch_no_credentials', {
-          message: 'No credentials found in Firestore',
+          message: 'No active Instagram integration found in Firestore',
         });
-        throw new Error('No Instagram credentials found for this business');
+        throw new Error('No Instagram integration found for this business');
       }
 
-      const credentials = credDoc.data();
+      const integrationDoc = integrationQuery.docs[0];
+      const integration = integrationDoc.data();
+      const credentials = integration.credentials;
+      
+      if (!credentials || !credentials.access_token) {
+        await this.logInstagramActivity(businessId, 'profile_fetch_no_token', {
+          message: 'Integration found but no access token available',
+        });
+        throw new Error('No valid access token found');
+      }
+
       const accessToken = credentials.access_token;
 
       if (!accessToken) {
@@ -462,31 +775,40 @@ export class FacebookConfigService {
     try {
       const logs: any[] = [];
 
-      // Get credentials data if business ID provided
+      // Get integration data if business ID provided
       if (businessId) {
         try {
-          const credDoc = await this.firestoreService.collection('instagram_credentials').doc(businessId).get();
-          if (credDoc.exists) {
-            const credData = credDoc.data();
+          const integrationsCollection = this.firestoreService.collection('integrations');
+          const integrationQuery = await integrationsCollection
+            .where('businessId', '==', businessId)
+            .where('platformId', '==', 'instagram')
+            .limit(1)
+            .get();
+            
+          if (!integrationQuery.empty) {
+            const integrationDoc = integrationQuery.docs[0];
+            const integrationData = integrationDoc.data();
             logs.push({
-              type: 'credentials_stored',
-              timestamp: credData.created_at || credData.updated_at,
+              type: 'integration_stored',
+              timestamp: integrationData.updatedAt || integrationData.createdAt,
               business_id: businessId,
               details: {
-                user_id: credData.user_id,
-                has_access_token: !!credData.access_token,
-                expires_in: credData.expires_in,
-                created_at: credData.created_at,
-                updated_at: credData.updated_at,
+                user_id: integrationData.credentials?.user_id,
+                has_access_token: !!integrationData.credentials?.access_token,
+                expires_in: integrationData.credentials?.expires_in,
+                platform_name: integrationData.platformName,
+                status: integrationData.status,
+                created_at: integrationData.createdAt,
+                updated_at: integrationData.updatedAt,
               }
             });
           } else {
             logs.push({
-              type: 'credentials_missing',
+              type: 'integration_missing',
               timestamp: new Date().toISOString(),
               business_id: businessId,
               details: {
-                message: 'No credentials found for this business ID'
+                message: 'No Instagram integration found for this business ID'
               }
             });
           }
@@ -569,17 +891,127 @@ export class FacebookConfigService {
     }
   }
 
+  /**
+   * Trigger authorization completion notification via Firestore
+   */
+  async triggerAuthorizationComplete(businessId: string, authData: {
+    platform: string;
+    status: 'success' | 'error';
+    user_id?: string;
+    error?: string;
+    timestamp: string;
+    integration_id: string;
+  }): Promise<void> {
+    try {
+      // Create a notification document that the app can listen to
+      const notificationData = {
+        businessId,
+        type: 'authorization_complete',
+        platform: authData.platform,
+        status: authData.status,
+        user_id: authData.user_id,
+        error: authData.error,
+        timestamp: authData.timestamp,
+        integration_id: authData.integration_id,
+        read: false,
+        expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(), // Expire in 5 minutes
+      };
+
+      // Add to authorization_notifications collection
+      await this.firestoreService.collection('authorization_notifications').add(notificationData);
+
+      // Also update a real-time status document that the app can watch
+      const statusDocRef = this.firestoreService.collection('authorization_status').doc(businessId);
+      await statusDocRef.set({
+        platform: authData.platform,
+        status: authData.status,
+        user_id: authData.user_id,
+        error: authData.error,
+        timestamp: authData.timestamp,
+        integration_id: authData.integration_id,
+        last_updated: new Date().toISOString(),
+      }, { merge: true });
+
+      this.logger.log(`Authorization completion triggered for business: ${businessId}, platform: ${authData.platform}`);
+    } catch (error) {
+      this.logger.error('Failed to trigger authorization completion:', error);
+      // Don't throw error to avoid breaking the main OAuth flow
+    }
+  }
+
   async logInstagramActivity(businessId: string, activity: string, data: any): Promise<void> {
     try {
+      // Clean the data object to remove undefined values
+      const cleanedData = JSON.parse(JSON.stringify(data || {}));
+      
       await this.firestoreService.collection('instagram_activity_logs').add({
         businessId,
         activity,
-        data,
+        data: cleanedData,
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
       this.logger.error('Failed to log Instagram activity:', error);
       // Don't throw error to avoid breaking main flow
+    }
+  }
+
+  /**
+   * Get all integrations for a business
+   */
+  async getIntegrationsForBusiness(businessId: string): Promise<any[]> {
+    try {
+      const integrationsCollection = this.firestoreService.collection('integrations');
+      const snapshot = await integrationsCollection
+        .where('businessId', '==', businessId)
+        .where('status', '!=', 'deleted')
+        .orderBy('createdAt', 'desc')
+        .get();
+
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+    } catch (error) {
+      this.logger.error('Failed to get integrations for business:', error);
+      throw new Error('Failed to fetch integrations');
+    }
+  }
+
+  /**
+   * Disconnect an integration (soft delete)
+   */
+  async disconnectIntegration(integrationId: string, businessId: string): Promise<void> {
+    try {
+      const integrationsCollection = this.firestoreService.collection('integrations');
+      const integrationDoc = await integrationsCollection.doc(integrationId).get();
+      
+      if (!integrationDoc.exists) {
+        throw new Error('Integration not found');
+      }
+
+      const integration = integrationDoc.data();
+      if (integration.businessId !== businessId) {
+        throw new Error('Integration does not belong to this business');
+      }
+
+      await integrationDoc.ref.update({
+        status: 'disconnected',
+        updatedAt: new Date().toISOString(),
+        disconnectedAt: new Date().toISOString(),
+      });
+
+      // Log the disconnection
+      await this.logInstagramActivity(businessId, 'integration_disconnected', {
+        integration_id: integrationId,
+        platform: integration.platformId,
+        platform_name: integration.platformName,
+      });
+
+      this.logger.log(`Integration ${integrationId} disconnected for business: ${businessId}`);
+    } catch (error) {
+      this.logger.error('Failed to disconnect integration:', error);
+      throw new Error('Failed to disconnect integration');
     }
   }
 }

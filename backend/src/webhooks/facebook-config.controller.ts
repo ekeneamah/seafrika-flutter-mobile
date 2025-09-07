@@ -2,14 +2,18 @@ import {
   Controller,
   Get,
   Post,
+  Delete,
   Query,
   Body,
   Headers,
+  Param,
+  Res,
   HttpException,
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiParam } from '@nestjs/swagger';
+import { Response } from 'express';
 import { FacebookConfigService } from './facebook-config.service';
 
 @ApiTags('Facebook Configuration')
@@ -80,6 +84,51 @@ export class FacebookConfigController {
     }
   }
 
+  @Get('instagram/basic-auth-url')
+  @ApiOperation({ summary: 'Generate Instagram Basic Display authorization URL (for personal accounts)' })
+  @ApiResponse({ status: 200, description: 'Basic Display authorization URL generated' })
+  @ApiQuery({ name: 'redirect_uri', description: 'OAuth redirect URI' })
+  @ApiQuery({ name: 'state', description: 'Optional state parameter', required: false })
+  async getInstagramBasicAuthUrl(
+    @Query('redirect_uri') redirectUri: string,
+    @Query('state') state?: string,
+    @Headers('Business-ID') businessId?: string,
+  ) {
+    if (!redirectUri) {
+      throw new HttpException(
+        'redirect_uri parameter is required',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    try {
+      // Include business ID in state parameter if provided
+      const stateWithBusinessId = businessId 
+        ? `${state || 'basic'}_business_${businessId}`
+        : state;
+        
+      const authUrl = this.facebookConfigService.generateInstagramBasicAuthUrl(
+        redirectUri,
+        stateWithBusinessId,
+      );
+      
+      return {
+        auth_url: authUrl,
+        redirect_uri: redirectUri,
+        state: stateWithBusinessId || null,
+        business_id: businessId || null,
+        api_type: 'Instagram Basic Display API',
+        note: 'This is for personal Instagram accounts that do not require Facebook page management',
+      };
+    } catch (error) {
+      this.logger.error('Failed to generate basic auth URL:', error);
+      throw new HttpException(
+        'Failed to generate basic authorization URL',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
   @Get('instagram/oauth/redirect')
   @ApiOperation({ summary: 'Instagram OAuth redirect handler for business login' })
   @ApiResponse({ status: 200, description: 'OAuth redirect handled successfully' })
@@ -94,6 +143,7 @@ export class FacebookConfigController {
     @Query('error_reason') errorReason?: string,
     @Query('error_description') errorDescription?: string,
     @Query('state') state?: string,
+    @Res() res?: Response,
   ) {
     this.logger.log('Instagram OAuth redirect received', { 
       hasCode: !!code, 
@@ -104,14 +154,115 @@ export class FacebookConfigController {
 
     // If there's an error, return error response
     if (error) {
-      return {
-        success: false,
-        error: error,
-        error_reason: errorReason,
-        error_description: errorDescription,
-        message: 'Instagram authentication failed',
-        redirect_to: process.env.FRONTEND_URL || 'https://your-app.com/auth/error'
-      };
+      // Extract business ID from state parameter
+      let businessId = null;
+      if (state && state.includes('_business_')) {
+        const parts = state.split('_business_');
+        if (parts.length > 1) {
+          businessId = parts[1];
+        }
+      }
+
+      // Trigger authorization failed notification
+      if (businessId) {
+        await this.facebookConfigService.triggerAuthorizationComplete(businessId, {
+          platform: 'instagram',
+          status: 'error',
+          error: `${error}: ${errorDescription || errorReason || 'Unknown error'}`,
+          timestamp: new Date().toISOString(),
+          integration_id: `instagram_${businessId}_oauth_error`,
+        });
+      }
+
+      // Return HTML error page
+      const errorHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Instagram Authorization Failed</title>
+          <style>
+            body { 
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+              margin: 0; padding: 0; min-height: 100vh;
+              display: flex; align-items: center; justify-content: center;
+            }
+            .container { 
+              background: white; border-radius: 16px; padding: 40px;
+              box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+              text-align: center; max-width: 500px; margin: 20px;
+            }
+            .error-icon { font-size: 64px; color: #ff6b6b; margin-bottom: 20px; }
+            h1 { color: #333; margin-bottom: 20px; font-size: 28px; }
+            p { color: #666; line-height: 1.6; margin-bottom: 15px; }
+            .details { 
+              background: #f8f9fa; border-radius: 8px; padding: 20px;
+              margin: 20px 0; text-align: left; font-family: monospace;
+              font-size: 14px; border-left: 4px solid #ff6b6b;
+            }
+            .close-btn {
+              background: #ff6b6b; color: white; border: none; padding: 12px 24px;
+              border-radius: 8px; cursor: pointer; font-size: 16px; margin-top: 20px;
+            }
+            .close-btn:hover { background: #ee5a24; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="error-icon">❌</div>
+            <h1>Instagram Authorization Failed</h1>
+            <p>Authorization was denied or failed.</p>
+            
+            <div class="details">
+              <strong>Error Details:</strong><br>
+              Error: ${error}<br>
+              Reason: ${errorReason || 'Not provided'}<br>
+              Description: ${errorDescription || 'Not provided'}<br>
+              Business ID: ${businessId || 'Not provided'}
+            </div>
+            
+            <p>Please try again or contact support if the problem persists.</p>
+            <button class="close-btn" onclick="closeWindow()">Close Window</button>
+            
+            <script>
+              function closeWindow() {
+                try {
+                  // Try to close the window
+                  window.close();
+                  
+                  // If we reach here, window.close() didn't work
+                  setTimeout(() => {
+                    document.querySelector('.close-btn').textContent = 'Please close this tab manually';
+                    document.querySelector('.close-btn').style.background = '#666';
+                  }, 1000);
+                } catch (e) {
+                  document.querySelector('.close-btn').textContent = 'Please close this tab manually';
+                  document.querySelector('.close-btn').style.background = '#666';
+                }
+              }
+              
+              // Try to auto-close after 5 seconds
+              setTimeout(() => {
+                closeWindow();
+              }, 5000);
+            </script>
+            
+            <script>
+              setTimeout(() => {
+                try {
+                  window.close();
+                } catch (e) {
+                  document.querySelector('.close-btn').textContent = 'Please close this tab manually';
+                }
+              }, 10000);
+            </script>
+          </div>
+        </body>
+        </html>
+      `;
+
+      res.setHeader('Content-Type', 'text/html');
+      return res.send(errorHtml);
     }
 
     // If there's a code, process the authentication
@@ -148,6 +299,16 @@ export class FacebookConfigController {
             user_id: tokenData.user_id,
             expires_in: longLivedToken.expires_in,
           });
+          
+          // Trigger authorization completion notification via Firestore
+          await this.facebookConfigService.triggerAuthorizationComplete(businessId, {
+            platform: 'instagram',
+            status: 'success',
+            user_id: tokenData.user_id,
+            timestamp: new Date().toISOString(),
+            integration_id: `instagram_${businessId}_${tokenData.user_id}`,
+          });
+          
           this.logger.log(`Instagram credentials stored for business: ${businessId}`);
         }
 
@@ -158,18 +319,86 @@ export class FacebookConfigController {
           hasLongLivedToken: !!longLivedToken.access_token 
         });
 
-        return {
-          success: true,
-          message: 'Instagram authentication successful',
-          data: {
-            user_id: tokenData.user_id,
-            access_token: longLivedToken.access_token,
-            expires_in: longLivedToken.expires_in,
-            token_type: longLivedToken.token_type,
-          },
-          redirect_to: process.env.FRONTEND_URL || 'https://your-app.com/auth/success',
-          instructions: 'Save the access_token securely for API calls'
-        };
+        // Return a success HTML page instead of JSON
+        const successHtml = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Instagram Integration Successful</title>
+            <style>
+              body { 
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                margin: 0; padding: 0; min-height: 100vh;
+                display: flex; align-items: center; justify-content: center;
+              }
+              .container { 
+                background: white; border-radius: 16px; padding: 40px;
+                box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+                text-align: center; max-width: 500px; margin: 20px;
+              }
+              .success-icon { font-size: 64px; color: #4CAF50; margin-bottom: 20px; }
+              h1 { color: #333; margin-bottom: 20px; font-size: 28px; }
+              p { color: #666; line-height: 1.6; margin-bottom: 15px; }
+              .details { 
+                background: #f8f9fa; border-radius: 8px; padding: 20px;
+                margin: 20px 0; text-align: left; font-family: monospace;
+                font-size: 14px; border-left: 4px solid #4CAF50;
+              }
+              .close-btn {
+                background: #4CAF50; color: white; border: none; padding: 12px 24px;
+                border-radius: 8px; cursor: pointer; font-size: 16px; margin-top: 20px;
+              }
+              .close-btn:hover { background: #45a049; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="success-icon">✅</div>
+              <h1>Instagram Integration Successful!</h1>
+              <p>Your Instagram account has been successfully connected to Seafrika.</p>
+              <p><strong>Business ID:</strong> ${businessId || 'Not provided'}</p>
+              
+              <div class="details">
+                <strong>Integration Details:</strong><br>
+                User ID: ${tokenData.user_id}<br>
+                Token Type: ${longLivedToken.token_type || 'bearer'}<br>
+                Expires In: ${Math.floor((longLivedToken.expires_in || 0) / 86400)} days<br>
+                Status: ✅ Active
+              </div>
+              
+              <p>You can now close this window and return to your app.</p>
+              <button class="close-btn" onclick="closeWindow()">Close Window</button>
+              
+              <script>
+                function closeWindow() {
+                  try {
+                    // Try to close the window
+                    window.close();
+                    
+                    // If we reach here, window.close() didn't work
+                    setTimeout(() => {
+                      document.querySelector('.close-btn').textContent = 'Please close this tab manually';
+                      document.querySelector('.close-btn').style.background = '#666';
+                    }, 1000);
+                  } catch (e) {
+                    document.querySelector('.close-btn').textContent = 'Please close this tab manually';
+                    document.querySelector('.close-btn').style.background = '#666';
+                  }
+                }
+                
+                // Try to auto-close after 5 seconds
+                setTimeout(() => {
+                  closeWindow();
+                }, 5000);
+              </script>
+            </div>
+          </body>
+          </html>
+        `;
+
+        res.setHeader('Content-Type', 'text/html');
+        return res.send(successHtml);
       } catch (error) {
         this.logger.error('Failed to process Instagram OAuth code:', error);
         
@@ -182,15 +411,80 @@ export class FacebookConfigController {
             state_provided: !!state,
             redirect_uri_used: `${process.env.BASE_URL || 'https://seafrikaapi-u53tcgosiq-uc.a.run.app'}/api/config/facebook/instagram/oauth/redirect`,
           });
+
+          // Store integration error in Firestore
+          await this.facebookConfigService.storeIntegrationError(
+            businessId, 
+            'instagram', 
+            `Instagram authorization failed: ${error.message}`
+          );
         }
         
-        return {
-          success: false,
-          error: 'token_exchange_failed',
-          message: 'Failed to exchange authorization code for access token',
-          details: process.env.NODE_ENV === 'development' ? error.message : undefined,
-          redirect_to: process.env.FRONTEND_URL || 'https://your-app.com/auth/error'
-        };
+        // Return HTML error page
+        const errorHtml = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Instagram Integration Failed</title>
+            <style>
+              body { 
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+                margin: 0; padding: 0; min-height: 100vh;
+                display: flex; align-items: center; justify-content: center;
+              }
+              .container { 
+                background: white; border-radius: 16px; padding: 40px;
+                box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+                text-align: center; max-width: 500px; margin: 20px;
+              }
+              .error-icon { font-size: 64px; color: #ff6b6b; margin-bottom: 20px; }
+              h1 { color: #333; margin-bottom: 20px; font-size: 28px; }
+              p { color: #666; line-height: 1.6; margin-bottom: 15px; }
+              .details { 
+                background: #f8f9fa; border-radius: 8px; padding: 20px;
+                margin: 20px 0; text-align: left; font-family: monospace;
+                font-size: 14px; border-left: 4px solid #ff6b6b;
+              }
+              .close-btn {
+                background: #ff6b6b; color: white; border: none; padding: 12px 24px;
+                border-radius: 8px; cursor: pointer; font-size: 16px; margin-top: 20px;
+              }
+              .close-btn:hover { background: #ee5a24; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="error-icon">❌</div>
+              <h1>Instagram Integration Failed</h1>
+              <p>There was an error connecting your Instagram account.</p>
+              
+              <div class="details">
+                <strong>Error Details:</strong><br>
+                Business ID: ${businessId || 'Not provided'}<br>
+                Error: ${error.message}<br>
+                Time: ${new Date().toLocaleString()}
+              </div>
+              
+              <p>Please try again or contact support if the problem persists.</p>
+              <button class="close-btn" onclick="window.close()">Close Window</button>
+              
+              <script>
+                setTimeout(() => {
+                  try {
+                    window.close();
+                  } catch (e) {
+                    document.querySelector('.close-btn').textContent = 'Please close this tab manually';
+                  }
+                }, 10000);
+              </script>
+            </div>
+          </body>
+          </html>
+        `;
+
+        res.setHeader('Content-Type', 'text/html');
+        return res.send(errorHtml);
       }
     }
 
@@ -491,8 +785,8 @@ export class FacebookConfigController {
     }
 
     try {
-      const profile = await this.facebookConfigService.getInstagramBusinessProfile(businessId);
-      return profile;
+      const profile = await this.facebookConfigService.getStoredInstagramProfile(businessId);
+      return { profile };
     } catch (error) {
       this.logger.error('Failed to get Instagram business profile:', error);
       throw new HttpException(
@@ -895,6 +1189,72 @@ export class FacebookConfigController {
       this.logger.error('Failed to get Instagram integration logs:', error);
       throw new HttpException(
         'Failed to fetch integration logs',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Get('integrations/:businessId')
+  @ApiOperation({ summary: 'Get all integrations for a business' })
+  @ApiResponse({ status: 200, description: 'Integrations retrieved successfully' })
+  @ApiParam({ name: 'businessId', description: 'Business ID' })
+  async getIntegrationsForBusiness(@Param('businessId') businessId: string) {
+    if (!businessId) {
+      throw new HttpException(
+        'Business ID is required',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    try {
+      const integrations = await this.facebookConfigService.getIntegrationsForBusiness(businessId);
+      return {
+        success: true,
+        data: integrations,
+        count: integrations.length,
+      };
+    } catch (error) {
+      this.logger.error('Failed to get integrations for business:', error);
+      throw new HttpException(
+        'Failed to fetch integrations',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Delete('integrations/:integrationId')
+  @ApiOperation({ summary: 'Disconnect an integration' })
+  @ApiResponse({ status: 200, description: 'Integration disconnected successfully' })
+  @ApiParam({ name: 'integrationId', description: 'Integration ID' })
+  async disconnectIntegration(
+    @Param('integrationId') integrationId: string,
+    @Headers('Business-ID') businessId: string,
+  ) {
+    if (!integrationId) {
+      throw new HttpException(
+        'Integration ID is required',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    if (!businessId) {
+      throw new HttpException(
+        'Business-ID header is required',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    try {
+      await this.facebookConfigService.disconnectIntegration(integrationId, businessId);
+      return {
+        success: true,
+        message: 'Integration disconnected successfully',
+        integration_id: integrationId,
+      };
+    } catch (error) {
+      this.logger.error('Failed to disconnect integration:', error);
+      throw new HttpException(
+        error.message || 'Failed to disconnect integration',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
