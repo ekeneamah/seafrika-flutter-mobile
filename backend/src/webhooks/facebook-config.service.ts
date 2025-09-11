@@ -100,22 +100,39 @@ export class FacebookConfigService {
    * Generate Instagram authorization URL (using Facebook Graph API for Business features)
    */
   generateInstagramAuthUrl(redirectUri: string, state?: string): string {
-    const clientId = this.configService.get('FACEBOOK_APP_ID'); // Use Facebook App ID for Graph API
-    const baseUrl = 'https://www.facebook.com/v21.0/dialog/oauth'; // Facebook Graph OAuth URL
-    
-    const params = new URLSearchParams({
-      client_id: clientId,
-      redirect_uri: redirectUri,
-      scope: 'pages_show_list,pages_manage_metadata,instagram_basic,instagram_content_publish,instagram_manage_comments,instagram_manage_insights,instagram_manage_messages',
-      response_type: 'code',
-    });
+  const clientId = this.configService.get('FACEBOOK_APP_ID');
+  const baseUrl = 'https://www.facebook.com/v21.0/dialog/oauth';
 
-    if (state) {
-      params.append('state', state);
-    }
+  // Build scopes based on the features you plan to enable
+  const scopes = [
+    'pages_show_list',
+    'pages_manage_metadata',
+    'pages_read_engagement',
+    'business_management',
+    'instagram_basic',
+    'instagram_content_publish',     // optional: publishing
+    'instagram_manage_comments',     // optional: comments
+    'instagram_manage_messages',     // optional: messaging
+    'read_insights'                  // optional: insights
+  ].join(',');
 
-    return `${baseUrl}?${params.toString()}`;
-  }
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: redirectUri,          // must EXACTLY match the one in the app settings
+    scope: scopes,
+    response_type: 'code',
+    display: 'popup',
+    auth_type: 'rerequest',
+    return_scopes: 'true'
+  });
+
+  if (state) params.append('state', state);
+
+  const url = `${baseUrl}?${params.toString()}`;
+  this.logger.log('Generated Facebook OAuth URL:', url);
+  return url;
+}
+
 
   /**
    * Generate Instagram Basic Display authorization URL (for personal accounts)
@@ -135,6 +152,7 @@ export class FacebookConfigService {
       params.append('state', state);
     }
 
+    this.logger.log('Generated Instagram Basic OAuth URL:', `${baseUrl}?${params.toString()}`);
     return `${baseUrl}?${params.toString()}`;
   }
 
@@ -161,16 +179,14 @@ export class FacebookConfigService {
         });
       }
 
-      // Use Facebook Graph API token exchange endpoint
-      const response = await axios.post('https://graph.facebook.com/v21.0/oauth/access_token', {
-        client_id: clientId,
-        client_secret: clientSecret,
-        grant_type: 'authorization_code',
-        redirect_uri: redirectUri,
-        code: code,
-      }, {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+      // Use Facebook Graph API token exchange endpoint with GET request
+      const response = await axios.get('https://graph.facebook.com/v21.0/oauth/access_token', {
+        params: {
+          client_id: clientId,
+          client_secret: clientSecret,
+          grant_type: 'authorization_code',
+          redirect_uri: redirectUri,
+          code: code,
         },
       });
 
@@ -256,126 +272,179 @@ export class FacebookConfigService {
   /**
    * Subscribe to Instagram webhooks
    */
-  async subscribeToWebhooks(instagramUserId: string, accessToken: string): Promise<{
-    success: boolean;
-    message: string;
-  }> {
-    try {
-      const response = await axios.post(
-        `https://graph.facebook.com/v18.0/${instagramUserId}/subscribed_apps`,
-        {},
-        {
-          params: {
-            access_token: accessToken,
-          },
-        },
-      );
-
-      return {
-        success: true,
-        message: 'Successfully subscribed to Instagram webhooks',
-      };
-    } catch (error) {
-      this.logger.error('Failed to subscribe to webhooks:', error.response?.data);
-      return {
-        success: false,
-        message: `Failed to subscribe: ${error.response?.data?.error?.message || error.message}`,
-      };
-    }
+  async subscribeToWebhooks(instagramUserId: string, accessToken: string) {
+  try {
+    const response = await axios.post(
+      `https://graph.facebook.com/v21.0/${instagramUserId}/subscribed_apps`,
+      { subscribed_fields: ['comments', 'mentions', 'messages'] },
+      { params: { access_token: accessToken } }
+    );
+    return { success: true, message: 'Successfully subscribed to Instagram webhooks' };
+  } catch (error: any) {
+    this.logger.error('Failed to subscribe to webhooks:', error.response?.data || error.message);
+    return {
+      success: false,
+      message: `Failed to subscribe: ${error.response?.data?.error?.message || error.message}`,
+    };
   }
+}
 
   /**
    * Get Instagram Business Account via Facebook Graph API
    */
   async getInstagramProfile(accessToken: string): Promise<any> {
+  try {
+    return await this.getInstagramBusinessProfile(accessToken);
+  } catch (businessError) {
+    this.logger.warn(
+      'Instagram Business Account not found or improperly connected:',
+      businessError.message,
+    );
+    throw new Error(
+      'Instagram Business integration failed. Please ensure your Instagram account is a Business Account and linked to a Facebook Page.'
+    );
+  }
+}
+  async getInstagramProfileXX(accessToken: string): Promise<any> {
+    // Strategy 1: Try Instagram Business Account via Facebook pages
     try {
-      // Strategy 1: Try Instagram Business Account via Facebook pages
-      try {
-        return await this.getInstagramBusinessProfile(accessToken);
-      } catch (businessError) {
-        this.logger.warn('Instagram Business Account not found, trying Basic Display:', businessError.message);
-      }
+      return await this.getInstagramBusinessProfile(accessToken);
+    } catch (businessError) {
+      this.logger.warn('Instagram Business Account not found, trying Basic Display:', businessError.message);
+    }
 
-      // Strategy 2: Try Instagram Basic Display API
-      try {
-        return await this.getInstagramBasicProfile(accessToken);
-      } catch (basicError) {
-        this.logger.warn('Instagram Basic Display failed:', basicError.message);
-      }
+    // Strategy 2: Try Instagram Basic Display API
+    try {
+      return await this.getInstagramBasicProfile(accessToken);
+    } catch (basicError) {
+      this.logger.warn('Instagram Basic Display failed:', basicError.message);
+    }
 
-      // Strategy 3: Get basic user info if Instagram-specific APIs fail
-      try {
-        return await this.getFacebookUserProfile(accessToken);
-      } catch (userError) {
-        this.logger.error('All profile strategies failed:', userError.message);
-      }
-
-      throw new Error('Unable to fetch any profile information');
-    } catch (error) {
-      this.logger.error('Failed to get Instagram profile:', error.message);
-      throw new Error(`Failed to fetch Instagram profile: ${error.message}`);
+    // Strategy 3: Get basic user info if Instagram-specific APIs fail
+    try {
+      this.logger.log('Attempting Facebook User Profile as fallback');
+      return await this.getFacebookUserProfile(accessToken);
+    } catch (userError) {
+      this.logger.error('All profile strategies failed:', userError.message);
+      throw new Error(`Unable to fetch any profile information. Business Account: not found, Basic Display: token incompatible, Facebook Profile: ${userError.message}`);
     }
   }
 
   /**
    * Get Instagram Business Account profile via Facebook pages
    */
-  private async getInstagramBusinessProfile(accessToken: string): Promise<any> {
-    // First, get the user's Facebook pages
-    const pagesResponse = await axios.get('https://graph.facebook.com/v21.0/me/accounts', {
-      params: {
-        fields: 'id,name,instagram_business_account',
-        access_token: accessToken,
-      },
-    });
+private async getInstagramBusinessProfile(userToken: string): Promise<any> {
+  // 1) Get all Pages (paginate)
+  const pages: Array<{ id: string; name: string; access_token?: string }> = [];
+  let nextUrl = 'https://graph.facebook.com/v21.0/me/accounts';
+  let params: Record<string, any> = {
+    fields: 'id,name,access_token',
+    access_token: userToken,
+    limit: 50,
+  };
 
-    this.logger.log('Facebook pages response:', pagesResponse.data);
+  while (nextUrl) {
+    const resp = await axios.get(nextUrl, { params });
+    const body = resp.data || {};
+    if (Array.isArray(body.data)) pages.push(...body.data);
+    nextUrl = body.paging?.next ?? null;
+    params = {}; // 'next' already carries the token & cursor
+  }
 
-    // Find a page with an Instagram Business Account
-    const pageWithInstagram = pagesResponse.data.data.find(
-      (page: any) => page.instagram_business_account
+  this.logger.log(`Fetched ${pages.length} managed Pages`);
+
+  if (pages.length === 0) {
+    // Very common: missing scope pages_show_list OR user isn’t a Page Admin OR no Page granted in consent dialog
+    throw new Error(
+      'No Facebook Pages returned. Ensure the login requested "pages_show_list", the user is a Page Admin, and the Page was selected in the consent dialog.'
     );
+  }
 
-    if (!pageWithInstagram) {
-      throw new Error('No Instagram Business Account found connected to Facebook pages');
+  // 2) For each Page, try to read connected IG using the PAGE token
+  for (const p of pages) {
+    const pageId = p.id;
+    const pageName = p.name;
+    const pageToken = p.access_token;
+
+    if (!pageToken) {
+      this.logger.warn(`Skipping Page ${pageId} (${pageName}) — no page access_token granted`);
+      continue;
     }
 
-    const instagramAccountId = pageWithInstagram.instagram_business_account.id;
+    try {
+      // IMPORTANT: use connected_instagram_account
+      const linkResp = await axios.get(`https://graph.facebook.com/v21.0/${pageId}`, {
+        params: {
+          fields: 'connected_instagram_account{id}',
+          access_token: pageToken,
+        },
+      });
 
-    // Get Instagram Business Account details
-    const instagramResponse = await axios.get(`https://graph.facebook.com/v21.0/${instagramAccountId}`, {
-      params: {
-        fields: 'id,username,name,biography,followers_count,follows_count,media_count,profile_picture_url,website',
-        access_token: accessToken,
-      },
-    });
+      const igId = linkResp.data?.connected_instagram_account?.id;
+      if (!igId) {
+        this.logger.log(`Page ${pageId} (${pageName}) has no connected_instagram_account`);
+        continue;
+      }
 
-    this.logger.log('Instagram Business Account response:', instagramResponse.data);
-    this.logger.log('Facebook page info:', {
-      id: pageWithInstagram.id,
-      name: pageWithInstagram.name,
-    });
+      // 3) Fetch IG user details (page token is valid for this)
+      const igResp = await axios.get(`https://graph.facebook.com/v21.0/${igId}`, {
+        params: {
+          // Add/remove fields to taste; some require additional permissions
+          fields:
+            'id,username,name,biography,followers_count,follows_count,media_count,profile_picture_url,website',
+          access_token: pageToken,
+        },
+      });
 
-    const result = {
-      ...instagramResponse.data,
-      facebook_page_id: pageWithInstagram.id,
-      facebook_page_name: pageWithInstagram.name,
-      account_type: 'BUSINESS',
-      api_type: 'Instagram Business API',
-      features: {
-        view_profile: true,
-        view_media: true,
-        basic_insights: true,
-        publish_content: true,
-        manage_comments: true,
-        advanced_analytics: true,
-      },
-    };
+      const profile = igResp.data || {};
+      const result = {
+        ...profile,
+        instagram_user_id: profile.id,
+        facebook_page_id: pageId,
+        facebook_page_name: pageName,
+        api_type: 'Instagram Graph API',
+        // Don’t hardcode BUSINESS; Creator can also be linked
+        account_type: profile.account_type ?? 'PROFESSIONAL',
+        // Feature flags reflect what your app *can* do if you also requested/approved the scopes
+        features: {
+          view_profile: true,
+          view_media: true,
+          basic_insights: true,
+          publish_content: true,      // needs instagram_content_publish + pages_manage_posts
+          manage_comments: true,      // needs instagram_manage_comments
+          advanced_analytics: true,   // needs read_insights
+        },
+      };
 
-    this.logger.log('Final Instagram profile result:', result);
+      this.logger.log('Resolved Instagram via Page linkage:', {
+        pageId,
+        pageName,
+        instagram_user_id: igId,
+        username: profile.username,
+      });
 
-    return result;
+      return result;
+    } catch (err: any) {
+      const msg = err?.response?.data?.error?.message || err?.message;
+      const code = err?.response?.data?.error?.code;
+      this.logger.warn(
+        `Failed IG lookup for Page ${pageId} (${pageName}) — ${code ?? ''} ${msg}`
+      );
+      // continue to next Page
+    }
   }
+
+  // 4) Nothing found after checking all Pages
+  this.logger.warn('No connected Instagram account found on any granted Page', {
+    pages_checked: pages.length,
+    pages_with_tokens: pages.filter(x => !!x.access_token).length,
+  });
+
+  throw new Error(
+    'No connected Instagram account found. Link your Instagram Business/Creator account to a Facebook Page (Page Settings → Linked Accounts → Instagram), ensure you are Page Admin, and re-grant access selecting that Page in the consent dialog.'
+  );
+}
+
 
   /**
    * Get Instagram Basic Display profile
@@ -383,6 +452,7 @@ export class FacebookConfigService {
   private async getInstagramBasicProfile(accessToken: string): Promise<any> {
     try {
       // Get basic Instagram user info via Basic Display API
+      // Note: Basic Display API only provides: id, username, account_type, media_count
       const response = await axios.get('https://graph.instagram.com/me', {
         params: {
           fields: 'id,username,account_type,media_count',
@@ -392,35 +462,14 @@ export class FacebookConfigService {
 
       this.logger.log('Instagram Basic Display response:', response.data);
 
-      // Try to get additional profile information if available
-      let profilePicture = null;
-      try {
-        const mediaResponse = await axios.get('https://graph.instagram.com/me/media', {
-          params: {
-            fields: 'id',
-            limit: 1,
-            access_token: accessToken,
-          },
-        });
-        
-        if (mediaResponse.data.data.length > 0) {
-          // Get user's profile picture from their latest media (if available)
-          const userResponse = await axios.get(`https://graph.instagram.com/${response.data.id}`, {
-            params: {
-              fields: 'profile_picture_url',
-              access_token: accessToken,
-            },
-          });
-          profilePicture = userResponse.data.profile_picture_url;
-        }
-      } catch (profileError) {
-        this.logger.warn('Could not fetch profile picture from Basic Display:', profileError.message);
-      }
-
       const result = {
         ...response.data,
         name: response.data.username, // Use username as name for basic accounts
-        profile_picture_url: profilePicture,
+        profile_picture_url: null, // Basic Display API doesn't provide profile picture
+        biography: null, // Basic Display API doesn't provide biography
+        followers_count: null, // Basic Display API doesn't provide follower count
+        follows_count: null, // Basic Display API doesn't provide following count
+        website: null, // Basic Display API doesn't provide website
         account_type: response.data.account_type || 'PERSONAL',
         api_type: 'Instagram Basic Display API',
         features: {
@@ -460,6 +509,24 @@ export class FacebookConfigService {
       profile_picture_url: response.data.picture?.data?.url,
       account_type: 'FACEBOOK_USER',
       api_type: 'Facebook Graph API',
+      // Explicitly set Instagram fields to null since this is just a Facebook profile
+      biography: null,
+      followers_count: null,
+      follows_count: null,
+      media_count: null,
+      website: null,
+      facebook_page_id: null,
+      facebook_page_name: null,
+      features: {
+        view_profile: true,
+        view_media: false, // No Instagram media access
+        basic_insights: false,
+        publish_content: false,
+        manage_comments: false,
+        advanced_analytics: false,
+      },
+      // Add helpful message for users
+      message: 'No Instagram Business Account found. Connect an Instagram Business Account to your Facebook Page for full Instagram features.',
     };
   }
 
@@ -474,7 +541,7 @@ export class FacebookConfigService {
     const appAccessToken = `${appId}|${appSecret}`;
 
     try {
-      const response = await axios.get(`https://graph.facebook.com/v18.0/${appId}`, {
+      const response = await axios.get(`https://graph.facebook.com/v21.0/${appId}`, {
         params: {
           access_token: appAccessToken,
           fields: 'id,name,category',
@@ -493,7 +560,7 @@ export class FacebookConfigService {
   async getWebhookSubscriptions(pageId: string, accessToken: string): Promise<any> {
     try {
       const response = await axios.get(
-        `https://graph.facebook.com/v18.0/${pageId}/subscribed_apps`,
+        `https://graph.facebook.com/v21.0/${pageId}/subscribed_apps`,
         {
           params: {
             access_token: accessToken,
@@ -509,9 +576,9 @@ export class FacebookConfigService {
   }
 
   /**
-   * Refresh Instagram access token
+   * Refresh Instagram Basic Display access token (only for Basic Display API)
    */
-  async refreshAccessToken(accessToken: string): Promise<{
+  async refreshBasicDisplayToken(accessToken: string): Promise<{
     access_token: string;
     token_type: string;
     expires_in: number;
@@ -526,8 +593,82 @@ export class FacebookConfigService {
 
       return response.data;
     } catch (error) {
-      this.logger.error('Failed to refresh access token:', error.response?.data);
-      throw new Error('Failed to refresh access token');
+      this.logger.error('Failed to refresh Basic Display token:', error.response?.data);
+      throw new Error('Failed to refresh Instagram Basic Display token');
+    }
+  }
+
+  /**
+   * Flag Graph API tokens that are expiring soon
+   * Facebook Graph API tokens cannot be refreshed - users must re-authenticate
+   */
+  async flagGraphTokensExpiringSoon(): Promise<{
+    expiring_tokens: Array<{
+      businessId: string;
+      integration_id: string;
+      expires_at: string;
+      days_until_expiry: number;
+    }>;
+    total_flagged: number;
+  }> {
+    try {
+      const integrationsCollection = this.firestoreService.collection('integrations');
+      const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      
+      // Get all active Instagram integrations
+      const integrationQuery = await integrationsCollection
+        .where('platformId', '==', 'instagram')
+        .where('status', '==', 'active')
+        .get();
+
+      const expiringTokens = [];
+      
+      for (const doc of integrationQuery.docs) {
+        const integration = doc.data();
+        const credentials = integration.credentials;
+        
+        if (credentials && credentials.expires_in && credentials.created_at) {
+          const createdAt = new Date(credentials.created_at);
+          const expiresAt = new Date(createdAt.getTime() + (credentials.expires_in * 1000));
+          const now = new Date();
+          const daysUntilExpiry = Math.ceil((expiresAt.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
+          
+          // Flag if expires within 7 days
+          if (daysUntilExpiry <= 7 && daysUntilExpiry > 0) {
+            expiringTokens.push({
+              businessId: integration.businessId,
+              integration_id: doc.id,
+              expires_at: expiresAt.toISOString(),
+              days_until_expiry: daysUntilExpiry,
+            });
+            
+            // Update integration status to indicate reconnection needed
+            await doc.ref.update({
+              status: 'reconnect_needed',
+              reconnect_reason: `Token expires in ${daysUntilExpiry} day(s)`,
+              flagged_at: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            });
+            
+            // Log the flagging
+            await this.logInstagramActivity(integration.businessId, 'token_expiring_flagged', {
+              integration_id: doc.id,
+              expires_at: expiresAt.toISOString(),
+              days_until_expiry: daysUntilExpiry,
+            });
+          }
+        }
+      }
+      
+      this.logger.log(`Flagged ${expiringTokens.length} expiring Graph API tokens`);
+      
+      return {
+        expiring_tokens: expiringTokens,
+        total_flagged: expiringTokens.length,
+      };
+    } catch (error) {
+      this.logger.error('Failed to flag expiring tokens:', error);
+      throw new Error('Failed to check for expiring tokens');
     }
   }
 
@@ -903,34 +1044,48 @@ export class FacebookConfigService {
     integration_id: string;
   }): Promise<void> {
     try {
-      // Create a notification document that the app can listen to
-      const notificationData = {
+      // Clean the data to remove undefined values for Firestore
+      const cleanNotificationData = {
         businessId,
         type: 'authorization_complete',
         platform: authData.platform,
         status: authData.status,
-        user_id: authData.user_id,
-        error: authData.error,
         timestamp: authData.timestamp,
         integration_id: authData.integration_id,
         read: false,
         expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(), // Expire in 5 minutes
       };
 
+      // Only add optional fields if they have values
+      if (authData.user_id !== undefined) {
+        cleanNotificationData['user_id'] = authData.user_id;
+      }
+      if (authData.error !== undefined) {
+        cleanNotificationData['error'] = authData.error;
+      }
+
       // Add to authorization_notifications collection
-      await this.firestoreService.collection('authorization_notifications').add(notificationData);
+      await this.firestoreService.collection('authorization_notifications').add(cleanNotificationData);
 
       // Also update a real-time status document that the app can watch
       const statusDocRef = this.firestoreService.collection('authorization_status').doc(businessId);
-      await statusDocRef.set({
+      const cleanStatusData = {
         platform: authData.platform,
         status: authData.status,
-        user_id: authData.user_id,
-        error: authData.error,
         timestamp: authData.timestamp,
         integration_id: authData.integration_id,
         last_updated: new Date().toISOString(),
-      }, { merge: true });
+      };
+
+      // Only add optional fields if they have values
+      if (authData.user_id !== undefined) {
+        cleanStatusData['user_id'] = authData.user_id;
+      }
+      if (authData.error !== undefined) {
+        cleanStatusData['error'] = authData.error;
+      }
+
+      await statusDocRef.set(cleanStatusData, { merge: true });
 
       this.logger.log(`Authorization completion triggered for business: ${businessId}, platform: ${authData.platform}`);
     } catch (error) {

@@ -1146,20 +1146,7 @@ class _InstagramIntegrationScreenState
                 const SizedBox(height: 20),
                 
                 // Personal Account Option
-                _buildConnectionOption(
-                  icon: Icons.person,
-                  title: 'Personal Instagram Account',
-                  subtitle: 'Basic profile and media access without requiring Facebook page management',
-                  requirements: [
-                    'Any Instagram account (personal/business)',
-                    'No Facebook page required',
-                    'Basic profile and media viewing only',
-                  ],
-                  buttonText: 'Connect Personal Account',
-                  buttonColor: Colors.green.shade600,
-                  onPressed: _startInstagramBasicConnection,
-                  recommended: false,
-                ),
+              
               ],
             ),
           ),
@@ -1167,45 +1154,7 @@ class _InstagramIntegrationScreenState
           const SizedBox(height: 24),
 
           // Requirements info
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppTheme.accent.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppTheme.accent.withOpacity(0.3),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.info_outline,
-                      color: AppTheme.accent,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Don\'t have a Facebook page?',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'No problem! You can use the Personal Account option above. '
-                  'It connects directly to your Instagram account without requiring '
-                  'Facebook page management permissions.',
-                  style: TextStyle(fontSize: 14),
-                ),
-              ],
-            ),
-          ),
+        
 
           const SizedBox(height: 16),
 
@@ -2569,122 +2518,6 @@ class _InstagramIntegrationScreenState
     );
   }
 
-  Future<void> _startInstagramBasicConnection() async {
-    final businessId = ref.read(selectedBusinessIdProvider);
-    if (businessId == null) {
-      setState(() {
-        _error = 'No business selected';
-        _isLoading = false;
-      });
-      return;
-    }
 
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
 
-    try {
-      // Get Instagram Basic Display auth URL from backend
-      final authService = ref.read(authServiceProvider);
-      final response = await http.get(
-        Uri.parse(
-          'https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/config/facebook/instagram/basic-auth-url'
-          '?redirect_uri=${Uri.encodeComponent('https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/config/facebook/instagram/oauth/redirect')}'
-          '&state=${Uri.encodeComponent('basic_${DateTime.now().millisecondsSinceEpoch}')}',
-        ),
-        headers: {
-          'Content-Type': 'application/json',
-          'Business-ID': businessId,
-          'User-ID': authService.currentUser?.id ?? '',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final authUrl = data['auth_url'];
-
-        // Launch Instagram Basic Display OAuth URL
-        try {
-          final uri = Uri.parse(authUrl);
-          
-          if (await canLaunchUrl(uri)) {
-            await launchUrl(
-              uri,
-              mode: LaunchMode.externalApplication,
-            );
-          } else {
-            await launchUrl(
-              uri,
-              mode: LaunchMode.inAppWebView,
-            );
-          }
-          
-          // Show instructions for Basic Display
-          _showBasicAuthInstructions();
-        } catch (launchError) {
-          try {
-            await launchUrl(
-              Uri.parse(authUrl),
-              mode: LaunchMode.platformDefault,
-            );
-            _showBasicAuthInstructions();
-          } catch (fallbackError) {
-            setState(() {
-              _error = 'Failed to open Instagram authorization page. Please try again.';
-            });
-          }
-        }
-      } else {
-        final errorData = json.decode(response.body);
-        setState(() {
-          _error = 'Failed to generate authorization URL: ${errorData['message'] ?? 'Unknown error'}';
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _error = 'Failed to start Instagram Basic connection: $e';
-      });
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  void _showBasicAuthInstructions() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Instagram Basic Authorization'),
-          content: const Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Please complete the authorization in the opened browser:',
-                style: TextStyle(fontWeight: FontWeight.w500),
-              ),
-              SizedBox(height: 12),
-              Text('1. Log in to your Instagram account'),
-              Text('2. Review and accept the permissions'),
-              Text('3. You will be redirected back automatically'),
-              SizedBox(height: 12),
-              Text(
-                'This will connect your personal Instagram account with basic access to profile and media.',
-                style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Got it'),
-            ),
-          ],
-        );
-      },
-    );
-  }
 }

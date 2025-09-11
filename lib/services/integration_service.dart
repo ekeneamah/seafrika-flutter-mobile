@@ -3,7 +3,10 @@ import 'package:flutter/foundation.dart';
 import 'package:vendor_app/models/integration.dart';
 import 'package:crypto/crypto.dart';
 import 'package:vendor_app/config/collection_references.dart';
+import 'package:vendor_app/config/api_config.dart';
 import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:firebase_auth/firebase_auth.dart';
 
 /// Exception types for integration operations
 class IntegrationException implements Exception {
@@ -72,6 +75,20 @@ class IntegrationService {
           autoRespondReviews: false,
           notifyNewReviews: false,
           syncCustomerFeedback: false,
+        );
+      case 'messaging':
+        return IntegrationSettings(
+          autoSync: true,
+          syncInterval: 5, // More frequent for messaging
+          syncInventory: false,
+          syncOrders: false,
+          syncProducts: false,
+          // Review settings (off for messaging platforms)
+          syncReviews: false,
+          syncRatings: false,
+          autoRespondReviews: false,
+          notifyNewReviews: false,
+          syncCustomerFeedback: true, // Enable customer feedback for messaging
         );
       case 'reviews':
         return IntegrationSettings(
@@ -215,6 +232,132 @@ class IntegrationService {
     }
   }
 
+  /// Create WhatsApp Business integration
+  Future<Integration> createWhatsAppIntegration({
+    required String phoneNumberId,
+    required String accessToken,
+    required String businessAccountId,
+    required String verifyToken,
+    required Map<String, dynamic> businessProfile,
+  }) async {
+    print('🏭 DEBUG: createWhatsAppIntegration called with:');
+    print('   - phoneNumberId: $phoneNumberId');
+    print('   - businessAccountId: $businessAccountId');
+    print('   - businessProfile keys: ${businessProfile.keys.toList()}');
+    print('   - businessId: $_businessId');
+    
+    _validateBusinessId();
+    print('✅ DEBUG: Business ID validation passed');
+
+    try {
+      final integrationData = {
+        'platformId': 'whatsapp',
+        'platformName': 'WhatsApp Business',
+        'platformIcon': 'whatsapp',
+        'status': 'connected',
+        'createdAt': FieldValue.serverTimestamp(),
+        'settings': _createDefaultSettings('messaging').toMap(),
+        'credentials': {
+          'phone_number_id': phoneNumberId,
+          'access_token': _encryptCredential(accessToken),
+          'business_account_id': businessAccountId,
+          'verify_token': _encryptCredential(verifyToken),
+          'created_at': DateTime.now().toIso8601String(),
+        },
+        'profile': businessProfile,
+        'businessId': _businessId,
+        'lastSyncAt': null,
+        'syncStatus': 'pending',
+      };
+
+      print('📦 DEBUG: WhatsApp integration data prepared, adding to Firestore...');
+      final docRef = await CollectionReferences
+          .integrations
+          .add(integrationData);
+
+      print('✅ DEBUG: Document added with ID: ${docRef.id}');
+
+      // Fetch the created integration
+      final doc = await docRef.get();
+      final data = doc.data() as Map<String, dynamic>;
+      data['id'] = doc.id;
+      
+      final integration = Integration.fromMap(data);
+      print('🎉 DEBUG: WhatsApp integration created successfully: ${integration.id}');
+      
+      return integration;
+    } on FirebaseException catch (e) {
+      print('❌ DEBUG: FirebaseException in createWhatsAppIntegration: ${e.message}');
+      throw IntegrationException('Failed to create WhatsApp integration: ${e.message}', 'FIRESTORE_ERROR');
+    } catch (e) {
+      print('❌ DEBUG: Unexpected error in createWhatsAppIntegration: $e');
+      throw IntegrationException('Unexpected error while creating WhatsApp integration', 'UNKNOWN_ERROR');
+    }
+  }
+
+  /// Create Facebook Page integration
+  Future<Integration> createFacebookIntegration({
+    required String pageId,
+    required String pageAccessToken,
+    required String accessToken,
+    required String userId,
+    required Map<String, dynamic> pageData,
+  }) async {
+    print('🏭 DEBUG: createFacebookIntegration called with:');
+    print('   - pageId: $pageId');
+    print('   - userId: $userId');
+    print('   - pageData keys: ${pageData.keys.toList()}');
+    print('   - businessId: $_businessId');
+    
+    _validateBusinessId();
+    print('✅ DEBUG: Business ID validation passed');
+
+    try {
+      final integrationData = {
+        'platformId': 'facebook',
+        'platformName': 'Facebook Page',
+        'platformIcon': 'facebook',
+        'status': 'connected',
+        'createdAt': FieldValue.serverTimestamp(),
+        'settings': _createDefaultSettings('social').toMap(),
+        'credentials': {
+          'page_id': pageId,
+          'page_access_token': _encryptCredential(pageAccessToken),
+          'access_token': _encryptCredential(accessToken),
+          'user_id': userId,
+          'created_at': DateTime.now().toIso8601String(),
+        },
+        'profile': pageData,
+        'businessId': _businessId,
+        'lastSyncAt': null,
+        'syncStatus': 'pending',
+      };
+
+      print('📦 DEBUG: Facebook integration data prepared, adding to Firestore...');
+      final docRef = await CollectionReferences
+          .integrations
+          .add(integrationData);
+
+      print('✅ DEBUG: Document added with ID: ${docRef.id}');
+
+      // Fetch the created integration
+      final doc = await docRef.get();
+      final data = doc.data() as Map<String, dynamic>;
+      data['id'] = doc.id;
+      
+      final integration = Integration.fromMap(data);
+      print('🎉 DEBUG: Facebook integration created successfully: ${integration.id}');
+      
+      return integration;
+    } on FirebaseException catch (e) {
+      print('❌ DEBUG: FirebaseException in createFacebookIntegration: ${e.message}');
+      throw IntegrationException('Failed to create Facebook integration: ${e.message}', 'FIRESTORE_ERROR');
+    } catch (e) {
+      print('❌ DEBUG: Unexpected error in createFacebookIntegration: $e');
+      throw IntegrationException('Unexpected error while creating Facebook integration', 'UNKNOWN_ERROR');
+    }
+  }
+
   /// Sync Instagram products
   Future<Map<String, dynamic>> syncInstagramProducts(String integrationId) async {
     _validateBusinessId();
@@ -286,45 +429,323 @@ class IntegrationService {
   }
 
   /// Get Instagram posts/media
-  Future<List<Map<String, dynamic>>> getInstagramMedia(String integrationId) async {
+  /// Get Instagram media via backend API
+  Future<Map<String, dynamic>> getInstagramMedia(
+    String integrationId, {
+    int limit = 25,
+    String? after,
+  }) async {
     _validateBusinessId();
 
     try {
-      final integration = await fetchIntegration(integrationId);
-      
-      if (integration.platformId != 'instagram') {
-        throw IntegrationException('Integration is not an Instagram integration', 'INVALID_PLATFORM');
+      // Validate parameters
+      if (integrationId.isEmpty) {
+        throw IntegrationException('Integration ID is required', 'INVALID_INTEGRATION_ID');
       }
 
-      // Here you would call the Instagram API to get media
-      // For now, we'll return mock data
-      return [
-        {
-          'id': 'media_1',
-          'media_type': 'IMAGE',
-          'media_url': 'https://example.com/image1.jpg',
-          'caption': 'Check out our latest product!',
-          'timestamp': DateTime.now().subtract(const Duration(days: 1)).toIso8601String(),
-          'like_count': 45,
-          'comments_count': 8,
-          'permalink': 'https://instagram.com/p/xyz123',
+      // Get auth token
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw IntegrationException('User not authenticated', 'AUTH_REQUIRED');
+      }
+
+      final idToken = await user.getIdToken();
+
+      // Build API URL with query parameters
+      final uri = Uri.parse('${ApiConfig.baseUrl}/api/integrations/instagram/$integrationId/media');
+      final queryParams = <String, String>{
+        'limit': limit.toString(),
+      };
+      if (after != null && after.isNotEmpty) {
+        queryParams['after'] = after;
+      }
+
+      final finalUri = uri.replace(queryParameters: queryParams);
+
+      print('🔍 DEBUG: Calling Instagram API: $finalUri');
+
+      // Make API call
+      final response = await http.get(
+        finalUri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $idToken',
         },
-        {
-          'id': 'media_2',
-          'media_type': 'VIDEO',
-          'media_url': 'https://example.com/video1.mp4',
-          'thumbnail_url': 'https://example.com/thumb1.jpg',
-          'caption': 'Behind the scenes of our manufacturing process',
-          'timestamp': DateTime.now().subtract(const Duration(days: 3)).toIso8601String(),
-          'like_count': 78,
-          'comments_count': 12,
-          'permalink': 'https://instagram.com/p/abc456',
-        },
-      ];
+      );
+
+      print('📊 DEBUG: API Response status: ${response.statusCode}');
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        print('✅ DEBUG: Successfully fetched ${data['data']?.length ?? 0} media items');
+        
+        // Transform API response to match existing format
+        return {
+          'items': data['data'] ?? [],
+          'nextCursor': data['paging']?['cursors']?['after'],
+          'hasMore': data['paging']?['cursors']?['after'] != null,
+        };
+      } else if (response.statusCode == 401) {
+        throw IntegrationException('Authentication failed', 'AUTH_FAILED');
+      } else if (response.statusCode == 404) {
+        throw IntegrationException('Integration not found or inactive', 'INTEGRATION_NOT_FOUND');
+      } else if (response.statusCode == 429) {
+        throw IntegrationException('Rate limit exceeded', 'RATE_LIMIT');
+      } else {
+        final errorBody = response.body;
+        print('❌ DEBUG: API Error: ${response.statusCode} - $errorBody');
+        throw IntegrationException(
+          'Failed to fetch Instagram media: ${response.statusCode}',
+          'API_ERROR',
+        );
+      }
     } on IntegrationException {
       rethrow;
     } catch (e) {
-      throw IntegrationException('Failed to get Instagram media', 'UNKNOWN_ERROR');
+      print('❌ DEBUG: Unexpected error in getInstagramMedia: $e');
+      throw IntegrationException('Failed to get Instagram media: $e', 'UNKNOWN_ERROR');
+    }
+  }
+
+  /// Get Instagram comments for a specific post
+  Future<Map<String, dynamic>> getInstagramComments(
+    String integrationId,
+    String postId, {
+    int limit = 25,
+    String? after,
+  }) async {
+    _validateBusinessId();
+
+    try {
+      // Validate parameters
+      if (integrationId.isEmpty) {
+        throw IntegrationException('Integration ID is required', 'INVALID_INTEGRATION_ID');
+      }
+      if (postId.isEmpty) {
+        throw IntegrationException('Post ID is required', 'INVALID_POST_ID');
+      }
+
+      // Get auth token
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw IntegrationException('User not authenticated', 'AUTH_REQUIRED');
+      }
+
+      final idToken = await user.getIdToken();
+
+      // Build API URL with query parameters
+      final uri = Uri.parse('${ApiConfig.baseUrl}/api/integrations/instagram/$integrationId/media/$postId/comments');
+      final queryParams = <String, String>{
+        'limit': limit.toString(),
+      };
+      if (after != null && after.isNotEmpty) {
+        queryParams['after'] = after;
+      }
+
+      final finalUri = uri.replace(queryParameters: queryParams);
+
+      print('🔍 DEBUG: Calling Instagram Comments API: $finalUri');
+
+      // Make API call
+      final response = await http.get(
+        finalUri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $idToken',
+        },
+      );
+
+      print('📊 DEBUG: Comments API Response status: ${response.statusCode}');
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        print('✅ DEBUG: Successfully fetched ${data['data']?.length ?? 0} comments');
+        
+        // Transform API response to match expected format
+        return {
+          'comments': data['data'] ?? [],
+          'nextCursor': data['paging']?['cursors']?['after'],
+          'hasMore': data['paging']?['cursors']?['after'] != null,
+        };
+      } else if (response.statusCode == 401) {
+        throw IntegrationException('Authentication failed', 'AUTH_FAILED');
+      } else if (response.statusCode == 404) {
+        throw IntegrationException('Post not found or no comments available', 'POST_NOT_FOUND');
+      } else if (response.statusCode == 429) {
+        throw IntegrationException('Rate limit exceeded', 'RATE_LIMIT');
+      } else {
+        final errorBody = response.body;
+        print('❌ DEBUG: Comments API Error: ${response.statusCode} - $errorBody');
+        throw IntegrationException(
+          'Failed to fetch Instagram comments: ${response.statusCode}',
+          'API_ERROR',
+        );
+      }
+    } on IntegrationException {
+      rethrow;
+    } catch (e) {
+      print('❌ DEBUG: Unexpected error in getInstagramComments: $e');
+      throw IntegrationException('Failed to get Instagram comments: $e', 'UNKNOWN_ERROR');
+    }
+  }
+
+  /// Reply to an Instagram comment
+  Future<Map<String, dynamic>> replyToInstagramComment(
+    String integrationId,
+    String postId,
+    String commentId,
+    String message,
+  ) async {
+    _validateBusinessId();
+
+    try {
+      // Validate parameters
+      if (integrationId.isEmpty) {
+        throw IntegrationException('Integration ID is required', 'INVALID_INTEGRATION_ID');
+      }
+      if (postId.isEmpty) {
+        throw IntegrationException('Post ID is required', 'INVALID_POST_ID');
+      }
+      if (commentId.isEmpty) {
+        throw IntegrationException('Comment ID is required', 'INVALID_COMMENT_ID');
+      }
+      if (message.trim().isEmpty) {
+        throw IntegrationException('Reply message is required', 'INVALID_MESSAGE');
+      }
+      if (message.length > 1000) {
+        throw IntegrationException('Reply message cannot exceed 1000 characters', 'MESSAGE_TOO_LONG');
+      }
+
+      // Get auth token
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw IntegrationException('User not authenticated', 'AUTH_REQUIRED');
+      }
+
+      final idToken = await user.getIdToken();
+
+      // Build API URL
+      final uri = Uri.parse('${ApiConfig.baseUrl}/api/integrations/instagram/$integrationId/media/$postId/comments/$commentId/replies');
+
+      print('🔍 DEBUG: Replying to comment: $uri');
+
+      // Make API call
+      final response = await http.post(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $idToken',
+        },
+        body: json.encode({'message': message.trim()}),
+      );
+
+      print('📊 DEBUG: Reply API Response status: ${response.statusCode}');
+      
+      if (response.statusCode == 201) {
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        print('✅ DEBUG: Successfully posted reply with ID: ${data['id']}');
+        return data;
+      } else if (response.statusCode == 401) {
+        throw IntegrationException('Authentication failed', 'AUTH_FAILED');
+      } else if (response.statusCode == 404) {
+        throw IntegrationException('Comment not found or cannot be replied to', 'COMMENT_NOT_FOUND');
+      } else if (response.statusCode == 429) {
+        throw IntegrationException('Rate limit exceeded', 'RATE_LIMIT');
+      } else {
+        final errorBody = response.body;
+        print('❌ DEBUG: Reply API Error: ${response.statusCode} - $errorBody');
+        throw IntegrationException(
+          'Failed to reply to comment: ${response.statusCode}',
+          'API_ERROR',
+        );
+      }
+    } on IntegrationException {
+      rethrow;
+    } catch (e) {
+      print('❌ DEBUG: Unexpected error in replyToInstagramComment: $e');
+      throw IntegrationException('Failed to reply to comment: $e', 'UNKNOWN_ERROR');
+    }
+  }
+
+  /// Create a new Instagram post
+  Future<Map<String, dynamic>> createInstagramPost(
+    String integrationId, {
+    String? imageUrl,
+    String? videoUrl,
+    String? caption,
+    String? mediaType,
+    List<Map<String, String>>? children,
+  }) async {
+    _validateBusinessId();
+
+    try {
+      // Validate parameters
+      if (integrationId.isEmpty) {
+        throw IntegrationException('Integration ID is required', 'INVALID_INTEGRATION_ID');
+      }
+      if (imageUrl == null && videoUrl == null && (children == null || children.isEmpty)) {
+        throw IntegrationException('Either image URL, video URL, or children must be provided', 'INVALID_MEDIA');
+      }
+      if (caption != null && caption.length > 2200) {
+        throw IntegrationException('Caption cannot exceed 2200 characters', 'CAPTION_TOO_LONG');
+      }
+
+      // Get auth token
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw IntegrationException('User not authenticated', 'AUTH_REQUIRED');
+      }
+
+      final idToken = await user.getIdToken();
+
+      // Build API URL
+      final uri = Uri.parse('${ApiConfig.baseUrl}/api/integrations/instagram/$integrationId/media');
+
+      // Build request body
+      final body = <String, dynamic>{};
+      if (imageUrl != null) body['image_url'] = imageUrl;
+      if (videoUrl != null) body['video_url'] = videoUrl;
+      if (caption != null) body['caption'] = caption;
+      if (mediaType != null) body['media_type'] = mediaType;
+      if (children != null) body['children'] = children;
+
+      print('🔍 DEBUG: Creating Instagram post: $uri');
+
+      // Make API call
+      final response = await http.post(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $idToken',
+        },
+        body: json.encode(body),
+      );
+
+      print('📊 DEBUG: Create Post API Response status: ${response.statusCode}');
+      
+      if (response.statusCode == 201) {
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        print('✅ DEBUG: Successfully created post with ID: ${data['id']}');
+        return data;
+      } else if (response.statusCode == 401) {
+        throw IntegrationException('Authentication failed', 'AUTH_FAILED');
+      } else if (response.statusCode == 400) {
+        throw IntegrationException('Invalid post data or media', 'INVALID_POST_DATA');
+      } else if (response.statusCode == 429) {
+        throw IntegrationException('Rate limit exceeded', 'RATE_LIMIT');
+      } else {
+        final errorBody = response.body;
+        print('❌ DEBUG: Create Post API Error: ${response.statusCode} - $errorBody');
+        throw IntegrationException(
+          'Failed to create Instagram post: ${response.statusCode}',
+          'API_ERROR',
+        );
+      }
+    } on IntegrationException {
+      rethrow;
+    } catch (e) {
+      print('❌ DEBUG: Unexpected error in createInstagramPost: $e');
+      throw IntegrationException('Failed to create Instagram post: $e', 'UNKNOWN_ERROR');
     }
   }
 

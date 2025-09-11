@@ -6,6 +6,8 @@ import 'package:vendor_app/services/integration_service.dart';
 import 'package:vendor_app/widgets/error_view.dart' as error;
 import 'package:vendor_app/widgets/loading_view.dart';
 import 'package:vendor_app/widgets/integration_app_bar.dart';
+import 'package:vendor_app/screens/integrations/facebook_integration_screen.dart';
+import 'package:vendor_app/screens/integrations/whatsapp_integration_screen.dart';
 
 class AddIntegrationScreen extends ConsumerStatefulWidget {
   const AddIntegrationScreen({super.key});
@@ -1005,8 +1007,20 @@ class _AddIntegrationScreenState extends ConsumerState<AddIntegrationScreen> {
         Navigator.pushNamed(context, '/integrations/instagram');
         break;
       case 'facebook':
-        // You can add Facebook integration screen here
-        _showComingSoonDialog(platformName);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const FacebookIntegrationScreen(),
+          ),
+        );
+        break;
+      case 'whatsapp_business':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const WhatsAppIntegrationScreen(),
+          ),
+        );
         break;
       case 'shopify':
       case 'woocommerce':

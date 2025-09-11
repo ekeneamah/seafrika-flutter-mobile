@@ -13,6 +13,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiParam } from '@nestjs/swagger';
+import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 import { FacebookConfigService } from './facebook-config.service';
 
@@ -23,6 +24,7 @@ export class FacebookConfigController {
 
   constructor(
     private readonly facebookConfigService: FacebookConfigService,
+    private readonly configService: ConfigService,
   ) {}
 
   @Get('validate')
@@ -58,6 +60,13 @@ export class FacebookConfigController {
       );
     }
 
+    this.logger.log('Generating Instagram auth URL', { 
+      redirectUri, 
+      state, 
+      businessId,
+      facebookAppId: this.configService.get('FACEBOOK_APP_ID')?.substring(0, 8) + '...'
+    });
+
     try {
       // Include business ID in state parameter if provided
       const stateWithBusinessId = businessId 
@@ -69,11 +78,17 @@ export class FacebookConfigController {
         stateWithBusinessId,
       );
       
+      this.logger.log('Generated auth URL successfully', { authUrl: authUrl.substring(0, 100) + '...' });
+      
       return {
         auth_url: authUrl,
         redirect_uri: redirectUri,
         state: stateWithBusinessId || null,
         business_id: businessId || null,
+        app_id: this.configService.get('FACEBOOK_APP_ID'),
+        instructions: {
+          troubleshooting: 'If redirected to Facebook home page instead of auth dialog, check your app configuration and redirect URI'
+        }
       };
     } catch (error) {
       this.logger.error('Failed to generate auth URL:', error);
@@ -127,6 +142,140 @@ export class FacebookConfigController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+  }
+
+  @Get('debug/oauth-urls')
+  @ApiOperation({ summary: 'Debug OAuth URLs and configuration' })
+  @ApiResponse({ status: 200, description: 'OAuth configuration debug information' })
+  @ApiQuery({ name: 'redirect_uri', description: 'OAuth redirect URI to test' })
+  async debugOAuthUrls(@Query('redirect_uri') redirectUri: string) {
+    if (!redirectUri) {
+      throw new HttpException(
+        'redirect_uri parameter is required for debugging',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const facebookAppId = this.configService.get('FACEBOOK_APP_ID');
+    const instagramAppId = this.configService.get('INSTAGRAM_APP_ID');
+
+    const businessAuthUrl = this.facebookConfigService.generateInstagramAuthUrl(redirectUri, 'debug_business');
+    const basicAuthUrl = this.facebookConfigService.generateInstagramBasicAuthUrl(redirectUri, 'debug_basic');
+
+    return {
+      configuration: {
+        facebook_app_id: facebookAppId || 'NOT_SET',
+        instagram_app_id: instagramAppId || 'NOT_SET',
+        redirect_uri: redirectUri,
+      },
+      oauth_urls: {
+        business: {
+          url: businessAuthUrl,
+          description: 'For Instagram Business accounts with Facebook page management',
+          api: 'Facebook Graph API',
+        },
+        basic: {
+          url: basicAuthUrl,
+          description: 'For personal Instagram accounts without Facebook page requirement',
+          api: 'Instagram Basic Display API',
+        }
+      },
+      troubleshooting: {
+        common_issues: [
+          'Redirects to Facebook home page: Check app configuration and permissions',
+          'Invalid redirect URI: Ensure redirect URI is registered in Facebook App settings',
+          'App not live: Make sure Facebook App is in live mode for production',
+          'Missing permissions: Verify required permissions are requested in app dashboard'
+        ],
+        next_steps: [
+          '1. Test the URLs above in a browser',
+          '2. Check Facebook App Dashboard for any configuration issues',
+          '3. Verify redirect URIs are properly configured',
+          '4. Ensure app is in correct mode (development vs live)'
+        ]
+      }
+    };
+  }
+
+  @Get('troubleshoot/facebook-oauth')
+  @ApiOperation({ summary: 'Comprehensive Facebook OAuth troubleshooting guide' })
+  @ApiResponse({ status: 200, description: 'Detailed troubleshooting information' })
+  async facebookOAuthTroubleshooting() {
+    return {
+      issue: 'Facebook OAuth redirects to home page instead of authorization dialog',
+      common_causes: [
+        {
+          cause: 'Missing or incorrect app configuration',
+          solution: 'Verify Facebook App ID and secret are correctly set',
+          check: 'Environment variables FACEBOOK_APP_ID and FACEBOOK_APP_SECRET'
+        },
+        {
+          cause: 'Invalid redirect URI',
+          solution: 'Ensure redirect URI is registered in Facebook App settings',
+          location: 'Facebook App Dashboard > App Settings > Basic > App Domains'
+        },
+        {
+          cause: 'App not in live mode',
+          solution: 'Switch app to live mode or add test users',
+          location: 'Facebook App Dashboard > App Review > Request'
+        },
+        {
+          cause: 'Missing required permissions',
+          solution: 'Request proper permissions in app dashboard',
+          required_permissions: ['pages_show_list', 'pages_manage_metadata', 'instagram_basic']
+        },
+        {
+          cause: 'Incorrect OAuth URL parameters',
+          solution: 'Use display=popup and auth_type=rerequest parameters',
+          example: 'display=popup forces OAuth dialog instead of full page redirect'
+        }
+      ],
+      step_by_step_fix: [
+        {
+          step: 1,
+          action: 'Check Facebook App Configuration',
+          details: [
+            'Go to Facebook Developers Console',
+            'Select your app',
+            'Verify App ID matches your FACEBOOK_APP_ID environment variable',
+            'Check App Secret is correctly set'
+          ]
+        },
+        {
+          step: 2,
+          action: 'Verify Redirect URIs',
+          details: [
+            'In App Dashboard, go to Settings > Basic',
+            'Add your redirect URI to "App Domains"',
+            'Format: your-domain.com (without https://)',
+            'Also add to "Valid OAuth Redirect URIs" in Facebook Login settings'
+          ]
+        },
+        {
+          step: 3,
+          action: 'Check App Mode and Permissions',
+          details: [
+            'For testing: App can be in Development mode with test users',
+            'For production: App must be Live with approved permissions',
+            'Required permissions: pages_show_list, pages_manage_metadata, instagram_basic'
+          ]
+        },
+        {
+          step: 4,
+          action: 'Test OAuth URL',
+          details: [
+            'Use the debug endpoint: GET /config/facebook/debug/oauth-urls',
+            'Copy the generated URL and test in browser',
+            'Should show OAuth dialog, not Facebook home page'
+          ]
+        }
+      ],
+      test_urls: {
+        debug_endpoint: '/config/facebook/debug/oauth-urls?redirect_uri=YOUR_REDIRECT_URI',
+        facebook_app_dashboard: 'https://developers.facebook.com/apps/',
+        oauth_debugger: 'https://developers.facebook.com/tools/debug/accesstoken/'
+      }
+    };
   }
 
   @Get('instagram/oauth/redirect')
@@ -797,8 +946,9 @@ export class FacebookConfigController {
   }
 
   @Post('instagram/refresh-token')
-  @ApiOperation({ summary: 'Refresh Instagram access token' })
+  @ApiOperation({ summary: 'Refresh Instagram access token (Basic Display only)' })
   @ApiResponse({ status: 200, description: 'Access token refreshed' })
+  @ApiResponse({ status: 400, description: 'Cannot refresh Graph API tokens' })
   async refreshToken(@Body() body: { access_token: string }) {
     const { access_token } = body;
 
@@ -810,13 +960,24 @@ export class FacebookConfigController {
     }
 
     try {
-      const refreshedToken = await this.facebookConfigService.refreshAccessToken(
+      // Note: Only Instagram Basic Display tokens can be refreshed
+      // Facebook Graph API tokens cannot be refreshed - users must re-authenticate
+      const refreshedToken = await this.facebookConfigService.refreshBasicDisplayToken(
         access_token,
       );
 
       return refreshedToken;
     } catch (error) {
       this.logger.error('Token refresh failed:', error);
+      
+      // Check if error indicates this is a Graph API token
+      if (error.message?.includes('Basic Display') || error.response?.data?.error?.message?.includes('Invalid')) {
+        throw new HttpException(
+          'Cannot refresh Graph API tokens. User must re-authenticate.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      
       throw new HttpException(
         'Failed to refresh access token',
         HttpStatus.BAD_REQUEST,
