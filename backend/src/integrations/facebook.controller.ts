@@ -1,725 +1,439 @@
 import {
   Controller,
-  Get,
   Post,
+  Get,
   Delete,
+  Body,
   Param,
   Query,
-  Body,
+  UseInterceptors,
+  UploadedFile,
   Headers,
   HttpException,
   HttpStatus,
-  Logger,
-  UploadedFile,
-  UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiConsumes, ApiParam, ApiQuery, ApiBody } from '@nestjs/swagger';
 import { FacebookService } from './facebook.service';
-import type { Express } from 'express';
-
-declare global {
-  namespace Express {
-    namespace Multer {
-      interface File {
-        fieldname: string;
-        originalname: string;
-        encoding: string;
-        mimetype: string;
-        size: number;
-        destination: string;
-        filename: string;
-        path: string;
-        buffer: Buffer;
-      }
-    }
-  }
-}
 
 @ApiTags('Facebook Integration')
 @Controller('integrations/facebook')
-@ApiBearerAuth()
 export class FacebookController {
-  private readonly logger = new Logger(FacebookController.name);
-
   constructor(private readonly facebookService: FacebookService) {}
 
-  @Get(':integrationId/page-info')
-  @ApiOperation({ 
-    summary: 'Get Facebook page information',
-    description: 'Retrieve detailed information about the connected Facebook page'
-  })
-  @ApiParam({ 
-    name: 'integrationId', 
-    description: 'The integration ID from Firestore' 
-  })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Page information retrieved successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string' },
-        name: { type: 'string' },
-        category: { type: 'string' },
-        about: { type: 'string' },
-        description: { type: 'string' },
-        website: { type: 'string' },
-        phone: { type: 'string' },
-        email: { type: 'string' },
-        fan_count: { type: 'number' },
-        followers_count: { type: 'number' },
-        link: { type: 'string' },
-        username: { type: 'string' },
-        is_verified: { type: 'boolean' }
-      }
-    }
-  })
-  @ApiResponse({ status: 400, description: 'Bad request - invalid parameters' })
-  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing auth token' })
-  @ApiResponse({ status: 404, description: 'Integration not found or inactive' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
-  async getPageInfo(
-    @Param('integrationId') integrationId: string,
-    @Headers('authorization') authHeader?: string,
-  ): Promise<any> {
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new HttpException(
-        'Missing or invalid Authorization header',
-        HttpStatus.UNAUTHORIZED,
-      );
-    }
-
-    try {
-      this.logger.log(`Retrieving Facebook page info for integration ${integrationId}`);
-      
-      const pageInfo = await this.facebookService.getPageInfo(integrationId);
-      return pageInfo;
-    } catch (error) {
-      this.logger.error(`Failed to get Facebook page info:`, error);
-      throw error;
-    }
-  }
-
-  @Get(':integrationId/posts')
-  @ApiOperation({ 
-    summary: 'Get Facebook page posts',
-    description: 'Retrieve posts from the connected Facebook page'
-  })
-  @ApiParam({ 
-    name: 'integrationId', 
-    description: 'The integration ID from Firestore' 
-  })
-  @ApiQuery({ 
-    name: 'limit', 
-    required: false, 
-    description: 'Number of posts to return (default: 25, max: 100)',
-    type: Number
-  })
-  @ApiQuery({ 
-    name: 'after', 
-    required: false, 
-    description: 'Pagination cursor for getting next page of results',
-    type: String
-  })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Posts retrieved successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'string' },
-              message: { type: 'string' },
-              created_time: { type: 'string' },
-              type: { type: 'string' },
-              permalink_url: { type: 'string' },
-              full_picture: { type: 'string' },
-              reactions: { type: 'object' },
-              comments: { type: 'object' },
-              likes: { type: 'object' }
-            }
-          }
-        },
-        paging: { type: 'object' }
-      }
-    }
-  })
-  async getPagePosts(
-    @Param('integrationId') integrationId: string,
-    @Query('limit') limit?: number,
-    @Query('after') after?: string,
-    @Headers('authorization') authHeader?: string,
-  ): Promise<any> {
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new HttpException(
-        'Missing or invalid Authorization header',
-        HttpStatus.UNAUTHORIZED,
-      );
-    }
-
-    try {
-      this.logger.log(`Retrieving Facebook posts for integration ${integrationId}`);
-      
-      const posts = await this.facebookService.getPagePosts(
-        integrationId,
-        limit || 25,
-        after
-      );
-      return posts;
-    } catch (error) {
-      this.logger.error(`Failed to get Facebook posts:`, error);
-      throw error;
-    }
-  }
-
-  @Post(':integrationId/posts')
-  @ApiOperation({ 
-    summary: 'Create a Facebook post',
-    description: 'Create a new post on the connected Facebook page'
-  })
-  @ApiParam({ 
-    name: 'integrationId', 
-    description: 'The integration ID from Firestore' 
-  })
+  @Post('auth')
+  @ApiOperation({ summary: 'Authenticate with Facebook' })
+  @ApiResponse({ status: 200, description: 'Authentication successful' })
+  @ApiResponse({ status: 400, description: 'Invalid authentication code' })
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
-        message: { type: 'string', description: 'Post message text' },
-        link: { type: 'string', description: 'URL to share' },
-        mediaIds: { 
-          type: 'array', 
-          items: { type: 'string' },
-          description: 'Array of uploaded media IDs'
-        },
-        scheduledPublishTime: { 
-          type: 'number', 
-          description: 'Unix timestamp for scheduled publishing'
-        }
-      }
-    }
-  })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Post created successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string' },
-        post_id: { type: 'string' }
-      }
-    }
-  })
-  async createPost(
-    @Param('integrationId') integrationId: string,
-    @Body() postData: { 
-      message?: string; 
-      link?: string; 
-      mediaIds?: string[];
-      scheduledPublishTime?: number;
+        code: { type: 'string', description: 'OAuth authorization code' },
+        redirectUri: { type: 'string', description: 'OAuth redirect URI' },
+      },
+      required: ['code', 'redirectUri'],
     },
-    @Headers('authorization') authHeader?: string,
-  ): Promise<any> {
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new HttpException(
-        'Missing or invalid Authorization header',
-        HttpStatus.UNAUTHORIZED,
-      );
-    }
-
+  })
+  async authenticateFacebook(
+    @Body() body: { code: string; redirectUri: string },
+    @Headers('business-id') businessId: string,
+  ) {
     try {
-      this.logger.log(`Creating Facebook post for integration ${integrationId}`);
-      
-      const result = await this.facebookService.createPost(
-        integrationId,
-        postData.message,
-        postData.link,
-        postData.mediaIds,
-        postData.scheduledPublishTime
-      );
-      return result;
+      return await this.facebookService.authenticateUser(body.code, body.redirectUri, businessId);
     } catch (error) {
-      this.logger.error(`Failed to create Facebook post:`, error);
-      throw error;
+      throw new HttpException(
+        `Facebook authentication failed: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
     }
   }
 
-  @Get(':integrationId/posts/:postId/comments')
-  @ApiOperation({ 
-    summary: 'Get post comments',
-    description: 'Retrieve comments for a specific Facebook post'
-  })
-  @ApiParam({ 
-    name: 'integrationId', 
-    description: 'The integration ID from Firestore' 
-  })
-  @ApiParam({ 
-    name: 'postId', 
-    description: 'The Facebook post ID' 
-  })
-  @ApiQuery({ 
-    name: 'limit', 
-    required: false, 
-    description: 'Number of comments to return (default: 25)',
-    type: Number
-  })
-  @ApiQuery({ 
-    name: 'after', 
-    required: false, 
-    description: 'Pagination cursor for getting next page of results',
-    type: String
-  })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Comments retrieved successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'string' },
-              message: { type: 'string' },
-              created_time: { type: 'string' },
-              from: { type: 'object' },
-              like_count: { type: 'number' },
-              comment_count: { type: 'number' }
-            }
-          }
-        },
-        paging: { type: 'object' }
-      }
-    }
-  })
-  async getPostComments(
-    @Param('integrationId') integrationId: string,
-    @Param('postId') postId: string,
-    @Query('limit') limit?: number,
-    @Query('after') after?: string,
-    @Headers('authorization') authHeader?: string,
-  ): Promise<any> {
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new HttpException(
-        'Missing or invalid Authorization header',
-        HttpStatus.UNAUTHORIZED,
-      );
-    }
-
+  @Get('user/profile')
+  @ApiOperation({ summary: 'Get user Facebook profile' })
+  @ApiResponse({ status: 200, description: 'Profile retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'User not authenticated with Facebook' })
+  async getUserProfile(@Headers('business-id') businessId: string) {
     try {
-      this.logger.log(`Retrieving comments for Facebook post ${postId}`);
-      
-      const comments = await this.facebookService.getPostComments(
-        integrationId,
-        postId,
-        limit || 25,
-        after
-      );
-      return comments;
+      return await this.facebookService.getUserProfile(businessId);
     } catch (error) {
-      this.logger.error(`Failed to get Facebook post comments:`, error);
-      throw error;
+      throw new HttpException(
+        `Failed to get user profile: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
     }
   }
 
-  @Post(':integrationId/comments/:commentId/reply')
-  @ApiOperation({ 
-    summary: 'Reply to a comment',
-    description: 'Reply to a comment on a Facebook post'
-  })
-  @ApiParam({ 
-    name: 'integrationId', 
-    description: 'The integration ID from Firestore' 
-  })
-  @ApiParam({ 
-    name: 'commentId', 
-    description: 'The Facebook comment ID' 
-  })
+  @Get('user/pages')
+  @ApiOperation({ summary: 'Get user Facebook pages' })
+  @ApiResponse({ status: 200, description: 'Pages retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'User not authenticated with Facebook' })
+  async getUserPages(@Headers('business-id') businessId: string) {
+    try {
+      return await this.facebookService.getUserPages(businessId);
+    } catch (error) {
+      throw new HttpException(
+        `Failed to get user pages: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  @Post('pages/:pageId/subscribe-webhook')
+  @ApiOperation({ summary: 'Subscribe page to webhooks' })
+  @ApiParam({ name: 'pageId', description: 'Facebook Page ID' })
+  @ApiResponse({ status: 200, description: 'Webhook subscription successful' })
+  @ApiResponse({ status: 400, description: 'Failed to subscribe to webhooks' })
+  async subscribePageWebhooks(
+    @Param('pageId') pageId: string,
+    @Headers('business-id') businessId: string,
+  ) {
+    try {
+      return await this.facebookService.subscribeToPageWebhooks(pageId, businessId);
+    } catch (error) {
+      throw new HttpException(
+        `Failed to subscribe to webhooks: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  @Get('pages/:pageId/roles')
+  @ApiOperation({ summary: 'Get page roles and permissions' })
+  @ApiParam({ name: 'pageId', description: 'Facebook Page ID' })
+  @ApiResponse({ status: 200, description: 'Page roles retrieved successfully' })
+  async getPageRoles(
+    @Param('pageId') pageId: string,
+    @Headers('business-id') businessId: string,
+  ) {
+    try {
+      return await this.facebookService.getPageRoles(pageId, businessId);
+    } catch (error) {
+      throw new HttpException(
+        `Failed to get page roles: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  @Post('share/timeline')
+  @ApiOperation({ summary: 'Share content to Facebook timeline' })
+  @ApiResponse({ status: 200, description: 'Content shared successfully' })
+  @ApiResponse({ status: 400, description: 'Failed to share content' })
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
-        message: { type: 'string', description: 'Reply message' }
+        message: { type: 'string', description: 'Post message' },
+        link: { type: 'string', description: 'Optional link to share' },
+        imageUrl: { type: 'string', description: 'Optional image URL' },
       },
-      required: ['message']
-    }
+      required: ['message'],
+    },
   })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Reply sent successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string' }
-      }
-    }
-  })
-  async replyToComment(
-    @Param('integrationId') integrationId: string,
-    @Param('commentId') commentId: string,
-    @Body() replyData: { message: string },
-    @Headers('authorization') authHeader?: string,
-  ): Promise<any> {
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new HttpException(
-        'Missing or invalid Authorization header',
-        HttpStatus.UNAUTHORIZED,
-      );
-    }
-
+  async shareToTimeline(
+    @Body() shareData: { message: string; link?: string; imageUrl?: string },
+    @Headers('business-id') businessId: string,
+  ) {
     try {
-      this.logger.log(`Replying to Facebook comment ${commentId}`);
-      
-      const result = await this.facebookService.replyToComment(
-        integrationId,
-        commentId,
-        replyData.message
-      );
-      return result;
+      return await this.facebookService.shareToTimeline(shareData, businessId);
     } catch (error) {
-      this.logger.error(`Failed to reply to Facebook comment:`, error);
-      throw error;
+      throw new HttpException(
+        `Failed to share to timeline: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
     }
   }
 
-  @Get(':integrationId/insights')
-  @ApiOperation({ 
-    summary: 'Get page insights',
-    description: 'Retrieve analytics and insights for the Facebook page'
-  })
-  @ApiParam({ 
-    name: 'integrationId', 
-    description: 'The integration ID from Firestore' 
-  })
-  @ApiQuery({ 
-    name: 'metrics', 
-    description: 'Comma-separated list of metrics (e.g., page_impressions,page_reach)',
-    type: String
-  })
-  @ApiQuery({ 
-    name: 'period', 
-    description: 'Time period for the metrics',
-    enum: ['day', 'week', 'days_28', 'month', 'lifetime']
-  })
-  @ApiQuery({ 
-    name: 'since', 
-    required: false,
-    description: 'Start date (YYYY-MM-DD)',
-    type: String
-  })
-  @ApiQuery({ 
-    name: 'until', 
-    required: false,
-    description: 'End date (YYYY-MM-DD)',
-    type: String
-  })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Insights retrieved successfully',
+  @Post('pages/:pageId/posts')
+  @ApiOperation({ summary: 'Create post on Facebook page' })
+  @ApiParam({ name: 'pageId', description: 'Facebook Page ID' })
+  @ApiResponse({ status: 200, description: 'Post created successfully' })
+  @ApiResponse({ status: 400, description: 'Failed to create post' })
+  @ApiBody({
     schema: {
       type: 'object',
       properties: {
-        data: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              name: { type: 'string' },
-              period: { type: 'string' },
-              values: { type: 'array' },
-              title: { type: 'string' },
-              description: { type: 'string' }
-            }
-          }
-        }
-      }
-    }
+        message: { type: 'string', description: 'Post message' },
+        link: { type: 'string', description: 'Optional link to share' },
+        imageUrl: { type: 'string', description: 'Optional image URL' },
+        published: { type: 'boolean', description: 'Whether to publish immediately', default: true },
+      },
+      required: ['message'],
+    },
   })
-  async getPageInsights(
-    @Param('integrationId') integrationId: string,
-    @Query('metrics') metrics: string,
-    @Query('period') period: 'day' | 'week' | 'days_28' | 'month' | 'lifetime',
-    @Query('since') since?: string,
-    @Query('until') until?: string,
-    @Headers('authorization') authHeader?: string,
-  ): Promise<any> {
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new HttpException(
-        'Missing or invalid Authorization header',
-        HttpStatus.UNAUTHORIZED,
-      );
-    }
-
+  async createPagePost(
+    @Param('pageId') pageId: string,
+    @Body() postData: { message: string; link?: string; imageUrl?: string; published?: boolean },
+    @Headers('business-id') businessId: string,
+  ) {
     try {
-      this.logger.log(`Retrieving Facebook page insights for integration ${integrationId}`);
-      
-      const insights = await this.facebookService.getPageInsights(
-        integrationId,
-        metrics.split(','),
-        period,
-        since,
-        until
-      );
-      return insights;
+      return await this.facebookService.createPagePost(pageId, postData, businessId);
     } catch (error) {
-      this.logger.error(`Failed to get Facebook page insights:`, error);
-      throw error;
+      throw new HttpException(
+        `Failed to create page post: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
     }
   }
 
-  @Post(':integrationId/upload-media')
-  @ApiOperation({ 
-    summary: 'Upload media to Facebook',
-    description: 'Upload an image or video to Facebook for use in posts'
-  })
-  @ApiParam({ 
-    name: 'integrationId', 
-    description: 'The integration ID from Firestore' 
-  })
+  @Post('pages/:pageId/photos')
+  @ApiOperation({ summary: 'Upload photo to Facebook page' })
+  @ApiParam({ name: 'pageId', description: 'Facebook Page ID' })
   @ApiConsumes('multipart/form-data')
+  @ApiResponse({ status: 200, description: 'Photo uploaded successfully' })
+  @ApiResponse({ status: 400, description: 'Failed to upload photo' })
+  @UseInterceptors(FileInterceptor('photo'))
+  async uploadPagePhoto(
+    @Param('pageId') pageId: string,
+    @UploadedFile() photo: Express.Multer.File,
+    @Body() data: { caption?: string; published?: boolean },
+    @Headers('business-id') businessId: string,
+  ) {
+    try {
+      return await this.facebookService.uploadPagePhoto(pageId, photo, data, businessId);
+    } catch (error) {
+      throw new HttpException(
+        `Failed to upload photo: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  @Post('pages/:pageId/videos')
+  @ApiOperation({ summary: 'Upload video to Facebook page' })
+  @ApiParam({ name: 'pageId', description: 'Facebook Page ID' })
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({ status: 200, description: 'Video uploaded successfully' })
+  @ApiResponse({ status: 400, description: 'Failed to upload video' })
+  @UseInterceptors(FileInterceptor('video'))
+  async uploadPageVideo(
+    @Param('pageId') pageId: string,
+    @UploadedFile() video: Express.Multer.File,
+    @Body() data: { title?: string; description?: string; published?: boolean },
+    @Headers('business-id') businessId: string,
+  ) {
+    try {
+      return await this.facebookService.uploadPageVideo(pageId, video, data, businessId);
+    } catch (error) {
+      throw new HttpException(
+        `Failed to upload video: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  @Get('pages/:pageId/insights')
+  @ApiOperation({ summary: 'Get Facebook page insights' })
+  @ApiParam({ name: 'pageId', description: 'Facebook Page ID' })
+  @ApiQuery({ name: 'metric', description: 'Specific metrics to retrieve', required: false })
+  @ApiQuery({ name: 'period', description: 'Time period for insights', required: false })
+  @ApiResponse({ status: 200, description: 'Insights retrieved successfully' })
+  async getPageInsights(
+    @Param('pageId') pageId: string,
+    @Query('metric') metric?: string,
+    @Query('period') period?: string,
+    @Headers('business-id') businessId: string,
+  ) {
+    try {
+      return await this.facebookService.getPageInsights(pageId, { metric, period }, businessId);
+    } catch (error) {
+      throw new HttpException(
+        `Failed to get page insights: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  @Post('messages/send')
+  @ApiOperation({ summary: 'Send Facebook Messenger message' })
+  @ApiResponse({ status: 200, description: 'Message sent successfully' })
+  @ApiResponse({ status: 400, description: 'Failed to send message' })
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
-        file: {
-          type: 'string',
-          format: 'binary',
-          description: 'Media file to upload'
-        },
-        published: {
-          type: 'boolean',
-          description: 'Whether to publish immediately (default: false)'
-        }
-      }
-    }
-  })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Media uploaded successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        id: { type: 'string', description: 'Media ID for use in posts' }
-      }
-    }
-  })
-  @UseInterceptors(FileInterceptor('file'))
-  async uploadMedia(
-    @Param('integrationId') integrationId: string,
-    @UploadedFile() file: Express.Multer.File,
-    @Body('published') published?: string,
-    @Headers('authorization') authHeader?: string,
-  ): Promise<any> {
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new HttpException(
-        'Missing or invalid Authorization header',
-        HttpStatus.UNAUTHORIZED,
-      );
-    }
-
-    if (!file) {
-      throw new HttpException('No file uploaded', HttpStatus.BAD_REQUEST);
-    }
-
-    try {
-      this.logger.log(`Uploading media file for Facebook integration ${integrationId}`);
-      
-      const result = await this.facebookService.uploadMedia(
-        integrationId,
-        file.buffer,
-        file.mimetype,
-        file.originalname,
-        published === 'true'
-      );
-      
-      return result;
-    } catch (error) {
-      this.logger.error(`Failed to upload media to Facebook:`, error);
-      throw error;
-    }
-  }
-
-  @Delete(':integrationId/posts/:postId')
-  @ApiOperation({ 
-    summary: 'Delete a Facebook post',
-    description: 'Delete a post from the connected Facebook page'
-  })
-  @ApiParam({ 
-    name: 'integrationId', 
-    description: 'The integration ID from Firestore' 
-  })
-  @ApiParam({ 
-    name: 'postId', 
-    description: 'The Facebook post ID to delete' 
-  })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Post deleted successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean' }
-      }
-    }
-  })
-  async deletePost(
-    @Param('integrationId') integrationId: string,
-    @Param('postId') postId: string,
-    @Headers('authorization') authHeader?: string,
-  ): Promise<any> {
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new HttpException(
-        'Missing or invalid Authorization header',
-        HttpStatus.UNAUTHORIZED,
-      );
-    }
-
-    try {
-      this.logger.log(`Deleting Facebook post ${postId} for integration ${integrationId}`);
-      
-      const result = await this.facebookService.deletePost(integrationId, postId);
-      return result;
-    } catch (error) {
-      this.logger.error(`Failed to delete Facebook post:`, error);
-      throw error;
-    }
-  }
-
-  @Post(':integrationId/comments/:commentId/moderate')
-  @ApiOperation({ 
-    summary: 'Moderate a comment',
-    description: 'Hide or unhide a comment on a Facebook post'
-  })
-  @ApiParam({ 
-    name: 'integrationId', 
-    description: 'The integration ID from Firestore' 
-  })
-  @ApiParam({ 
-    name: 'commentId', 
-    description: 'The Facebook comment ID' 
-  })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        hide: { type: 'boolean', description: 'Whether to hide (true) or unhide (false) the comment' }
+        recipientId: { type: 'string', description: 'Recipient user ID' },
+        message: { type: 'string', description: 'Message text' },
+        pageId: { type: 'string', description: 'Page ID to send from' },
       },
-      required: ['hide']
-    }
+      required: ['recipientId', 'message', 'pageId'],
+    },
   })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Comment moderated successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean' }
-      }
-    }
-  })
-  async moderateComment(
-    @Param('integrationId') integrationId: string,
-    @Param('commentId') commentId: string,
-    @Body() moderationData: { hide: boolean },
-    @Headers('authorization') authHeader?: string,
-  ): Promise<any> {
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new HttpException(
-        'Missing or invalid Authorization header',
-        HttpStatus.UNAUTHORIZED,
-      );
-    }
-
+  async sendMessage(
+    @Body() messageData: { recipientId: string; message: string; pageId: string },
+    @Headers('business-id') businessId: string,
+  ) {
     try {
-      this.logger.log(`Moderating Facebook comment ${commentId}`);
-      
-      const result = await this.facebookService.moderateComment(
-        integrationId,
-        commentId,
-        moderationData.hide
+      return await this.facebookService.sendMessage(
+        messageData.pageId,
+        messageData.recipientId,
+        messageData.message,
+        businessId,
       );
-      return result;
     } catch (error) {
-      this.logger.error(`Failed to moderate Facebook comment:`, error);
-      throw error;
+      throw new HttpException(
+        `Failed to send message: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
     }
   }
 
-  @Get(':integrationId/messages')
-  @ApiOperation({ 
-    summary: 'Get page messages',
-    description: 'Retrieve conversations and messages for the Facebook page'
-  })
-  @ApiParam({ 
-    name: 'integrationId', 
-    description: 'The integration ID from Firestore' 
-  })
-  @ApiQuery({ 
-    name: 'limit', 
-    required: false, 
-    description: 'Number of conversations to return (default: 25)',
-    type: Number
-  })
-  @ApiQuery({ 
-    name: 'after', 
-    required: false, 
-    description: 'Pagination cursor for getting next page of results',
-    type: String
-  })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Messages retrieved successfully',
+  @Get('conversations/:conversationId/messages')
+  @ApiOperation({ summary: 'Get conversation messages' })
+  @ApiParam({ name: 'conversationId', description: 'Conversation ID' })
+  @ApiQuery({ name: 'limit', description: 'Number of messages to retrieve', required: false })
+  @ApiResponse({ status: 200, description: 'Messages retrieved successfully' })
+  async getConversationMessages(
+    @Param('conversationId') conversationId: string,
+    @Query('limit') limit?: number,
+    @Headers('business-id') businessId: string,
+  ) {
+    try {
+      return await this.facebookService.getConversationMessages(conversationId, limit, businessId);
+    } catch (error) {
+      throw new HttpException(
+        `Failed to get conversation messages: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  @Post('posts/:postId/like')
+  @ApiOperation({ summary: 'Toggle like on Facebook post' })
+  @ApiParam({ name: 'postId', description: 'Facebook Post ID' })
+  @ApiResponse({ status: 200, description: 'Like toggled successfully' })
+  @ApiResponse({ status: 400, description: 'Failed to toggle like' })
+  async toggleLike(
+    @Param('postId') postId: string,
+    @Headers('business-id') businessId: string,
+  ) {
+    try {
+      return await this.facebookService.toggleLike(postId, businessId);
+    } catch (error) {
+      throw new HttpException(
+        `Failed to toggle like: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  @Post('posts/:postId/reactions')
+  @ApiOperation({ summary: 'Add reaction to Facebook post' })
+  @ApiParam({ name: 'postId', description: 'Facebook Post ID' })
+  @ApiResponse({ status: 200, description: 'Reaction added successfully' })
+  @ApiResponse({ status: 400, description: 'Failed to add reaction' })
+  @ApiBody({
     schema: {
       type: 'object',
       properties: {
-        data: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'string' },
-              participants: { type: 'object' },
-              senders: { type: 'object' },
-              can_reply: { type: 'boolean' },
-              message_count: { type: 'number' },
-              unread_count: { type: 'number' }
-            }
-          }
-        }
-      }
-    }
+        type: { 
+          type: 'string', 
+          enum: ['LIKE', 'LOVE', 'WOW', 'HAHA', 'SAD', 'ANGRY'],
+          description: 'Reaction type' 
+        },
+      },
+      required: ['type'],
+    },
   })
-  async getPageMessages(
-    @Param('integrationId') integrationId: string,
-    @Query('limit') limit?: number,
-    @Query('after') after?: string,
-    @Headers('authorization') authHeader?: string,
-  ): Promise<any> {
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  async addReaction(
+    @Param('postId') postId: string,
+    @Body() reactionData: { type: 'LIKE' | 'LOVE' | 'WOW' | 'HAHA' | 'SAD' | 'ANGRY' },
+    @Headers('business-id') businessId: string,
+  ) {
+    try {
+      return await this.facebookService.addReaction(postId, reactionData.type, businessId);
+    } catch (error) {
       throw new HttpException(
-        'Missing or invalid Authorization header',
-        HttpStatus.UNAUTHORIZED,
+        `Failed to add reaction: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
       );
     }
+  }
 
+  @Post('posts/:postId/comments')
+  @ApiOperation({ summary: 'Comment on Facebook post' })
+  @ApiParam({ name: 'postId', description: 'Facebook Post ID' })
+  @ApiResponse({ status: 200, description: 'Comment added successfully' })
+  @ApiResponse({ status: 400, description: 'Failed to add comment' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', description: 'Comment message' },
+        pageId: { type: 'string', description: 'Page ID to comment from (optional)' },
+      },
+      required: ['message'],
+    },
+  })
+  async commentOnPost(
+    @Param('postId') postId: string,
+    @Body() commentData: { message: string; pageId?: string },
+    @Headers('business-id') businessId: string,
+  ) {
     try {
-      this.logger.log(`Retrieving Facebook page messages for integration ${integrationId}`);
-      
-      const messages = await this.facebookService.getPageMessages(
-        integrationId,
-        limit || 25,
-        after
-      );
-      return messages;
+      return await this.facebookService.commentOnPost(postId, commentData, businessId);
     } catch (error) {
-      this.logger.error(`Failed to get Facebook page messages:`, error);
-      throw error;
+      throw new HttpException(
+        `Failed to comment on post: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  @Get('pages/:pageId/posts')
+  @ApiOperation({ summary: 'Get Facebook page posts' })
+  @ApiParam({ name: 'pageId', description: 'Facebook Page ID' })
+  @ApiQuery({ name: 'limit', description: 'Number of posts to retrieve', required: false })
+  @ApiQuery({ name: 'fields', description: 'Specific fields to retrieve', required: false })
+  @ApiResponse({ status: 200, description: 'Posts retrieved successfully' })
+  async getPagePosts(
+    @Param('pageId') pageId: string,
+    @Query('limit') limit?: number,
+    @Query('fields') fields?: string,
+    @Headers('business-id') businessId: string,
+  ) {
+    try {
+      return await this.facebookService.getPagePosts(pageId, { limit, fields }, businessId);
+    } catch (error) {
+      throw new HttpException(
+        `Failed to get page posts: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  @Delete('posts/:postId')
+  @ApiOperation({ summary: 'Delete Facebook post' })
+  @ApiParam({ name: 'postId', description: 'Facebook Post ID' })
+  @ApiResponse({ status: 200, description: 'Post deleted successfully' })
+  @ApiResponse({ status: 400, description: 'Failed to delete post' })
+  async deletePost(
+    @Param('postId') postId: string,
+    @Headers('business-id') businessId: string,
+  ) {
+    try {
+      return await this.facebookService.deletePost(postId, businessId);
+    } catch (error) {
+      throw new HttpException(
+        `Failed to delete post: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  @Delete('auth')
+  @ApiOperation({ summary: 'Disconnect Facebook integration' })
+  @ApiResponse({ status: 200, description: 'Facebook disconnected successfully' })
+  @ApiResponse({ status: 400, description: 'Failed to disconnect Facebook' })
+  async disconnectFacebook(@Headers('business-id') businessId: string) {
+    try {
+      return await this.facebookService.disconnectUser(businessId);
+    } catch (error) {
+      throw new HttpException(
+        `Failed to disconnect Facebook: ${error.message}`,
+        HttpStatus.BAD_REQUEST,
+      );
     }
   }
 }

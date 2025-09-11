@@ -436,6 +436,354 @@ export class FacebookService {
   }
 
   /**
+   * Send a private message via Messenger
+   */
+  async sendMessage(
+    integrationId: string,
+    recipientId: string,
+    message: string,
+    messageType: 'text' | 'image' | 'video' | 'audio' | 'file' = 'text',
+    attachmentUrl?: string
+  ): Promise<{ message_id: string; recipient_id: string }> {
+    const integration = await this.getIntegration(integrationId);
+    this.validateIntegration(integration);
+
+    const { page_access_token } = integration.credentials;
+
+    try {
+      const messageData: any = {
+        recipient: { id: recipientId },
+        message: {},
+      };
+
+      if (messageType === 'text') {
+        messageData.message.text = message;
+      } else if (attachmentUrl) {
+        messageData.message.attachment = {
+          type: messageType,
+          payload: { url: attachmentUrl, is_reusable: true },
+        };
+      }
+
+      const response = await axios.post(
+        `${this.FACEBOOK_API_BASE_URL}/me/messages`,
+        messageData,
+        {
+          headers: {
+            'Authorization': `Bearer ${page_access_token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      this.logger.log(`Message sent to ${recipientId}: ${response.data.message_id}`);
+      return response.data;
+    } catch (error) {
+      this.logger.error('Failed to send Facebook message:', error.response?.data || error);
+      throw new HttpException(
+        `Failed to send message: ${error.response?.data?.error?.message || error.message}`,
+        error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Get conversation messages
+   */
+  async getConversationMessages(
+    integrationId: string,
+    conversationId: string,
+    limit: number = 25,
+    after?: string
+  ): Promise<any> {
+    const integration = await this.getIntegration(integrationId);
+    this.validateIntegration(integration);
+
+    const { page_access_token } = integration.credentials;
+
+    try {
+      const response = await axios.get(
+        `${this.FACEBOOK_API_BASE_URL}/${conversationId}/messages`,
+        {
+          headers: {
+            'Authorization': `Bearer ${page_access_token}`,
+          },
+          params: {
+            fields: 'id,created_time,from,to,message,attachments,sticker,tags',
+            limit,
+            after,
+          },
+        }
+      );
+
+      this.logger.log(`Retrieved ${response.data.data.length} messages from conversation ${conversationId}`);
+      return response.data;
+    } catch (error) {
+      this.logger.error('Failed to get conversation messages:', error.response?.data || error);
+      throw new HttpException(
+        `Failed to get conversation messages: ${error.response?.data?.error?.message || error.message}`,
+        error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Share content to Facebook timeline or page
+   */
+  async shareToTimeline(
+    integrationId: string,
+    content: {
+      message?: string;
+      link?: string;
+      mediaId?: string;
+      targetId?: string; // page ID or user ID
+      privacy?: 'EVERYONE' | 'ALL_FRIENDS' | 'FRIENDS_OF_FRIENDS' | 'SELF' | 'CUSTOM';
+    }
+  ): Promise<{ id: string; post_id: string }> {
+    const integration = await this.getIntegration(integrationId);
+    this.validateIntegration(integration);
+
+    const { page_access_token, page_id } = integration.credentials;
+    const targetId = content.targetId || page_id;
+
+    try {
+      const payload: any = {};
+      
+      if (content.message) payload.message = content.message;
+      if (content.link) payload.link = content.link;
+      if (content.mediaId) payload.object_attachment = content.mediaId;
+      if (content.privacy) payload.privacy = { value: content.privacy };
+
+      const response = await axios.post(
+        `${this.FACEBOOK_API_BASE_URL}/${targetId}/feed`,
+        payload,
+        {
+          headers: {
+            'Authorization': `Bearer ${page_access_token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      this.logger.log(`Content shared to ${targetId}: ${response.data.id}`);
+      return response.data;
+    } catch (error) {
+      this.logger.error('Failed to share content to timeline:', error.response?.data || error);
+      throw new HttpException(
+        `Failed to share to timeline: ${error.response?.data?.error?.message || error.message}`,
+        error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Like or unlike a post/comment
+   */
+  async toggleLike(
+    integrationId: string,
+    objectId: string,
+    action: 'like' | 'unlike' = 'like'
+  ): Promise<{ success: boolean }> {
+    const integration = await this.getIntegration(integrationId);
+    this.validateIntegration(integration);
+
+    const { page_access_token } = integration.credentials;
+
+    try {
+      if (action === 'like') {
+        await axios.post(
+          `${this.FACEBOOK_API_BASE_URL}/${objectId}/likes`,
+          {},
+          {
+            headers: {
+              'Authorization': `Bearer ${page_access_token}`,
+            },
+          }
+        );
+      } else {
+        await axios.delete(
+          `${this.FACEBOOK_API_BASE_URL}/${objectId}/likes`,
+          {
+            headers: {
+              'Authorization': `Bearer ${page_access_token}`,
+            },
+          }
+        );
+      }
+
+      this.logger.log(`${action} action performed on ${objectId}`);
+      return { success: true };
+    } catch (error) {
+      this.logger.error(`Failed to ${action} object:`, error.response?.data || error);
+      throw new HttpException(
+        `Failed to ${action}: ${error.response?.data?.error?.message || error.message}`,
+        error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Add reaction to post/comment
+   */
+  async addReaction(
+    integrationId: string,
+    objectId: string,
+    reactionType: 'LIKE' | 'LOVE' | 'WOW' | 'HAHA' | 'SAD' | 'ANGRY' | 'THANKFUL'
+  ): Promise<{ success: boolean }> {
+    const integration = await this.getIntegration(integrationId);
+    this.validateIntegration(integration);
+
+    const { page_access_token } = integration.credentials;
+
+    try {
+      await axios.post(
+        `${this.FACEBOOK_API_BASE_URL}/${objectId}/reactions`,
+        {
+          type: reactionType,
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${page_access_token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      this.logger.log(`Reaction ${reactionType} added to ${objectId}`);
+      return { success: true };
+    } catch (error) {
+      this.logger.error('Failed to add reaction:', error.response?.data || error);
+      throw new HttpException(
+        `Failed to add reaction: ${error.response?.data?.error?.message || error.message}`,
+        error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Get user profile information (for authentication)
+   */
+  async getUserProfile(accessToken: string): Promise<any> {
+    try {
+      const response = await axios.get(
+        `${this.FACEBOOK_API_BASE_URL}/me`,
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          params: {
+            fields: 'id,name,email,picture,birthday,gender,location,hometown,about,relationship_status,website',
+          },
+        }
+      );
+
+      this.logger.log(`Retrieved user profile: ${response.data.name}`);
+      return response.data;
+    } catch (error) {
+      this.logger.error('Failed to get user profile:', error.response?.data || error);
+      throw new HttpException(
+        `Failed to get user profile: ${error.response?.data?.error?.message || error.message}`,
+        error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Get user's pages (for page management)
+   */
+  async getUserPages(accessToken: string): Promise<any> {
+    try {
+      const response = await axios.get(
+        `${this.FACEBOOK_API_BASE_URL}/me/accounts`,
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          params: {
+            fields: 'id,name,category,category_list,access_token,perms,tasks,fan_count',
+          },
+        }
+      );
+
+      this.logger.log(`Retrieved ${response.data.data.length} user pages`);
+      return response.data;
+    } catch (error) {
+      this.logger.error('Failed to get user pages:', error.response?.data || error);
+      throw new HttpException(
+        `Failed to get user pages: ${error.response?.data?.error?.message || error.message}`,
+        error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Subscribe to page webhooks for real-time updates
+   */
+  async subscribeToPageWebhooks(
+    integrationId: string,
+    webhookFields: string[] = ['feed', 'mention', 'conversations', 'messages', 'messaging_postbacks']
+  ): Promise<{ success: boolean }> {
+    const integration = await this.getIntegration(integrationId);
+    this.validateIntegration(integration);
+
+    const { page_access_token, page_id } = integration.credentials;
+
+    try {
+      const response = await axios.post(
+        `${this.FACEBOOK_API_BASE_URL}/${page_id}/subscribed_apps`,
+        {
+          subscribed_fields: webhookFields,
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${page_access_token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      this.logger.log(`Subscribed to webhooks for page ${page_id}: ${webhookFields.join(', ')}`);
+      return { success: true };
+    } catch (error) {
+      this.logger.error('Failed to subscribe to page webhooks:', error.response?.data || error);
+      throw new HttpException(
+        `Failed to subscribe to webhooks: ${error.response?.data?.error?.message || error.message}`,
+        error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Get page roles and permissions
+   */
+  async getPageRoles(integrationId: string): Promise<any> {
+    const integration = await this.getIntegration(integrationId);
+    this.validateIntegration(integration);
+
+    const { page_access_token, page_id } = integration.credentials;
+
+    try {
+      const response = await axios.get(
+        `${this.FACEBOOK_API_BASE_URL}/${page_id}/roles`,
+        {
+          headers: {
+            'Authorization': `Bearer ${page_access_token}`,
+          },
+        }
+      );
+
+      this.logger.log(`Retrieved page roles for ${page_id}`);
+      return response.data;
+    } catch (error) {
+      this.logger.error('Failed to get page roles:', error.response?.data || error);
+      throw new HttpException(
+        `Failed to get page roles: ${error.response?.data?.error?.message || error.message}`,
+        error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
    * Private helper methods
    */
   private async getIntegration(integrationId: string): Promise<FacebookIntegrationDocument> {

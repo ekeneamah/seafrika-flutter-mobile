@@ -27,6 +27,7 @@ import '../services/integration_service.dart';
 import '../services/order_management_service.dart';
 import '../services/customer_service.dart';
 import '../services/inventory_allocation_service.dart';
+import '../services/facebook_service.dart';
 import '../models/role.dart';
 import '../models/user.dart';
 import '../models/permission.dart';

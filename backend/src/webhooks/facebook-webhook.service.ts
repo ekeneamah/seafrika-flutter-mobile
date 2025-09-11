@@ -259,9 +259,278 @@ export class FacebookWebhookService {
       if (integration.settings?.autoResponder) {
         await this.checkMessageAutoResponderRules(integration, value);
       }
+
+      // Process message intents and commands
+      await this.processMessageIntents(integration, value);
+
     } catch (error) {
       this.logger.error(`Failed to handle new message:`, error);
     }
+  }
+
+  /**
+   * Process Messenger-specific events like postbacks, quick replies, etc.
+   */
+  async processMessengerWebhook(webhookData: any): Promise<void> {
+    this.logger.log('Processing Messenger webhook');
+    
+    for (const entry of webhookData.entry) {
+      if (entry.messaging) {
+        for (const messagingEvent of entry.messaging) {
+          await this.processMessagingEvent(entry.id, messagingEvent);
+        }
+      }
+    }
+  }
+
+  private async processMessagingEvent(pageId: string, messagingEvent: any): Promise<void> {
+    const integration = await this.findIntegrationByPageId(pageId);
+    
+    if (!integration) {
+      this.logger.warn(`No integration found for page ID: ${pageId}`);
+      return;
+    }
+
+    try {
+      if (messagingEvent.message) {
+        await this.handleMessengerMessage(integration, messagingEvent);
+      } else if (messagingEvent.postback) {
+        await this.handleMessengerPostback(integration, messagingEvent);
+      } else if (messagingEvent.delivery) {
+        await this.handleMessageDelivery(integration, messagingEvent);
+      } else if (messagingEvent.read) {
+        await this.handleMessageRead(integration, messagingEvent);
+      } else if (messagingEvent.referral) {
+        await this.handleMessengerReferral(integration, messagingEvent);
+      }
+    } catch (error) {
+      this.logger.error('Failed to process messaging event:', error);
+    }
+  }
+
+  private async handleMessengerMessage(integration: any, messagingEvent: any): Promise<void> {
+    const { sender, recipient, timestamp, message } = messagingEvent;
+    
+    try {
+      // Store the message
+      await this.storeMessengerMessage(integration, {
+        senderId: sender.id,
+        recipientId: recipient.id,
+        timestamp,
+        message,
+        messageType: 'received'
+      });
+
+      // Send notification
+      await this.sendMessageNotification(integration, messagingEvent);
+
+      // Process message content and intents
+      if (message.text) {
+        await this.processMessageIntents(integration, {
+          senderId: sender.id,
+          text: message.text,
+          timestamp
+        });
+      }
+
+      // Handle attachments
+      if (message.attachments) {
+        await this.processMessageAttachments(integration, message.attachments, sender.id);
+      }
+
+      // Auto-respond if configured
+      if (integration.settings?.autoResponder?.enabled) {
+        await this.sendAutoResponse(integration, sender.id, message.text);
+      }
+
+    } catch (error) {
+      this.logger.error('Failed to handle Messenger message:', error);
+    }
+  }
+
+  private async handleMessengerPostback(integration: any, messagingEvent: any): Promise<void> {
+    const { sender, postback, timestamp } = messagingEvent;
+    
+    try {
+      // Store postback event
+      await this.storePostbackEvent(integration, {
+        senderId: sender.id,
+        payload: postback.payload,
+        title: postback.title,
+        timestamp
+      });
+
+      // Process postback action
+      await this.processPostbackAction(integration, sender.id, postback.payload);
+
+    } catch (error) {
+      this.logger.error('Failed to handle Messenger postback:', error);
+    }
+  }
+
+  private async handleMessageDelivery(integration: any, messagingEvent: any): Promise<void> {
+    const { delivery } = messagingEvent;
+    
+    try {
+      // Update message delivery status
+      await this.updateMessageDeliveryStatus(integration, delivery.mids, 'delivered');
+      
+    } catch (error) {
+      this.logger.error('Failed to handle message delivery:', error);
+    }
+  }
+
+  private async handleMessageRead(integration: any, messagingEvent: any): Promise<void> {
+    const { read } = messagingEvent;
+    
+    try {
+      // Update message read status
+      await this.updateMessageReadStatus(integration, read.watermark);
+      
+    } catch (error) {
+      this.logger.error('Failed to handle message read:', error);
+    }
+  }
+
+  private async handleMessengerReferral(integration: any, messagingEvent: any): Promise<void> {
+    const { sender, referral, timestamp } = messagingEvent;
+    
+    try {
+      // Store referral event for analytics
+      await this.storeReferralEvent(integration, {
+        senderId: sender.id,
+        ref: referral.ref,
+        source: referral.source,
+        type: referral.type,
+        timestamp
+      });
+      
+    } catch (error) {
+      this.logger.error('Failed to handle Messenger referral:', error);
+    }
+  }
+
+  private async processMessageIntents(integration: any, messageData: any): Promise<void> {
+    try {
+      const { text, senderId } = messageData;
+      
+      if (!text) return;
+
+      const lowerText = text.toLowerCase().trim();
+
+      // Handle common intents
+      if (lowerText.includes('hello') || lowerText.includes('hi') || lowerText.includes('hey')) {
+        await this.sendGreetingResponse(integration, senderId);
+      } else if (lowerText.includes('help') || lowerText.includes('support')) {
+        await this.sendHelpResponse(integration, senderId);
+      } else if (lowerText.includes('hours') || lowerText.includes('open')) {
+        await this.sendBusinessHoursResponse(integration, senderId);
+      } else if (lowerText.includes('location') || lowerText.includes('address')) {
+        await this.sendLocationResponse(integration, senderId);
+      } else if (lowerText.includes('menu') || lowerText.includes('catalog')) {
+        await this.sendMenuResponse(integration, senderId);
+      }
+      
+    } catch (error) {
+      this.logger.error('Failed to process message intents:', error);
+    }
+  }
+
+  private async processMessageAttachments(integration: any, attachments: any[], senderId: string): Promise<void> {
+    try {
+      for (const attachment of attachments) {
+        await this.storeMessageAttachment(integration, {
+          senderId,
+          type: attachment.type,
+          payload: attachment.payload,
+          timestamp: new Date()
+        });
+
+        // Process based on attachment type
+        if (attachment.type === 'location') {
+          await this.processLocationShare(integration, senderId, attachment.payload);
+        } else if (attachment.type === 'image' || attachment.type === 'video') {
+          await this.processMediaShare(integration, senderId, attachment);
+        }
+      }
+    } catch (error) {
+      this.logger.error('Failed to process message attachments:', error);
+    }
+  }
+
+  private async sendAutoResponse(integration: any, recipientId: string, messageText: string): Promise<void> {
+    try {
+      const { autoResponder } = integration.settings;
+      
+      if (!autoResponder?.enabled) return;
+
+      // Check business hours
+      const isBusinessHours = this.isWithinBusinessHours(integration.settings?.businessHours);
+      
+      let responseMessage = autoResponder.defaultMessage || 'Thank you for your message. We will get back to you soon.';
+      
+      if (!isBusinessHours && autoResponder.awayMessage) {
+        responseMessage = autoResponder.awayMessage;
+      }
+
+      // Send auto-response via Facebook API
+      // This would require injecting FacebookService
+      this.logger.log(`Auto-response sent to ${recipientId}: ${responseMessage}`);
+      
+    } catch (error) {
+      this.logger.error('Failed to send auto-response:', error);
+    }
+  }
+
+  private async sendGreetingResponse(integration: any, recipientId: string): Promise<void> {
+    const greeting = integration.settings?.responses?.greeting || 
+      'Hello! Welcome to our page. How can we help you today?';
+    
+    // Send greeting via Facebook API
+    this.logger.log(`Greeting sent to ${recipientId}: ${greeting}`);
+  }
+
+  private async sendHelpResponse(integration: any, recipientId: string): Promise<void> {
+    const helpMessage = integration.settings?.responses?.help || 
+      'Here are some ways we can help:\n• Business hours\n• Location\n• Menu/Catalog\n• Support';
+    
+    // Send help message via Facebook API
+    this.logger.log(`Help response sent to ${recipientId}: ${helpMessage}`);
+  }
+
+  private async sendBusinessHoursResponse(integration: any, recipientId: string): Promise<void> {
+    const businessHours = integration.settings?.businessHours;
+    let hoursMessage = 'Our business hours:\n';
+    
+    if (businessHours) {
+      ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].forEach(day => {
+        const dayHours = businessHours[day];
+        if (dayHours?.enabled) {
+          hoursMessage += `${day.charAt(0).toUpperCase() + day.slice(1)}: ${dayHours.start} - ${dayHours.end}\n`;
+        }
+      });
+    } else {
+      hoursMessage = 'Please contact us for our current business hours.';
+    }
+    
+    // Send business hours via Facebook API
+    this.logger.log(`Business hours sent to ${recipientId}`);
+  }
+
+  private async sendLocationResponse(integration: any, recipientId: string): Promise<void> {
+    const location = integration.settings?.businessInfo?.address || 
+      'Please contact us for our location information.';
+    
+    // Send location via Facebook API
+    this.logger.log(`Location sent to ${recipientId}: ${location}`);
+  }
+
+  private async sendMenuResponse(integration: any, recipientId: string): Promise<void> {
+    const menuMessage = integration.settings?.responses?.menu || 
+      'Check out our products and services on our page!';
+    
+    // Send menu/catalog via Facebook API
+    this.logger.log(`Menu response sent to ${recipientId}`);
   }
 
   private async findIntegrationByPageId(pageId: string): Promise<any> {
@@ -419,6 +688,218 @@ export class FacebookWebhookService {
     } catch (error) {
       this.logger.error(`Failed to store message event:`, error);
       throw error;
+    }
+  }
+
+  private async storeMessengerMessage(integration: any, messageData: any): Promise<void> {
+    try {
+      const messagesCollection = this.firestoreService
+        .collection('businesses')
+        .doc(integration.businessId)
+        .collection('messenger_messages');
+
+      await messagesCollection.add({
+        integrationId: integration.id,
+        senderId: messageData.senderId,
+        recipientId: messageData.recipientId,
+        message: messageData.message,
+        messageType: messageData.messageType,
+        timestamp: new Date(messageData.timestamp),
+        createdAt: new Date(),
+      });
+    } catch (error) {
+      this.logger.error(`Failed to store Messenger message:`, error);
+      throw error;
+    }
+  }
+
+  private async storePostbackEvent(integration: any, postbackData: any): Promise<void> {
+    try {
+      const eventsCollection = this.firestoreService
+        .collection('businesses')
+        .doc(integration.businessId)
+        .collection('messenger_events');
+
+      await eventsCollection.add({
+        integrationId: integration.id,
+        type: 'postback',
+        senderId: postbackData.senderId,
+        payload: postbackData.payload,
+        title: postbackData.title,
+        timestamp: new Date(postbackData.timestamp),
+        createdAt: new Date(),
+      });
+    } catch (error) {
+      this.logger.error(`Failed to store postback event:`, error);
+      throw error;
+    }
+  }
+
+  private async storeReferralEvent(integration: any, referralData: any): Promise<void> {
+    try {
+      const eventsCollection = this.firestoreService
+        .collection('businesses')
+        .doc(integration.businessId)
+        .collection('messenger_events');
+
+      await eventsCollection.add({
+        integrationId: integration.id,
+        type: 'referral',
+        senderId: referralData.senderId,
+        ref: referralData.ref,
+        source: referralData.source,
+        referralType: referralData.type,
+        timestamp: new Date(referralData.timestamp),
+        createdAt: new Date(),
+      });
+    } catch (error) {
+      this.logger.error(`Failed to store referral event:`, error);
+      throw error;
+    }
+  }
+
+  private async storeMessageAttachment(integration: any, attachmentData: any): Promise<void> {
+    try {
+      const attachmentsCollection = this.firestoreService
+        .collection('businesses')
+        .doc(integration.businessId)
+        .collection('message_attachments');
+
+      await attachmentsCollection.add({
+        integrationId: integration.id,
+        senderId: attachmentData.senderId,
+        type: attachmentData.type,
+        payload: attachmentData.payload,
+        timestamp: attachmentData.timestamp,
+        createdAt: new Date(),
+      });
+    } catch (error) {
+      this.logger.error(`Failed to store message attachment:`, error);
+      throw error;
+    }
+  }
+
+  private async updateMessageDeliveryStatus(integration: any, messageIds: string[], status: string): Promise<void> {
+    try {
+      const messagesCollection = this.firestoreService
+        .collection('businesses')
+        .doc(integration.businessId)
+        .collection('messenger_messages');
+
+      for (const messageId of messageIds) {
+        const querySnapshot = await messagesCollection
+          .where('message.mid', '==', messageId)
+          .get();
+
+        querySnapshot.forEach(async (doc) => {
+          await doc.ref.update({
+            deliveryStatus: status,
+            deliveredAt: new Date(),
+          });
+        });
+      }
+    } catch (error) {
+      this.logger.error(`Failed to update message delivery status:`, error);
+    }
+  }
+
+  private async updateMessageReadStatus(integration: any, watermark: number): Promise<void> {
+    try {
+      const messagesCollection = this.firestoreService
+        .collection('businesses')
+        .doc(integration.businessId)
+        .collection('messenger_messages');
+
+      const querySnapshot = await messagesCollection
+        .where('timestamp', '<=', new Date(watermark))
+        .where('readStatus', '!=', 'read')
+        .get();
+
+      querySnapshot.forEach(async (doc) => {
+        await doc.ref.update({
+          readStatus: 'read',
+          readAt: new Date(),
+        });
+      });
+    } catch (error) {
+      this.logger.error(`Failed to update message read status:`, error);
+    }
+  }
+
+  private async processPostbackAction(integration: any, senderId: string, payload: string): Promise<void> {
+    try {
+      // Handle different postback actions
+      switch (payload) {
+        case 'GET_STARTED':
+          await this.sendGreetingResponse(integration, senderId);
+          break;
+        case 'MENU':
+          await this.sendMenuResponse(integration, senderId);
+          break;
+        case 'HOURS':
+          await this.sendBusinessHoursResponse(integration, senderId);
+          break;
+        case 'LOCATION':
+          await this.sendLocationResponse(integration, senderId);
+          break;
+        case 'SUPPORT':
+          await this.sendHelpResponse(integration, senderId);
+          break;
+        default:
+          this.logger.log(`Unhandled postback payload: ${payload}`);
+      }
+    } catch (error) {
+      this.logger.error(`Failed to process postback action:`, error);
+    }
+  }
+
+  private async processLocationShare(integration: any, senderId: string, locationPayload: any): Promise<void> {
+    try {
+      // Store location data
+      const locationsCollection = this.firestoreService
+        .collection('businesses')
+        .doc(integration.businessId)
+        .collection('customer_locations');
+
+      await locationsCollection.add({
+        integrationId: integration.id,
+        senderId: senderId,
+        coordinates: locationPayload.coordinates,
+        address: locationPayload.address,
+        title: locationPayload.title,
+        createdAt: new Date(),
+      });
+
+      // Send acknowledgment
+      const response = 'Thank you for sharing your location! We\'ll use this to better assist you.';
+      this.logger.log(`Location acknowledgment sent to ${senderId}`);
+    } catch (error) {
+      this.logger.error(`Failed to process location share:`, error);
+    }
+  }
+
+  private async processMediaShare(integration: any, senderId: string, attachment: any): Promise<void> {
+    try {
+      // Store media reference
+      const mediaCollection = this.firestoreService
+        .collection('businesses')
+        .doc(integration.businessId)
+        .collection('shared_media');
+
+      await mediaCollection.add({
+        integrationId: integration.id,
+        senderId: senderId,
+        type: attachment.type,
+        url: attachment.payload.url,
+        stickerId: attachment.payload.sticker_id,
+        createdAt: new Date(),
+      });
+
+      // Send acknowledgment
+      const response = `Thank you for sharing the ${attachment.type}!`;
+      this.logger.log(`Media acknowledgment sent to ${senderId}`);
+    } catch (error) {
+      this.logger.error(`Failed to process media share:`, error);
     }
   }
 

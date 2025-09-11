@@ -3,12 +3,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:vendor_app/models/integration.dart';
+import 'package:vendor_app/models/facebook_models.dart';
 import 'package:vendor_app/providers/service_providers.dart';
 import 'package:vendor_app/providers/business_context_provider.dart';
+import 'package:vendor_app/providers/facebook_providers.dart';
 import 'package:vendor_app/services/integration_service.dart';
+import 'package:vendor_app/services/facebook_service.dart';
 import 'package:vendor_app/widgets/integration_app_bar.dart';
 import 'package:vendor_app/theme/app_theme.dart';
-import 'package:vendor_app/screens/integrations/facebook_dashboard_screen.dart';
+import 'package:vendor_app/screens/integrations/facebook_enhanced_dashboard_screen.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -416,9 +419,7 @@ class _FacebookIntegrationScreenState extends ConsumerState<FacebookIntegrationS
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (context) => FacebookDashboardScreen(
-              integrationId: integration.id,
-            ),
+            builder: (context) => const FacebookEnhancedDashboardScreen(),
           ),
         );
       }
@@ -1127,10 +1128,7 @@ class _FacebookIntegrationScreenState extends ConsumerState<FacebookIntegrationS
                 () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (context) => FacebookDashboardScreen(
-                        integrationId: _currentIntegration!.id,
-                        initialTab: 0,
-                      ),
+                      builder: (context) => const FacebookEnhancedDashboardScreen(),
                     ),
                   );
                 },
@@ -1145,10 +1143,7 @@ class _FacebookIntegrationScreenState extends ConsumerState<FacebookIntegrationS
                 () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (context) => FacebookDashboardScreen(
-                        integrationId: _currentIntegration!.id,
-                        initialTab: 1,
-                      ),
+                      builder: (context) => const FacebookEnhancedDashboardScreen(),
                     ),
                   );
                 },
@@ -1167,10 +1162,7 @@ class _FacebookIntegrationScreenState extends ConsumerState<FacebookIntegrationS
                 () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (context) => FacebookDashboardScreen(
-                        integrationId: _currentIntegration!.id,
-                        initialTab: 2,
-                      ),
+                      builder: (context) => const FacebookEnhancedDashboardScreen(),
                     ),
                   );
                 },
@@ -1185,10 +1177,7 @@ class _FacebookIntegrationScreenState extends ConsumerState<FacebookIntegrationS
                 () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (context) => FacebookDashboardScreen(
-                        integrationId: _currentIntegration!.id,
-                        initialTab: 3,
-                      ),
+                      builder: (context) => const FacebookEnhancedDashboardScreen(),
                     ),
                   );
                 },
