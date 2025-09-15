@@ -535,4 +535,180 @@ export class WhatsAppController {
       throw error;
     }
   }
+
+  @Get(':integrationId/conversations')
+  @ApiOperation({
+    summary: 'Get WhatsApp conversations',
+    description: 'Retrieve conversation history for a WhatsApp Business account'
+  })
+  @ApiParam({
+    name: 'integrationId',
+    description: 'The integration ID from Firestore'
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Maximum number of conversations to return (default: 20)'
+  })
+  @ApiQuery({
+    name: 'offset',
+    required: false,
+    description: 'Offset for pagination (default: 0)'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Conversations retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        conversations: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              contact: {
+                type: 'object',
+                properties: {
+                  wa_id: { type: 'string' },
+                  name: { type: 'string' },
+                  profile_picture: { type: 'string' }
+                }
+              },
+              last_message: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  timestamp: { type: 'string' },
+                  type: { type: 'string' },
+                  text: { type: 'object' },
+                  from: { type: 'string' }
+                }
+              },
+              unread_count: { type: 'number' }
+            }
+          }
+        },
+        pagination: {
+          type: 'object',
+          properties: {
+            total: { type: 'number' },
+            limit: { type: 'number' },
+            offset: { type: 'number' },
+            has_more: { type: 'boolean' }
+          }
+        }
+      }
+    }
+  })
+  async getConversations(
+    @Param('integrationId') integrationId: string,
+    @Query('limit') limit: number = 20,
+    @Query('offset') offset: number = 0,
+    @Headers('authorization') authHeader?: string,
+  ): Promise<any> {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new HttpException(
+        'Missing or invalid Authorization header',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    try {
+      this.logger.log(`Retrieving WhatsApp conversations for integration ${integrationId}`);
+      
+      const conversations = await this.whatsappService.getConversations(integrationId, limit, offset);
+      return conversations;
+    } catch (error) {
+      this.logger.error(`Failed to get WhatsApp conversations:`, error);
+      throw error;
+    }
+  }
+
+  @Get(':integrationId/conversations/:contactId/messages')
+  @ApiOperation({
+    summary: 'Get WhatsApp conversation messages',
+    description: 'Retrieve messages for a specific WhatsApp conversation'
+  })
+  @ApiParam({
+    name: 'integrationId',
+    description: 'The integration ID from Firestore'
+  })
+  @ApiParam({
+    name: 'contactId',
+    description: 'The WhatsApp contact ID (phone number)'
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Maximum number of messages to return (default: 50)'
+  })
+  @ApiQuery({
+    name: 'before',
+    required: false,
+    description: 'Timestamp to get messages before (for pagination)'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Conversation messages retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        messages: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              timestamp: { type: 'string' },
+              type: { type: 'string' },
+              from: { type: 'string' },
+              text: {
+                type: 'object',
+                properties: {
+                  body: { type: 'string' }
+                }
+              },
+              image: { type: 'object' },
+              video: { type: 'object' },
+              document: { type: 'object' },
+              location: { type: 'object' },
+              status: { type: 'string' }
+            }
+          }
+        },
+        pagination: {
+          type: 'object',
+          properties: {
+            has_more: { type: 'boolean' },
+            cursor: { type: 'string' }
+          }
+        }
+      }
+    }
+  })
+  async getConversationMessages(
+    @Param('integrationId') integrationId: string,
+    @Param('contactId') contactId: string,
+    @Query('limit') limit: number = 50,
+    @Query('before') before?: string,
+    @Headers('authorization') authHeader?: string,
+  ): Promise<any> {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new HttpException(
+        'Missing or invalid Authorization header',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    try {
+      this.logger.log(`Retrieving WhatsApp conversation messages for contact ${contactId} in integration ${integrationId}`);
+      
+      const messages = await this.whatsappService.getConversationMessages(integrationId, contactId, limit, before);
+      return messages;
+    } catch (error) {
+      this.logger.error(`Failed to get WhatsApp conversation messages:`, error);
+      throw error;
+    }
+  }
 }

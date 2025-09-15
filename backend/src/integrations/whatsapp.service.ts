@@ -339,6 +339,149 @@ export class WhatsAppService {
   }
 
   /**
+   * Get conversation list for a WhatsApp Business account
+   */
+  async getConversations(
+    integrationId: string,
+    limit: number = 20,
+    offset: number = 0
+  ): Promise<any> {
+    const integration = await this.getIntegration(integrationId);
+    this.validateIntegration(integration);
+
+    try {
+      // First get conversations from Firestore as WhatsApp Cloud API doesn't have a direct endpoint for this
+      const conversationsSnapshot = await this.firestoreService
+        .collection('whatsapp_conversations')
+        .where('integrationId', '==', integrationId)
+        .orderBy('lastMessageTimestamp', 'desc')
+        .limit(limit)
+        .offset(offset)
+        .get();
+
+      if (conversationsSnapshot.empty) {
+        // Return empty results if no conversations found
+        return {
+          conversations: [],
+          pagination: {
+            total: 0,
+            limit,
+            offset,
+            has_more: false
+          }
+        };
+      }
+
+      const conversations = [];
+      for (const doc of conversationsSnapshot.docs) {
+        const conversationData = doc.data();
+        conversations.push({
+          id: doc.id,
+          contact: conversationData.contact,
+          last_message: conversationData.lastMessage,
+          unread_count: conversationData.unreadCount || 0,
+          timestamp: conversationData.lastMessageTimestamp?.toDate() || new Date()
+        });
+      }
+
+      // Get total count for pagination
+      const totalSnapshot = await this.firestoreService
+        .collection('whatsapp_conversations')
+        .where('integrationId', '==', integrationId)
+        .get();
+
+      const totalCount = totalSnapshot.size;
+
+      return {
+        conversations,
+        pagination: {
+          total: totalCount,
+          limit,
+          offset,
+          has_more: offset + limit < totalCount
+        }
+      };
+    } catch (error) {
+      this.logger.error(`Failed to get WhatsApp conversations:`, error);
+      throw new HttpException(
+        `Failed to get conversations: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Get messages for a specific WhatsApp conversation
+   */
+  async getConversationMessages(
+    integrationId: string,
+    contactId: string,
+    limit: number = 50,
+    before?: string
+  ): Promise<any> {
+    const integration = await this.getIntegration(integrationId);
+    this.validateIntegration(integration);
+
+    try {
+      let query = this.firestoreService
+        .collection('whatsapp_messages')
+        .where('integrationId', '==', integrationId)
+        .where('contactId', '==', contactId)
+        .orderBy('timestamp', 'desc')
+        .limit(limit);
+
+      // Add timestamp condition for pagination if 'before' is provided
+      if (before) {
+        const beforeDate = new Date(before);
+        // Create a new query with the additional condition
+        query = this.firestoreService
+          .collection('whatsapp_messages')
+          .where('integrationId', '==', integrationId)
+          .where('contactId', '==', contactId)
+          .where('timestamp', '<', beforeDate)
+          .orderBy('timestamp', 'desc')
+          .limit(limit);
+      }
+
+      const messagesSnapshot = await query.get();
+
+      const messages = messagesSnapshot.docs.map(doc => {
+        const messageData = doc.data();
+        return {
+          id: doc.id,
+          timestamp: messageData.timestamp?.toDate() || new Date(),
+          type: messageData.type || 'text',
+          from: messageData.from,
+          text: messageData.text,
+          image: messageData.image,
+          video: messageData.video,
+          document: messageData.document,
+          location: messageData.location,
+          status: messageData.status || 'delivered'
+        };
+      });
+
+      // Get the timestamp of the last message for cursor-based pagination
+      const lastMessage = messages[messages.length - 1];
+      const cursor = lastMessage ? lastMessage.timestamp.toISOString() : null;
+
+      return {
+        messages,
+        pagination: {
+          has_more: messages.length === limit,
+          cursor
+        }
+      };
+    } catch (error) {
+      this.logger.error(`Failed to get WhatsApp conversation messages:`, error);
+      throw new HttpException(
+        `Failed to get conversation messages: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
    * Private helper methods
    */
   private async getIntegration(integrationId: string): Promise<WhatsAppIntegrationDocument> {

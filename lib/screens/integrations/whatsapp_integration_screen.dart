@@ -9,6 +9,7 @@ import 'package:vendor_app/services/integration_service.dart';
 import 'package:vendor_app/widgets/integration_app_bar.dart';
 import 'package:vendor_app/theme/app_theme.dart';
 import 'package:vendor_app/screens/integrations/whatsapp_dashboard_screen.dart';
+import 'package:vendor_app/screens/integrations/whatsapp_enhanced_dashboard_screen.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -344,7 +345,7 @@ class _WhatsAppIntegrationScreenState extends ConsumerState<WhatsAppIntegrationS
         // Navigate to WhatsApp dashboard
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (context) => WhatsAppDashboardScreen(
+            builder: (context) => WhatsAppEnhancedDashboardScreen(
               integrationId: newIntegration.id,
             ),
           ),
@@ -966,9 +967,9 @@ class _WhatsAppIntegrationScreenState extends ConsumerState<WhatsAppIntegrationS
                 () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (context) => WhatsAppDashboardScreen(
+                      builder: (context) => WhatsAppEnhancedDashboardScreen(
                         integrationId: _currentIntegration!.id,
-                        initialTab: 0,
+                        initialTab: 1, // Conversations tab
                       ),
                     ),
                   );
