@@ -136,6 +136,20 @@ class NavigationService {
         arguments: {'integrationId': integrationId});
   }
 
+  static Future<dynamic> navigateToFacebookInsights() {
+    return navigateTo(AppRoutes.facebookInsights);
+  }
+
+  static Future<dynamic> navigateToFacebookPosts(String integrationId) {
+    return navigateTo(AppRoutes.facebookPosts,
+        arguments: {'integrationId': integrationId});
+  }
+
+  static Future<dynamic> navigateToFacebookMessages(String integrationId) {
+    return navigateTo(AppRoutes.facebookPosts,
+        arguments: {'integrationId': integrationId, 'initialTab': 2});
+  }
+
   // Profile and Settings Navigation Methods
   static Future<dynamic> navigateToProfile() {
     return navigateTo(AppRoutes.profile);
@@ -321,7 +335,8 @@ class NavigationService {
         arguments: {'inventoryId': inventoryId});
   }
 
-  static Future<dynamic> navigateToBusinessInventoryDetail(String businessInventoryId) {
+  static Future<dynamic> navigateToBusinessInventoryDetail(
+      String businessInventoryId) {
     return navigateTo(AppRoutes.businessInventoryDetail,
         arguments: {'businessInventoryId': businessInventoryId});
   }

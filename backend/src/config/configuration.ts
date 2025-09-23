@@ -11,6 +11,9 @@ export default () => {
     INSTAGRAM_APP_SECRET: process.env.INSTAGRAM_APP_SECRET,
     FACEBOOK_APP_ID: process.env.FACEBOOK_APP_ID || '744815985034707',
     INSTAGRAM_APP_ID: process.env.INSTAGRAM_APP_ID || '779189224487576',
+    TIKTOK_CLIENT_KEY: process.env.TIKTOK_CLIENT_KEY,
+    TIKTOK_CLIENT_SECRET: process.env.TIKTOK_CLIENT_SECRET,
+    TIKTOK_API_VERSION: process.env.TIKTOK_API_VERSION || 'v2',
     // Add all other environment variables as needed
     API_PREFIX: process.env.API_PREFIX,
     CORS_ORIGIN: process.env.CORS_ORIGIN,

@@ -10,47 +10,79 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 // Providers for WhatsApp
-final whatsappMessagesProvider = StateNotifierProvider.autoDispose.family<WhatsAppMessagesNotifier, AsyncValue<List<Map<String, dynamic>>>, String>((ref, integrationId) {
-  return WhatsAppMessagesNotifier(ref, integrationId);
+final whatsappMessagesProvider = StateNotifierProvider.autoDispose.family<
+    WhatsAppMessagesNotifier,
+    AsyncValue<List<Map<String, dynamic>>>,
+    WhatsAppMessagesParams>((ref, params) {
+  return WhatsAppMessagesNotifier(ref, params);
 });
 
-final whatsappConversationsProvider = StateNotifierProvider.autoDispose.family<WhatsAppConversationsNotifier, AsyncValue<List<Map<String, dynamic>>>, String>((ref, integrationId) {
+// Parameters for WhatsApp messages provider
+class WhatsAppMessagesParams {
+  final String integrationId;
+  final String contactId;
+
+  WhatsAppMessagesParams({
+    required this.integrationId,
+    required this.contactId,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is WhatsAppMessagesParams &&
+          runtimeType == other.runtimeType &&
+          integrationId == other.integrationId &&
+          contactId == other.contactId;
+
+  @override
+  int get hashCode => integrationId.hashCode ^ contactId.hashCode;
+}
+
+final whatsappConversationsProvider = StateNotifierProvider.autoDispose.family<
+    WhatsAppConversationsNotifier,
+    AsyncValue<List<Map<String, dynamic>>>,
+    String>((ref, integrationId) {
   return WhatsAppConversationsNotifier(ref, integrationId);
 });
 
-final whatsappBusinessProfileProvider = StateNotifierProvider.autoDispose.family<WhatsAppBusinessProfileNotifier, AsyncValue<Map<String, dynamic>?>, String>((ref, integrationId) {
+final whatsappBusinessProfileProvider = StateNotifierProvider.autoDispose
+    .family<WhatsAppBusinessProfileNotifier, AsyncValue<Map<String, dynamic>?>,
+        String>((ref, integrationId) {
   return WhatsAppBusinessProfileNotifier(ref, integrationId);
 });
 
-final whatsappAnalyticsProvider = StateNotifierProvider.autoDispose.family<WhatsAppAnalyticsNotifier, AsyncValue<Map<String, dynamic>?>, String>((ref, integrationId) {
+final whatsappAnalyticsProvider = StateNotifierProvider.autoDispose.family<
+    WhatsAppAnalyticsNotifier,
+    AsyncValue<Map<String, dynamic>?>,
+    String>((ref, integrationId) {
   return WhatsAppAnalyticsNotifier(ref, integrationId);
 });
 
 // Notifiers
-class WhatsAppMessagesNotifier extends StateNotifier<AsyncValue<List<Map<String, dynamic>>>> {
+class WhatsAppMessagesNotifier
+    extends StateNotifier<AsyncValue<List<Map<String, dynamic>>>> {
   final Ref _ref;
   final String _integrationId;
-  final String? _contactId;
+  final String _contactId;
 
-  WhatsAppMessagesNotifier(this._ref, this._integrationId, [this._contactId])
-      : super(const AsyncValue.loading()) {
+  WhatsAppMessagesNotifier(this._ref, WhatsAppMessagesParams params)
+      : _integrationId = params.integrationId,
+        _contactId = params.contactId,
+        super(const AsyncValue.loading()) {
     fetchMessages();
   }
 
   Future<void> fetchMessages() async {
     try {
-      if (_contactId == null) {
-        state = const AsyncValue.data([]);
-        return;
-      }
-
       final service = _ref.read(integrationServiceProvider);
       if (service == null) throw Exception('Service not available');
-      
-      final token = await service.getAccessToken();
-      
+
+      final token = await service.getUserIdToken();
+
       final response = await http.get(
-        Uri.parse('${service.baseUrl}/integrations/whatsapp/$_integrationId/conversations/$_contactId/messages'),
+        Uri.parse(
+            '${service.baseUrl}/integrations/whatsapp/$_integrationId/conversations/$_contactId/messages'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -59,7 +91,8 @@ class WhatsAppMessagesNotifier extends StateNotifier<AsyncValue<List<Map<String,
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        state = AsyncValue.data(List<Map<String, dynamic>>.from(data['messages'] ?? []));
+        state = AsyncValue.data(
+            List<Map<String, dynamic>>.from(data['messages'] ?? []));
       } else {
         throw Exception('Failed to load messages: ${response.statusCode}');
       }
@@ -72,11 +105,12 @@ class WhatsAppMessagesNotifier extends StateNotifier<AsyncValue<List<Map<String,
     try {
       final service = _ref.read(integrationServiceProvider);
       if (service == null) throw Exception('Service not available');
-      
-      final token = await service.getAccessToken();
-      
+
+      final token = await service.getUserIdToken();
+
       final response = await http.post(
-        Uri.parse('${service.baseUrl}/integrations/whatsapp/$_integrationId/send-message'),
+        Uri.parse(
+            '${service.baseUrl}/integrations/whatsapp/$_integrationId/send-message'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -84,9 +118,7 @@ class WhatsAppMessagesNotifier extends StateNotifier<AsyncValue<List<Map<String,
         body: json.encode({
           'to': to,
           'type': 'text',
-          'text': {
-            'body': message
-          }
+          'text': {'body': message}
         }),
       );
 
@@ -105,11 +137,12 @@ class WhatsAppMessagesNotifier extends StateNotifier<AsyncValue<List<Map<String,
     try {
       final service = _ref.read(integrationServiceProvider);
       if (service == null) throw Exception('Service not available');
-      
-      final token = await service.getAccessToken();
-      
+
+      final token = await service.getUserIdToken();
+
       final response = await http.post(
-        Uri.parse('${service.baseUrl}/integrations/whatsapp/$_integrationId/mark-read/$messageId'),
+        Uri.parse(
+            '${service.baseUrl}/integrations/whatsapp/$_integrationId/mark-read/$messageId'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -119,7 +152,8 @@ class WhatsAppMessagesNotifier extends StateNotifier<AsyncValue<List<Map<String,
       if (response.statusCode == 200) {
         await fetchMessages();
       } else {
-        throw Exception('Failed to mark message as read: ${response.statusCode}');
+        throw Exception(
+            'Failed to mark message as read: ${response.statusCode}');
       }
     } catch (e) {
       // Handle error
@@ -128,7 +162,8 @@ class WhatsAppMessagesNotifier extends StateNotifier<AsyncValue<List<Map<String,
   }
 }
 
-class WhatsAppConversationsNotifier extends StateNotifier<AsyncValue<List<Map<String, dynamic>>>> {
+class WhatsAppConversationsNotifier
+    extends StateNotifier<AsyncValue<List<Map<String, dynamic>>>> {
   final Ref _ref;
   final String _integrationId;
 
@@ -141,11 +176,12 @@ class WhatsAppConversationsNotifier extends StateNotifier<AsyncValue<List<Map<St
     try {
       final service = _ref.read(integrationServiceProvider);
       if (service == null) throw Exception('Service not available');
-      
-      final token = await service.getAccessToken();
-      
+
+      final token = await service.getUserIdToken();
+
       final response = await http.get(
-        Uri.parse('${service.baseUrl}/integrations/whatsapp/$_integrationId/conversations'),
+        Uri.parse(
+            '${service.baseUrl}/integrations/whatsapp/$_integrationId/conversations'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -154,7 +190,8 @@ class WhatsAppConversationsNotifier extends StateNotifier<AsyncValue<List<Map<St
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        state = AsyncValue.data(List<Map<String, dynamic>>.from(data['conversations'] ?? []));
+        state = AsyncValue.data(
+            List<Map<String, dynamic>>.from(data['conversations'] ?? []));
       } else {
         throw Exception('Failed to load conversations: ${response.statusCode}');
       }
@@ -164,7 +201,8 @@ class WhatsAppConversationsNotifier extends StateNotifier<AsyncValue<List<Map<St
   }
 }
 
-class WhatsAppBusinessProfileNotifier extends StateNotifier<AsyncValue<Map<String, dynamic>?>> {
+class WhatsAppBusinessProfileNotifier
+    extends StateNotifier<AsyncValue<Map<String, dynamic>?>> {
   final Ref _ref;
   final String _integrationId;
 
@@ -177,11 +215,12 @@ class WhatsAppBusinessProfileNotifier extends StateNotifier<AsyncValue<Map<Strin
     try {
       final service = _ref.read(integrationServiceProvider);
       if (service == null) throw Exception('Service not available');
-      
-      final token = await service.getAccessToken();
-      
+
+      final token = await service.getUserIdToken();
+
       final response = await http.get(
-        Uri.parse('${service.baseUrl}/integrations/whatsapp/$_integrationId/business-profile'),
+        Uri.parse(
+            '${service.baseUrl}/integrations/whatsapp/$_integrationId/business-profile'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -192,7 +231,8 @@ class WhatsAppBusinessProfileNotifier extends StateNotifier<AsyncValue<Map<Strin
         final data = json.decode(response.body);
         state = AsyncValue.data(Map<String, dynamic>.from(data));
       } else {
-        throw Exception('Failed to load business profile: ${response.statusCode}');
+        throw Exception(
+            'Failed to load business profile: ${response.statusCode}');
       }
     } catch (e) {
       state = AsyncValue.error(e, StackTrace.current);
@@ -203,11 +243,12 @@ class WhatsAppBusinessProfileNotifier extends StateNotifier<AsyncValue<Map<Strin
     try {
       final service = _ref.read(integrationServiceProvider);
       if (service == null) throw Exception('Service not available');
-      
-      final token = await service.getAccessToken();
-      
+
+      final token = await service.getUserIdToken();
+
       final response = await http.post(
-        Uri.parse('${service.baseUrl}/integrations/whatsapp/$_integrationId/business-profile'),
+        Uri.parse(
+            '${service.baseUrl}/integrations/whatsapp/$_integrationId/business-profile'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -218,7 +259,8 @@ class WhatsAppBusinessProfileNotifier extends StateNotifier<AsyncValue<Map<Strin
       if (response.statusCode == 200) {
         await fetchBusinessProfile();
       } else {
-        throw Exception('Failed to update business profile: ${response.statusCode}');
+        throw Exception(
+            'Failed to update business profile: ${response.statusCode}');
       }
     } catch (e) {
       // Handle error
@@ -227,7 +269,8 @@ class WhatsAppBusinessProfileNotifier extends StateNotifier<AsyncValue<Map<Strin
   }
 }
 
-class WhatsAppAnalyticsNotifier extends StateNotifier<AsyncValue<Map<String, dynamic>?>> {
+class WhatsAppAnalyticsNotifier
+    extends StateNotifier<AsyncValue<Map<String, dynamic>?>> {
   final Ref _ref;
   final String _integrationId;
 
@@ -240,17 +283,18 @@ class WhatsAppAnalyticsNotifier extends StateNotifier<AsyncValue<Map<String, dyn
     try {
       final service = _ref.read(integrationServiceProvider);
       if (service == null) throw Exception('Service not available');
-      
-      final token = await service.getAccessToken();
-      
+
+      final token = await service.getUserIdToken();
+
       // Get analytics for the last 30 days
       final now = DateTime.now();
       final thirtyDaysAgo = now.subtract(const Duration(days: 30));
       final startDate = DateFormat('yyyy-MM-dd').format(thirtyDaysAgo);
       final endDate = DateFormat('yyyy-MM-dd').format(now);
-      
+
       final response = await http.get(
-        Uri.parse('${service.baseUrl}/integrations/whatsapp/$_integrationId/analytics?start=$startDate&end=$endDate'),
+        Uri.parse(
+            '${service.baseUrl}/integrations/whatsapp/$_integrationId/analytics?start=$startDate&end=$endDate'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -280,12 +324,13 @@ class WhatsAppEnhancedDashboardScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<WhatsAppEnhancedDashboardScreen> createState() => _WhatsAppEnhancedDashboardScreenState();
+  ConsumerState<WhatsAppEnhancedDashboardScreen> createState() =>
+      _WhatsAppEnhancedDashboardScreenState();
 }
 
-class _WhatsAppEnhancedDashboardScreenState extends ConsumerState<WhatsAppEnhancedDashboardScreen>
+class _WhatsAppEnhancedDashboardScreenState
+    extends ConsumerState<WhatsAppEnhancedDashboardScreen>
     with TickerProviderStateMixin {
-  
   late TabController _tabController;
   bool _isLoading = false;
   String? _error;
@@ -324,9 +369,8 @@ class _WhatsAppEnhancedDashboardScreenState extends ConsumerState<WhatsAppEnhanc
       }
 
       final integrations = await integrationService.fetchIntegrations();
-      final integration = integrations
-          .where((i) => i.id == widget.integrationId)
-          .firstOrNull;
+      final integration =
+          integrations.where((i) => i.id == widget.integrationId).firstOrNull;
 
       if (integration == null) {
         throw Exception('Integration not found');
@@ -348,7 +392,7 @@ class _WhatsAppEnhancedDashboardScreenState extends ConsumerState<WhatsAppEnhanc
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_integration?.name ?? 'WhatsApp Dashboard'),
+        title: Text(_integration?.platformName ?? 'WhatsApp Dashboard'),
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
@@ -376,14 +420,15 @@ class _WhatsAppEnhancedDashboardScreenState extends ConsumerState<WhatsAppEnhanc
   }
 
   Widget _buildOverviewTab() {
-    final businessProfile = ref.watch(whatsappBusinessProfileProvider(widget.integrationId));
-    
+    final businessProfile =
+        ref.watch(whatsappBusinessProfileProvider(widget.integrationId));
+
     return businessProfile.when(
       data: (profile) {
         if (profile == null) {
           return const Center(child: Text('No business profile found'));
         }
-        
+
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -405,24 +450,31 @@ class _WhatsAppEnhancedDashboardScreenState extends ConsumerState<WhatsAppEnhanc
                         Center(
                           child: CircleAvatar(
                             radius: 50,
-                            backgroundImage: NetworkImage(profile['profile_picture_url']),
+                            backgroundImage:
+                                NetworkImage(profile['profile_picture_url']),
                           ),
                         ),
                       const SizedBox(height: 16),
-                      _buildProfileItem('Business Name', profile['name'] ?? 'Not set'),
-                      _buildProfileItem('Description', profile['description'] ?? 'Not set'),
-                      _buildProfileItem('Address', profile['address'] ?? 'Not set'),
+                      _buildProfileItem(
+                          'Business Name', profile['name'] ?? 'Not set'),
+                      _buildProfileItem(
+                          'Description', profile['description'] ?? 'Not set'),
+                      _buildProfileItem(
+                          'Address', profile['address'] ?? 'Not set'),
                       _buildProfileItem('Email', profile['email'] ?? 'Not set'),
-                      _buildProfileItem('Industry', profile['vertical'] ?? 'Not set'),
-                      if (profile['websites'] != null && (profile['websites'] as List).isNotEmpty)
-                        _buildProfileItem('Website', (profile['websites'] as List).first),
+                      _buildProfileItem(
+                          'Industry', profile['vertical'] ?? 'Not set'),
+                      if (profile['websites'] != null &&
+                          (profile['websites'] as List).isNotEmpty)
+                        _buildProfileItem(
+                            'Website', (profile['websites'] as List).first),
                     ],
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Quick stats card
               Card(
                 elevation: 2,
@@ -441,9 +493,9 @@ class _WhatsAppEnhancedDashboardScreenState extends ConsumerState<WhatsAppEnhanc
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Action buttons
               Card(
                 elevation: 2,
@@ -464,7 +516,8 @@ class _WhatsAppEnhancedDashboardScreenState extends ConsumerState<WhatsAppEnhanc
                             icon: Icons.message,
                             label: 'Send Message',
                             onTap: () {
-                              _tabController.animateTo(1); // Go to conversations tab
+                              _tabController
+                                  .animateTo(1); // Go to conversations tab
                             },
                           ),
                           _buildActionButton(
@@ -478,7 +531,8 @@ class _WhatsAppEnhancedDashboardScreenState extends ConsumerState<WhatsAppEnhanc
                             icon: Icons.article,
                             label: 'Templates',
                             onTap: () {
-                              _tabController.animateTo(2); // Go to templates tab
+                              _tabController
+                                  .animateTo(2); // Go to templates tab
                             },
                           ),
                         ],
@@ -497,8 +551,9 @@ class _WhatsAppEnhancedDashboardScreenState extends ConsumerState<WhatsAppEnhanc
   }
 
   Widget _buildConversationsTab() {
-    final conversations = ref.watch(whatsappConversationsProvider(widget.integrationId));
-    
+    final conversations =
+        ref.watch(whatsappConversationsProvider(widget.integrationId));
+
     return Column(
       children: [
         Expanded(
@@ -510,19 +565,21 @@ class _WhatsAppEnhancedDashboardScreenState extends ConsumerState<WhatsAppEnhanc
                 child: conversations.when(
                   data: (data) {
                     if (data.isEmpty) {
-                      return const Center(child: Text('No conversations found'));
+                      return const Center(
+                          child: Text('No conversations found'));
                     }
-                    
+
                     return ListView.builder(
                       itemCount: data.length,
                       itemBuilder: (context, index) {
                         final conversation = data[index];
                         final contact = conversation['contact'] ?? {};
                         final lastMessage = conversation['last_message'] ?? {};
-                        
+
                         return ListTile(
                           leading: CircleAvatar(
-                            child: Text((contact['name'] ?? '?').substring(0, 1)),
+                            child:
+                                Text((contact['name'] ?? '?').substring(0, 1)),
                           ),
                           title: Text(contact['name'] ?? 'Unknown'),
                           subtitle: Text(
@@ -553,18 +610,20 @@ class _WhatsAppEnhancedDashboardScreenState extends ConsumerState<WhatsAppEnhanc
                       },
                     );
                   },
-                  loading: () => const Center(child: CircularProgressIndicator()),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
                   error: (error, stack) => Center(child: Text('Error: $error')),
                 ),
               ),
-              
+
               // Vertical divider
               const VerticalDivider(width: 1),
-              
+
               // Conversation detail
               Expanded(
                 child: _selectedContactId == null
-                    ? const Center(child: Text('Select a conversation to view messages'))
+                    ? const Center(
+                        child: Text('Select a conversation to view messages'))
                     : _buildConversationDetail(),
               ),
             ],
@@ -573,15 +632,22 @@ class _WhatsAppEnhancedDashboardScreenState extends ConsumerState<WhatsAppEnhanc
       ],
     );
   }
-  
+
   Widget _buildConversationDetail() {
+    if (_selectedContactId == null) {
+      return const Center(
+          child: Text('Select a conversation to view messages'));
+    }
+
     final messages = ref.watch(
       whatsappMessagesProvider(
-        widget.integrationId,
-        _selectedContactId,
+        WhatsAppMessagesParams(
+          integrationId: widget.integrationId,
+          contactId: _selectedContactId!,
+        ),
       ),
     );
-    
+
     return Column(
       children: [
         // Messages list
@@ -591,27 +657,32 @@ class _WhatsAppEnhancedDashboardScreenState extends ConsumerState<WhatsAppEnhanc
               if (data.isEmpty) {
                 return const Center(child: Text('No messages found'));
               }
-              
+
               // Sort messages by timestamp
               data.sort((a, b) {
                 final aTime = DateTime.parse(a['timestamp']);
                 final bTime = DateTime.parse(b['timestamp']);
                 return aTime.compareTo(bTime); // Ascending order
               });
-              
+
               return ListView.builder(
                 itemCount: data.length,
                 itemBuilder: (context, index) {
                   final message = data[index];
-                  final isFromMe = message['from'] == _integration?.credentials?['phone_number_id'];
-                  
+                  final isFromMe = message['from'] ==
+                      _integration?.credentials?['phone_number_id'];
+
                   return Align(
-                    alignment: isFromMe ? Alignment.centerRight : Alignment.centerLeft,
+                    alignment:
+                        isFromMe ? Alignment.centerRight : Alignment.centerLeft,
                     child: Container(
-                      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                      margin: const EdgeInsets.symmetric(
+                          vertical: 4, horizontal: 8),
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: isFromMe ? Colors.blue.shade100 : Colors.grey.shade200,
+                        color: isFromMe
+                            ? Colors.blue.shade100
+                            : Colors.grey.shade200,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Column(
@@ -619,10 +690,8 @@ class _WhatsAppEnhancedDashboardScreenState extends ConsumerState<WhatsAppEnhanc
                         children: [
                           if (message['text']?['body'] != null)
                             Text(message['text']['body']),
-                          if (message['image'] != null)
-                            const Text('[Image]'),
-                          if (message['video'] != null)
-                            const Text('[Video]'),
+                          if (message['image'] != null) const Text('[Image]'),
+                          if (message['video'] != null) const Text('[Video]'),
                           if (message['document'] != null)
                             const Text('[Document]'),
                           const SizedBox(height: 4),
@@ -646,7 +715,7 @@ class _WhatsAppEnhancedDashboardScreenState extends ConsumerState<WhatsAppEnhanc
             error: (error, stack) => Center(child: Text('Error: $error')),
           ),
         ),
-        
+
         // Message input
         Padding(
           padding: const EdgeInsets.all(8.0),
@@ -672,14 +741,18 @@ class _WhatsAppEnhancedDashboardScreenState extends ConsumerState<WhatsAppEnhanc
               IconButton(
                 icon: const Icon(Icons.send),
                 onPressed: () {
-                  if (_messageController.text.isNotEmpty && _selectedContactId != null) {
+                  if (_messageController.text.isNotEmpty &&
+                      _selectedContactId != null) {
                     final notifier = ref.read(
                       whatsappMessagesProvider(
-                        widget.integrationId,
-                        _selectedContactId,
+                        WhatsAppMessagesParams(
+                          integrationId: widget.integrationId,
+                          contactId: _selectedContactId!,
+                        ),
                       ).notifier,
                     );
-                    notifier.sendMessage(_selectedContactId!, _messageController.text);
+                    notifier.sendMessage(
+                        _selectedContactId!, _messageController.text);
                     _messageController.clear();
                   }
                 },
@@ -699,20 +772,20 @@ class _WhatsAppEnhancedDashboardScreenState extends ConsumerState<WhatsAppEnhanc
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        
+
         if (snapshot.hasError) {
           return Center(child: Text('Error: ${snapshot.error}'));
         }
-        
+
         if (!snapshot.hasData || snapshot.data!.statusCode != 200) {
           return const Center(child: Text('Failed to load templates'));
         }
-        
+
         final templates = json.decode(snapshot.data!.body);
         if (templates is! List || templates.isEmpty) {
           return const Center(child: Text('No templates found'));
         }
-        
+
         return GridView.builder(
           padding: const EdgeInsets.all(16),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -745,7 +818,8 @@ class _WhatsAppEnhancedDashboardScreenState extends ConsumerState<WhatsAppEnhanc
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text('Language: ${template['language'] ?? 'Not specified'}'),
+                    Text(
+                        'Language: ${template['language'] ?? 'Not specified'}'),
                     const Spacer(),
                     Align(
                       alignment: Alignment.centerRight,
@@ -768,16 +842,17 @@ class _WhatsAppEnhancedDashboardScreenState extends ConsumerState<WhatsAppEnhanc
   }
 
   Widget _buildAnalyticsTab() {
-    final analytics = ref.watch(whatsappAnalyticsProvider(widget.integrationId));
-    
+    final analytics =
+        ref.watch(whatsappAnalyticsProvider(widget.integrationId));
+
     return analytics.when(
       data: (data) {
         if (data == null) {
           return const Center(child: Text('No analytics data found'));
         }
-        
+
         final dataPoints = data['data_points'] as List? ?? [];
-        
+
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -800,9 +875,7 @@ class _WhatsAppEnhancedDashboardScreenState extends ConsumerState<WhatsAppEnhanc
                   ),
                 ),
               ),
-              
               const SizedBox(height: 16),
-              
               Card(
                 elevation: 2,
                 child: Padding(
@@ -853,9 +926,11 @@ class _WhatsAppEnhancedDashboardScreenState extends ConsumerState<WhatsAppEnhanc
   }
 
   Widget _buildQuickStatsGrid() {
-    final conversations = ref.watch(whatsappConversationsProvider(widget.integrationId));
-    final analytics = ref.watch(whatsappAnalyticsProvider(widget.integrationId));
-    
+    final conversations =
+        ref.watch(whatsappConversationsProvider(widget.integrationId));
+    final analytics =
+        ref.watch(whatsappAnalyticsProvider(widget.integrationId));
+
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
@@ -964,14 +1039,14 @@ class _WhatsAppEnhancedDashboardScreenState extends ConsumerState<WhatsAppEnhanc
     int totalDelivered = 0;
     int totalRead = 0;
     int totalFailed = 0;
-    
+
     for (final point in dataPoints) {
       totalSent += (point['sent'] as int?) ?? 0;
       totalDelivered += (point['delivered'] as int?) ?? 0;
       totalRead += (point['read'] as int?) ?? 0;
       totalFailed += (point['failed'] as int?) ?? 0;
     }
-    
+
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
@@ -1038,11 +1113,12 @@ class _WhatsAppEnhancedDashboardScreenState extends ConsumerState<WhatsAppEnhanc
   Future<http.Response> _fetchTemplates() async {
     final service = ref.read(integrationServiceProvider);
     if (service == null) throw Exception('Service not available');
-    
-    final token = await service.getAccessToken();
-    
+
+    final token = await service.getUserIdToken();
+
     return http.get(
-      Uri.parse('${service.baseUrl}/integrations/whatsapp/${widget.integrationId}/templates'),
+      Uri.parse(
+          '${service.baseUrl}/integrations/whatsapp/${widget.integrationId}/templates'),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
@@ -1052,7 +1128,7 @@ class _WhatsAppEnhancedDashboardScreenState extends ConsumerState<WhatsAppEnhanc
 
   void _showSendTemplateDialog(Map<String, dynamic> template) {
     final phoneController = TextEditingController();
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -1090,15 +1166,17 @@ class _WhatsAppEnhancedDashboardScreenState extends ConsumerState<WhatsAppEnhanc
     );
   }
 
-  Future<void> _sendTemplate(Map<String, dynamic> template, String phone) async {
+  Future<void> _sendTemplate(
+      Map<String, dynamic> template, String phone) async {
     try {
       final service = ref.read(integrationServiceProvider);
       if (service == null) throw Exception('Service not available');
-      
-      final token = await service.getAccessToken();
-      
+
+      final token = await service.getUserIdToken();
+
       final response = await http.post(
-        Uri.parse('${service.baseUrl}/integrations/whatsapp/${widget.integrationId}/send-template'),
+        Uri.parse(
+            '${service.baseUrl}/integrations/whatsapp/${widget.integrationId}/send-template'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',

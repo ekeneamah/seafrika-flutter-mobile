@@ -1,12 +1,14 @@
 import { Module } from '@nestjs/common';
-import { InstagramController } from './instagram.controller';
-import { InstagramService } from './instagram.service';
+import { FacebookController } from './facebook/facebook.controller';
+import { InstagramController } from './instagram/instagram.controller';
+import { MetaIntegrationService } from './shared/meta-integration.service';
 import { FirestoreModule } from '../firestore/firestore.module';
+import { WebhooksModule } from '../webhooks/webhooks.module';
 
 @Module({
-  imports: [FirestoreModule],
-  controllers: [InstagramController],
-  providers: [InstagramService],
-  exports: [InstagramService],
+  imports: [FirestoreModule, WebhooksModule],
+  controllers: [FacebookController, InstagramController],
+  providers: [MetaIntegrationService],
+  exports: [MetaIntegrationService],
 })
 export class IntegrationsModule {}

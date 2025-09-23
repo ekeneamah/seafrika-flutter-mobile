@@ -2,19 +2,19 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:image_picker/image_picker.dart';
+import '../config/api_config.dart';
 
 class FacebookService {
-  static const String baseUrl = 'https://seafrikaapi-u53tcgosiq-uc.a.run.app/api';
   final _storage = const FlutterSecureStorage();
   final http.Client _client;
 
   FacebookService({http.Client? client}) : _client = client ?? http.Client();
 
-  Future<Map<String, String>> _getHeaders(String businessId, {String? userId, String? token}) async {
+  Future<Map<String, String>> _getHeaders(String businessId,
+      {String? userId, String? token}) async {
     final authToken = token ?? await _storage.read(key: 'auth_token') ?? '';
     final userIdValue = userId ?? await _storage.read(key: 'user_id') ?? '';
-    
+
     return {
       'Content-Type': 'application/json',
       'Business-ID': businessId,
@@ -23,10 +23,11 @@ class FacebookService {
     };
   }
 
-  Future<Map<String, String>> _getMultipartHeaders(String businessId, {String? userId, String? token}) async {
+  Future<Map<String, String>> _getMultipartHeaders(String businessId,
+      {String? userId, String? token}) async {
     final authToken = token ?? await _storage.read(key: 'auth_token') ?? '';
     final userIdValue = userId ?? await _storage.read(key: 'user_id') ?? '';
-    
+
     return {
       'Business-ID': businessId,
       'User-ID': userIdValue,
@@ -52,7 +53,7 @@ class FacebookService {
     String? token,
   }) async {
     final response = await _client.post(
-      Uri.parse('$baseUrl/integrations/facebook/auth'),
+      Uri.parse(ApiConfig.getFacebookAuth()),
       headers: await _getHeaders(businessId, userId: userId, token: token),
       body: jsonEncode({
         'code': code,
@@ -68,7 +69,7 @@ class FacebookService {
     String? token,
   }) async {
     final response = await _client.delete(
-      Uri.parse('$baseUrl/integrations/facebook/auth'),
+      Uri.parse(ApiConfig.getFacebookAuth()),
       headers: await _getHeaders(businessId, userId: userId, token: token),
     );
     return _handleResponse(response);
@@ -81,7 +82,7 @@ class FacebookService {
     String? token,
   }) async {
     final response = await _client.get(
-      Uri.parse('$baseUrl/integrations/facebook/user/profile'),
+      Uri.parse(ApiConfig.getFacebookUserProfile()),
       headers: await _getHeaders(businessId, userId: userId, token: token),
     );
     return _handleResponse(response);
@@ -93,7 +94,7 @@ class FacebookService {
     String? token,
   }) async {
     final response = await _client.get(
-      Uri.parse('$baseUrl/integrations/facebook/user/pages'),
+      Uri.parse(ApiConfig.getFacebookUserPages()),
       headers: await _getHeaders(businessId, userId: userId, token: token),
     );
     return _handleResponse(response)['data'] ?? [];
@@ -107,7 +108,7 @@ class FacebookService {
     String? token,
   }) async {
     final response = await _client.post(
-      Uri.parse('$baseUrl/integrations/facebook/pages/$pageId/subscribe-webhook'),
+      Uri.parse(ApiConfig.getFacebookPageSubscribeWebhook(pageId)),
       headers: await _getHeaders(businessId, userId: userId, token: token),
     );
     return _handleResponse(response);
@@ -120,7 +121,7 @@ class FacebookService {
     String? token,
   }) async {
     final response = await _client.get(
-      Uri.parse('$baseUrl/integrations/facebook/pages/$pageId/roles'),
+      Uri.parse(ApiConfig.getFacebookPageRoles(pageId)),
       headers: await _getHeaders(businessId, userId: userId, token: token),
     );
     return _handleResponse(response)['data'] ?? [];
@@ -134,11 +135,11 @@ class FacebookService {
     String? userId,
     String? token,
   }) async {
-    final uri = Uri.parse('$baseUrl/integrations/facebook/pages/$pageId/insights');
+    final uri = Uri.parse(ApiConfig.getFacebookPageInsights(pageId));
     final queryParams = <String, String>{};
     if (metric != null) queryParams['metric'] = metric;
     if (period != null) queryParams['period'] = period;
-    
+
     final response = await _client.get(
       uri.replace(queryParameters: queryParams.isNotEmpty ? queryParams : null),
       headers: await _getHeaders(businessId, userId: userId, token: token),
@@ -156,7 +157,7 @@ class FacebookService {
     String? token,
   }) async {
     final response = await _client.post(
-      Uri.parse('$baseUrl/integrations/facebook/share/timeline'),
+      Uri.parse(ApiConfig.getFacebookShareTimeline()),
       headers: await _getHeaders(businessId, userId: userId, token: token),
       body: jsonEncode({
         'message': message,
@@ -178,7 +179,7 @@ class FacebookService {
     String? token,
   }) async {
     final response = await _client.post(
-      Uri.parse('$baseUrl/integrations/facebook/pages/$pageId/posts'),
+      Uri.parse(ApiConfig.getFacebookPagePosts(pageId)),
       headers: await _getHeaders(businessId, userId: userId, token: token),
       body: jsonEncode({
         'message': message,
@@ -201,12 +202,13 @@ class FacebookService {
   }) async {
     final request = http.MultipartRequest(
       'POST',
-      Uri.parse('$baseUrl/integrations/facebook/pages/$pageId/photos'),
+      Uri.parse(ApiConfig.getFacebookPagePhotos(pageId)),
     );
 
-    request.headers.addAll(await _getMultipartHeaders(businessId, userId: userId, token: token));
+    request.headers.addAll(
+        await _getMultipartHeaders(businessId, userId: userId, token: token));
     request.files.add(await http.MultipartFile.fromPath('photo', photo.path));
-    
+
     if (caption != null) request.fields['caption'] = caption;
     request.fields['published'] = published.toString();
 
@@ -227,12 +229,13 @@ class FacebookService {
   }) async {
     final request = http.MultipartRequest(
       'POST',
-      Uri.parse('$baseUrl/integrations/facebook/pages/$pageId/videos'),
+      Uri.parse(ApiConfig.getFacebookPageVideos(pageId)),
     );
 
-    request.headers.addAll(await _getMultipartHeaders(businessId, userId: userId, token: token));
+    request.headers.addAll(
+        await _getMultipartHeaders(businessId, userId: userId, token: token));
     request.files.add(await http.MultipartFile.fromPath('video', video.path));
-    
+
     if (title != null) request.fields['title'] = title;
     if (description != null) request.fields['description'] = description;
     request.fields['published'] = published.toString();
@@ -251,11 +254,11 @@ class FacebookService {
     String? userId,
     String? token,
   }) async {
-    final uri = Uri.parse('$baseUrl/integrations/facebook/pages/$pageId/posts');
+    final uri = Uri.parse(ApiConfig.getFacebookPagePosts(pageId));
     final queryParams = <String, String>{};
     if (limit != null) queryParams['limit'] = limit.toString();
     if (fields != null) queryParams['fields'] = fields;
-    
+
     final response = await _client.get(
       uri.replace(queryParameters: queryParams.isNotEmpty ? queryParams : null),
       headers: await _getHeaders(businessId, userId: userId, token: token),
@@ -270,7 +273,7 @@ class FacebookService {
     String? token,
   }) async {
     final response = await _client.delete(
-      Uri.parse('$baseUrl/integrations/facebook/posts/$postId'),
+      Uri.parse(ApiConfig.getFacebookPost(postId)),
       headers: await _getHeaders(businessId, userId: userId, token: token),
     );
     return _handleResponse(response);
@@ -284,7 +287,7 @@ class FacebookService {
     String? token,
   }) async {
     final response = await _client.post(
-      Uri.parse('$baseUrl/integrations/facebook/posts/$postId/like'),
+      Uri.parse(ApiConfig.getFacebookPostLike(postId)),
       headers: await _getHeaders(businessId, userId: userId, token: token),
     );
     return _handleResponse(response);
@@ -298,7 +301,7 @@ class FacebookService {
     String? token,
   }) async {
     final response = await _client.post(
-      Uri.parse('$baseUrl/integrations/facebook/posts/$postId/reactions'),
+      Uri.parse(ApiConfig.getFacebookPostReactions(postId)),
       headers: await _getHeaders(businessId, userId: userId, token: token),
       body: jsonEncode({
         'type': reactionType,
@@ -316,7 +319,7 @@ class FacebookService {
     String? token,
   }) async {
     final response = await _client.post(
-      Uri.parse('$baseUrl/integrations/facebook/posts/$postId/comments'),
+      Uri.parse(ApiConfig.getFacebookPostComments(postId)),
       headers: await _getHeaders(businessId, userId: userId, token: token),
       body: jsonEncode({
         'message': message,
@@ -336,7 +339,7 @@ class FacebookService {
     String? token,
   }) async {
     final response = await _client.post(
-      Uri.parse('$baseUrl/integrations/facebook/messages/send'),
+      Uri.parse(ApiConfig.getFacebookMessagesSend()),
       headers: await _getHeaders(businessId, userId: userId, token: token),
       body: jsonEncode({
         'pageId': pageId,
@@ -354,10 +357,11 @@ class FacebookService {
     String? userId,
     String? token,
   }) async {
-    final uri = Uri.parse('$baseUrl/integrations/facebook/conversations/$conversationId/messages');
+    final uri =
+        Uri.parse(ApiConfig.getFacebookConversationMessages(conversationId));
     final queryParams = <String, String>{};
     if (limit != null) queryParams['limit'] = limit.toString();
-    
+
     final response = await _client.get(
       uri.replace(queryParameters: queryParams.isNotEmpty ? queryParams : null),
       headers: await _getHeaders(businessId, userId: userId, token: token),

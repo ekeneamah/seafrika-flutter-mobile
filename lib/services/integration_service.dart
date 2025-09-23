@@ -12,16 +12,34 @@ import 'package:firebase_auth/firebase_auth.dart';
 class IntegrationException implements Exception {
   final String message;
   final String code;
-  
+
   const IntegrationException(this.message, this.code);
-  
+
   @override
   String toString() => 'IntegrationException: $message (Code: $code)';
 }
 
 class IntegrationService {
   final String _businessId;
-  
+
+  /// Expose API base URL for callers that need to build integration API endpoints
+  String get baseUrl => ApiConfig.baseUrl;
+
+  /// Compatibility method used by UI callers to retrieve an access token for
+  /// backend integration API calls. Returns the current Firebase ID token.
+  Future<String> getUserIdToken() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw IntegrationException('User not authenticated', 'AUTH_REQUIRED');
+    }
+    final idToken = await user.getIdToken();
+    if (idToken == null || idToken.isEmpty) {
+      throw IntegrationException(
+          'Failed to obtain ID token', 'TOKEN_UNAVAILABLE');
+    }
+    return idToken;
+  }
+
   // Encryption key for credentials (in production, this should come from secure storage)
   static const String _encryptionKey = 'vendor_app_integration_key_2024';
 
@@ -30,7 +48,7 @@ class IntegrationService {
     required String businessId,
   }) : _businessId = businessId;
 
-    /// Create default settings based on platform category
+  /// Create default settings based on platform category
   IntegrationSettings _createDefaultSettings(String category) {
     switch (category) {
       case 'ecommerce':
@@ -129,7 +147,8 @@ class IntegrationService {
       final digest = sha256.convert(bytes);
       return digest.toString();
     } catch (e) {
-      throw IntegrationException('Failed to encrypt credential', 'ENCRYPTION_ERROR');
+      throw IntegrationException(
+          'Failed to encrypt credential', 'ENCRYPTION_ERROR');
     }
   }
 
@@ -138,36 +157,43 @@ class IntegrationService {
     print('🔍 DEBUG: Validating business ID: "$_businessId"');
     if (_businessId.isEmpty) {
       print('❌ DEBUG: Business ID validation failed - empty business ID');
-      throw IntegrationException('Business ID is required for integration operations', 'INVALID_BUSINESS_ID');
+      throw IntegrationException(
+          'Business ID is required for integration operations',
+          'INVALID_BUSINESS_ID');
     }
     print('✅ DEBUG: Business ID validation passed');
   }
 
   Future<List<Integration>> fetchIntegrations() async {
     _validateBusinessId();
-    debugPrint('[IntegrationService] fetchIntegrations called for businessId=$_businessId');
+    debugPrint(
+        '[IntegrationService] fetchIntegrations called for businessId=$_businessId');
     try {
-      final query = CollectionReferences
-          .integrationsForBusiness(_businessId)
+      final query = CollectionReferences.integrationsForBusiness(_businessId)
           .where('status', isNotEqualTo: 'deleted')
           .orderBy('createdAt', descending: true);
       debugPrint('[IntegrationService] Firestore query: $query');
       final snapshot = await query.get();
-      debugPrint('[IntegrationService] Query returned ${snapshot.docs.length} docs');
+      debugPrint(
+          '[IntegrationService] Query returned ${snapshot.docs.length} docs');
       final integrations = snapshot.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>;
         data['id'] = doc.id;
-        debugPrint('[IntegrationService] Integration doc: id=${doc.id}, data=$data');
+        debugPrint(
+            '[IntegrationService] Integration doc: id=${doc.id}, data=$data');
         return Integration.fromMap(data);
       }).toList();
-      debugPrint('[IntegrationService] Returning ${integrations.length} integrations');
+      debugPrint(
+          '[IntegrationService] Returning ${integrations.length} integrations');
       return integrations;
     } on FirebaseException catch (e) {
       debugPrint('[IntegrationService] FirebaseException: ${e.message}');
-      throw IntegrationException('Failed to fetch integrations: ${e.message}', 'FIRESTORE_ERROR');
+      throw IntegrationException(
+          'Failed to fetch integrations: ${e.message}', 'FIRESTORE_ERROR');
     } catch (e) {
       debugPrint('[IntegrationService] Unexpected error: $e');
-      throw IntegrationException('Unexpected error while fetching integrations', 'UNKNOWN_ERROR');
+      throw IntegrationException(
+          'Unexpected error while fetching integrations', 'UNKNOWN_ERROR');
     }
   }
 
@@ -183,7 +209,7 @@ class IntegrationService {
     print('   - profileData keys: ${profileData.keys.toList()}');
     print('   - expiresIn: $expiresIn');
     print('   - businessId: $_businessId');
-    
+
     _validateBusinessId();
     print('✅ DEBUG: Business ID validation passed');
 
@@ -208,9 +234,8 @@ class IntegrationService {
       };
 
       print('📦 DEBUG: Integration data prepared, adding to Firestore...');
-      final docRef = await CollectionReferences
-          .integrations
-          .add(integrationData);
+      final docRef =
+          await CollectionReferences.integrations.add(integrationData);
 
       print('✅ DEBUG: Document added with ID: ${docRef.id}');
 
@@ -218,17 +243,22 @@ class IntegrationService {
       final doc = await docRef.get();
       final data = doc.data() as Map<String, dynamic>;
       data['id'] = doc.id;
-      
+
       final integration = Integration.fromMap(data);
       print('🎉 DEBUG: Integration created successfully: ${integration.id}');
-      
+
       return integration;
     } on FirebaseException catch (e) {
-      print('❌ DEBUG: FirebaseException in createInstagramIntegration: ${e.message}');
-      throw IntegrationException('Failed to create Instagram integration: ${e.message}', 'FIRESTORE_ERROR');
+      print(
+          '❌ DEBUG: FirebaseException in createInstagramIntegration: ${e.message}');
+      throw IntegrationException(
+          'Failed to create Instagram integration: ${e.message}',
+          'FIRESTORE_ERROR');
     } catch (e) {
       print('❌ DEBUG: Unexpected error in createInstagramIntegration: $e');
-      throw IntegrationException('Unexpected error while creating Instagram integration', 'UNKNOWN_ERROR');
+      throw IntegrationException(
+          'Unexpected error while creating Instagram integration',
+          'UNKNOWN_ERROR');
     }
   }
 
@@ -245,7 +275,7 @@ class IntegrationService {
     print('   - businessAccountId: $businessAccountId');
     print('   - businessProfile keys: ${businessProfile.keys.toList()}');
     print('   - businessId: $_businessId');
-    
+
     _validateBusinessId();
     print('✅ DEBUG: Business ID validation passed');
 
@@ -270,10 +300,10 @@ class IntegrationService {
         'syncStatus': 'pending',
       };
 
-      print('📦 DEBUG: WhatsApp integration data prepared, adding to Firestore...');
-      final docRef = await CollectionReferences
-          .integrations
-          .add(integrationData);
+      print(
+          '📦 DEBUG: WhatsApp integration data prepared, adding to Firestore...');
+      final docRef =
+          await CollectionReferences.integrations.add(integrationData);
 
       print('✅ DEBUG: Document added with ID: ${docRef.id}');
 
@@ -281,17 +311,23 @@ class IntegrationService {
       final doc = await docRef.get();
       final data = doc.data() as Map<String, dynamic>;
       data['id'] = doc.id;
-      
+
       final integration = Integration.fromMap(data);
-      print('🎉 DEBUG: WhatsApp integration created successfully: ${integration.id}');
-      
+      print(
+          '🎉 DEBUG: WhatsApp integration created successfully: ${integration.id}');
+
       return integration;
     } on FirebaseException catch (e) {
-      print('❌ DEBUG: FirebaseException in createWhatsAppIntegration: ${e.message}');
-      throw IntegrationException('Failed to create WhatsApp integration: ${e.message}', 'FIRESTORE_ERROR');
+      print(
+          '❌ DEBUG: FirebaseException in createWhatsAppIntegration: ${e.message}');
+      throw IntegrationException(
+          'Failed to create WhatsApp integration: ${e.message}',
+          'FIRESTORE_ERROR');
     } catch (e) {
       print('❌ DEBUG: Unexpected error in createWhatsAppIntegration: $e');
-      throw IntegrationException('Unexpected error while creating WhatsApp integration', 'UNKNOWN_ERROR');
+      throw IntegrationException(
+          'Unexpected error while creating WhatsApp integration',
+          'UNKNOWN_ERROR');
     }
   }
 
@@ -308,7 +344,7 @@ class IntegrationService {
     print('   - userId: $userId');
     print('   - pageData keys: ${pageData.keys.toList()}');
     print('   - businessId: $_businessId');
-    
+
     _validateBusinessId();
     print('✅ DEBUG: Business ID validation passed');
 
@@ -333,10 +369,10 @@ class IntegrationService {
         'syncStatus': 'pending',
       };
 
-      print('📦 DEBUG: Facebook integration data prepared, adding to Firestore...');
-      final docRef = await CollectionReferences
-          .integrations
-          .add(integrationData);
+      print(
+          '📦 DEBUG: Facebook integration data prepared, adding to Firestore...');
+      final docRef =
+          await CollectionReferences.integrations.add(integrationData);
 
       print('✅ DEBUG: Document added with ID: ${docRef.id}');
 
@@ -344,29 +380,37 @@ class IntegrationService {
       final doc = await docRef.get();
       final data = doc.data() as Map<String, dynamic>;
       data['id'] = doc.id;
-      
+
       final integration = Integration.fromMap(data);
-      print('🎉 DEBUG: Facebook integration created successfully: ${integration.id}');
-      
+      print(
+          '🎉 DEBUG: Facebook integration created successfully: ${integration.id}');
+
       return integration;
     } on FirebaseException catch (e) {
-      print('❌ DEBUG: FirebaseException in createFacebookIntegration: ${e.message}');
-      throw IntegrationException('Failed to create Facebook integration: ${e.message}', 'FIRESTORE_ERROR');
+      print(
+          '❌ DEBUG: FirebaseException in createFacebookIntegration: ${e.message}');
+      throw IntegrationException(
+          'Failed to create Facebook integration: ${e.message}',
+          'FIRESTORE_ERROR');
     } catch (e) {
       print('❌ DEBUG: Unexpected error in createFacebookIntegration: $e');
-      throw IntegrationException('Unexpected error while creating Facebook integration', 'UNKNOWN_ERROR');
+      throw IntegrationException(
+          'Unexpected error while creating Facebook integration',
+          'UNKNOWN_ERROR');
     }
   }
 
   /// Sync Instagram products
-  Future<Map<String, dynamic>> syncInstagramProducts(String integrationId) async {
+  Future<Map<String, dynamic>> syncInstagramProducts(
+      String integrationId) async {
     _validateBusinessId();
 
     try {
       final integration = await fetchIntegration(integrationId);
-      
+
       if (integration.platformId != 'instagram') {
-        throw IntegrationException('Integration is not an Instagram integration', 'INVALID_PLATFORM');
+        throw IntegrationException(
+            'Integration is not an Instagram integration', 'INVALID_PLATFORM');
       }
 
       // Here you would implement the actual sync logic
@@ -374,13 +418,10 @@ class IntegrationService {
       await Future.delayed(const Duration(seconds: 2));
 
       // Update last sync time
-      await CollectionReferences
-          .integrations
-          .doc(integrationId)
-          .update({
-            'lastSyncAt': FieldValue.serverTimestamp(),
-            'syncStatus': 'completed',
-          });
+      await CollectionReferences.integrations.doc(integrationId).update({
+        'lastSyncAt': FieldValue.serverTimestamp(),
+        'syncStatus': 'completed',
+      });
 
       return {
         'success': true,
@@ -391,21 +432,25 @@ class IntegrationService {
     } on IntegrationException {
       rethrow;
     } on FirebaseException catch (e) {
-      throw IntegrationException('Failed to sync Instagram products: ${e.message}', 'FIRESTORE_ERROR');
+      throw IntegrationException(
+          'Failed to sync Instagram products: ${e.message}', 'FIRESTORE_ERROR');
     } catch (e) {
-      throw IntegrationException('Unexpected error during Instagram sync', 'UNKNOWN_ERROR');
+      throw IntegrationException(
+          'Unexpected error during Instagram sync', 'UNKNOWN_ERROR');
     }
   }
 
   /// Get Instagram analytics data
-  Future<Map<String, dynamic>> getInstagramAnalytics(String integrationId) async {
+  Future<Map<String, dynamic>> getInstagramAnalytics(
+      String integrationId) async {
     _validateBusinessId();
 
     try {
       final integration = await fetchIntegration(integrationId);
-      
+
       if (integration.platformId != 'instagram') {
-        throw IntegrationException('Integration is not an Instagram integration', 'INVALID_PLATFORM');
+        throw IntegrationException(
+            'Integration is not an Instagram integration', 'INVALID_PLATFORM');
       }
 
       // Here you would call the Instagram API to get analytics
@@ -424,7 +469,8 @@ class IntegrationService {
     } on IntegrationException {
       rethrow;
     } catch (e) {
-      throw IntegrationException('Failed to get Instagram analytics', 'UNKNOWN_ERROR');
+      throw IntegrationException(
+          'Failed to get Instagram analytics', 'UNKNOWN_ERROR');
     }
   }
 
@@ -440,7 +486,8 @@ class IntegrationService {
     try {
       // Validate parameters
       if (integrationId.isEmpty) {
-        throw IntegrationException('Integration ID is required', 'INVALID_INTEGRATION_ID');
+        throw IntegrationException(
+            'Integration ID is required', 'INVALID_INTEGRATION_ID');
       }
 
       // Get auth token
@@ -452,7 +499,8 @@ class IntegrationService {
       final idToken = await user.getIdToken();
 
       // Build API URL with query parameters
-      final uri = Uri.parse('${ApiConfig.baseUrl}/api/integrations/instagram/$integrationId/media');
+      final uri = Uri.parse(
+          '${ApiConfig.baseUrl}/api/integrations/instagram/$integrationId/media');
       final queryParams = <String, String>{
         'limit': limit.toString(),
       };
@@ -470,15 +518,17 @@ class IntegrationService {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $idToken',
+          'Business-ID': _businessId,
         },
       );
 
       print('📊 DEBUG: API Response status: ${response.statusCode}');
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body) as Map<String, dynamic>;
-        print('✅ DEBUG: Successfully fetched ${data['data']?.length ?? 0} media items');
-        
+        print(
+            '✅ DEBUG: Successfully fetched ${data['data']?.length ?? 0} media items');
+
         // Transform API response to match existing format
         return {
           'items': data['data'] ?? [],
@@ -488,7 +538,8 @@ class IntegrationService {
       } else if (response.statusCode == 401) {
         throw IntegrationException('Authentication failed', 'AUTH_FAILED');
       } else if (response.statusCode == 404) {
-        throw IntegrationException('Integration not found or inactive', 'INTEGRATION_NOT_FOUND');
+        throw IntegrationException(
+            'Integration not found or inactive', 'INTEGRATION_NOT_FOUND');
       } else if (response.statusCode == 429) {
         throw IntegrationException('Rate limit exceeded', 'RATE_LIMIT');
       } else {
@@ -503,7 +554,8 @@ class IntegrationService {
       rethrow;
     } catch (e) {
       print('❌ DEBUG: Unexpected error in getInstagramMedia: $e');
-      throw IntegrationException('Failed to get Instagram media: $e', 'UNKNOWN_ERROR');
+      throw IntegrationException(
+          'Failed to get Instagram media: $e', 'UNKNOWN_ERROR');
     }
   }
 
@@ -519,7 +571,8 @@ class IntegrationService {
     try {
       // Validate parameters
       if (integrationId.isEmpty) {
-        throw IntegrationException('Integration ID is required', 'INVALID_INTEGRATION_ID');
+        throw IntegrationException(
+            'Integration ID is required', 'INVALID_INTEGRATION_ID');
       }
       if (postId.isEmpty) {
         throw IntegrationException('Post ID is required', 'INVALID_POST_ID');
@@ -534,7 +587,8 @@ class IntegrationService {
       final idToken = await user.getIdToken();
 
       // Build API URL with query parameters
-      final uri = Uri.parse('${ApiConfig.baseUrl}/api/integrations/instagram/$integrationId/media/$postId/comments');
+      final uri = Uri.parse(
+          '${ApiConfig.baseUrl}/api/integrations/instagram/$integrationId/media/$postId/comments');
       final queryParams = <String, String>{
         'limit': limit.toString(),
       };
@@ -552,15 +606,17 @@ class IntegrationService {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $idToken',
+          'Business-ID': _businessId,
         },
       );
 
       print('📊 DEBUG: Comments API Response status: ${response.statusCode}');
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body) as Map<String, dynamic>;
-        print('✅ DEBUG: Successfully fetched ${data['data']?.length ?? 0} comments');
-        
+        print(
+            '✅ DEBUG: Successfully fetched ${data['data']?.length ?? 0} comments');
+
         // Transform API response to match expected format
         return {
           'comments': data['data'] ?? [],
@@ -570,12 +626,14 @@ class IntegrationService {
       } else if (response.statusCode == 401) {
         throw IntegrationException('Authentication failed', 'AUTH_FAILED');
       } else if (response.statusCode == 404) {
-        throw IntegrationException('Post not found or no comments available', 'POST_NOT_FOUND');
+        throw IntegrationException(
+            'Post not found or no comments available', 'POST_NOT_FOUND');
       } else if (response.statusCode == 429) {
         throw IntegrationException('Rate limit exceeded', 'RATE_LIMIT');
       } else {
         final errorBody = response.body;
-        print('❌ DEBUG: Comments API Error: ${response.statusCode} - $errorBody');
+        print(
+            '❌ DEBUG: Comments API Error: ${response.statusCode} - $errorBody');
         throw IntegrationException(
           'Failed to fetch Instagram comments: ${response.statusCode}',
           'API_ERROR',
@@ -585,7 +643,8 @@ class IntegrationService {
       rethrow;
     } catch (e) {
       print('❌ DEBUG: Unexpected error in getInstagramComments: $e');
-      throw IntegrationException('Failed to get Instagram comments: $e', 'UNKNOWN_ERROR');
+      throw IntegrationException(
+          'Failed to get Instagram comments: $e', 'UNKNOWN_ERROR');
     }
   }
 
@@ -601,19 +660,23 @@ class IntegrationService {
     try {
       // Validate parameters
       if (integrationId.isEmpty) {
-        throw IntegrationException('Integration ID is required', 'INVALID_INTEGRATION_ID');
+        throw IntegrationException(
+            'Integration ID is required', 'INVALID_INTEGRATION_ID');
       }
       if (postId.isEmpty) {
         throw IntegrationException('Post ID is required', 'INVALID_POST_ID');
       }
       if (commentId.isEmpty) {
-        throw IntegrationException('Comment ID is required', 'INVALID_COMMENT_ID');
+        throw IntegrationException(
+            'Comment ID is required', 'INVALID_COMMENT_ID');
       }
       if (message.trim().isEmpty) {
-        throw IntegrationException('Reply message is required', 'INVALID_MESSAGE');
+        throw IntegrationException(
+            'Reply message is required', 'INVALID_MESSAGE');
       }
       if (message.length > 1000) {
-        throw IntegrationException('Reply message cannot exceed 1000 characters', 'MESSAGE_TOO_LONG');
+        throw IntegrationException(
+            'Reply message cannot exceed 1000 characters', 'MESSAGE_TOO_LONG');
       }
 
       // Get auth token
@@ -625,7 +688,8 @@ class IntegrationService {
       final idToken = await user.getIdToken();
 
       // Build API URL
-      final uri = Uri.parse('${ApiConfig.baseUrl}/api/integrations/instagram/$integrationId/media/$postId/comments/$commentId/replies');
+      final uri = Uri.parse(
+          '${ApiConfig.baseUrl}/api/integrations/instagram/$integrationId/media/$postId/comments/$commentId/replies');
 
       print('🔍 DEBUG: Replying to comment: $uri');
 
@@ -635,12 +699,13 @@ class IntegrationService {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $idToken',
+          'Business-ID': _businessId,
         },
         body: json.encode({'message': message.trim()}),
       );
 
       print('📊 DEBUG: Reply API Response status: ${response.statusCode}');
-      
+
       if (response.statusCode == 201) {
         final data = json.decode(response.body) as Map<String, dynamic>;
         print('✅ DEBUG: Successfully posted reply with ID: ${data['id']}');
@@ -648,7 +713,8 @@ class IntegrationService {
       } else if (response.statusCode == 401) {
         throw IntegrationException('Authentication failed', 'AUTH_FAILED');
       } else if (response.statusCode == 404) {
-        throw IntegrationException('Comment not found or cannot be replied to', 'COMMENT_NOT_FOUND');
+        throw IntegrationException(
+            'Comment not found or cannot be replied to', 'COMMENT_NOT_FOUND');
       } else if (response.statusCode == 429) {
         throw IntegrationException('Rate limit exceeded', 'RATE_LIMIT');
       } else {
@@ -663,7 +729,8 @@ class IntegrationService {
       rethrow;
     } catch (e) {
       print('❌ DEBUG: Unexpected error in replyToInstagramComment: $e');
-      throw IntegrationException('Failed to reply to comment: $e', 'UNKNOWN_ERROR');
+      throw IntegrationException(
+          'Failed to reply to comment: $e', 'UNKNOWN_ERROR');
     }
   }
 
@@ -681,13 +748,19 @@ class IntegrationService {
     try {
       // Validate parameters
       if (integrationId.isEmpty) {
-        throw IntegrationException('Integration ID is required', 'INVALID_INTEGRATION_ID');
+        throw IntegrationException(
+            'Integration ID is required', 'INVALID_INTEGRATION_ID');
       }
-      if (imageUrl == null && videoUrl == null && (children == null || children.isEmpty)) {
-        throw IntegrationException('Either image URL, video URL, or children must be provided', 'INVALID_MEDIA');
+      if (imageUrl == null &&
+          videoUrl == null &&
+          (children == null || children.isEmpty)) {
+        throw IntegrationException(
+            'Either image URL, video URL, or children must be provided',
+            'INVALID_MEDIA');
       }
       if (caption != null && caption.length > 2200) {
-        throw IntegrationException('Caption cannot exceed 2200 characters', 'CAPTION_TOO_LONG');
+        throw IntegrationException(
+            'Caption cannot exceed 2200 characters', 'CAPTION_TOO_LONG');
       }
 
       // Get auth token
@@ -699,7 +772,8 @@ class IntegrationService {
       final idToken = await user.getIdToken();
 
       // Build API URL
-      final uri = Uri.parse('${ApiConfig.baseUrl}/api/integrations/instagram/$integrationId/media');
+      final uri = Uri.parse(
+          '${ApiConfig.baseUrl}/api/integrations/instagram/$integrationId/media');
 
       // Build request body
       final body = <String, dynamic>{};
@@ -717,12 +791,14 @@ class IntegrationService {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $idToken',
+          'Business-ID': _businessId,
         },
         body: json.encode(body),
       );
 
-      print('📊 DEBUG: Create Post API Response status: ${response.statusCode}');
-      
+      print(
+          '📊 DEBUG: Create Post API Response status: ${response.statusCode}');
+
       if (response.statusCode == 201) {
         final data = json.decode(response.body) as Map<String, dynamic>;
         print('✅ DEBUG: Successfully created post with ID: ${data['id']}');
@@ -730,12 +806,14 @@ class IntegrationService {
       } else if (response.statusCode == 401) {
         throw IntegrationException('Authentication failed', 'AUTH_FAILED');
       } else if (response.statusCode == 400) {
-        throw IntegrationException('Invalid post data or media', 'INVALID_POST_DATA');
+        throw IntegrationException(
+            'Invalid post data or media', 'INVALID_POST_DATA');
       } else if (response.statusCode == 429) {
         throw IntegrationException('Rate limit exceeded', 'RATE_LIMIT');
       } else {
         final errorBody = response.body;
-        print('❌ DEBUG: Create Post API Error: ${response.statusCode} - $errorBody');
+        print(
+            '❌ DEBUG: Create Post API Error: ${response.statusCode} - $errorBody');
         throw IntegrationException(
           'Failed to create Instagram post: ${response.statusCode}',
           'API_ERROR',
@@ -745,44 +823,50 @@ class IntegrationService {
       rethrow;
     } catch (e) {
       print('❌ DEBUG: Unexpected error in createInstagramPost: $e');
-      throw IntegrationException('Failed to create Instagram post: $e', 'UNKNOWN_ERROR');
+      throw IntegrationException(
+          'Failed to create Instagram post: $e', 'UNKNOWN_ERROR');
     }
   }
 
   Future<Integration> fetchIntegration(String integrationId) async {
     _validateBusinessId();
-    
+
     if (integrationId.isEmpty) {
-      throw IntegrationException('Integration ID is required', 'INVALID_INTEGRATION_ID');
+      throw IntegrationException(
+          'Integration ID is required', 'INVALID_INTEGRATION_ID');
     }
-    
+
     try {
-      final doc = await CollectionReferences.integrations
-          .doc(integrationId)
-          .get();
+      final doc =
+          await CollectionReferences.integrations.doc(integrationId).get();
 
       if (!doc.exists) {
-        throw IntegrationException('Integration not found', 'INTEGRATION_NOT_FOUND');
+        throw IntegrationException(
+            'Integration not found', 'INTEGRATION_NOT_FOUND');
       }
 
       final data = doc.data() as Map<String, dynamic>?;
       if (data?['status'] == 'deleted') {
-        throw IntegrationException('Integration has been deleted', 'INTEGRATION_DELETED');
+        throw IntegrationException(
+            'Integration has been deleted', 'INTEGRATION_DELETED');
       }
 
       // Verify integration belongs to the business
       if (data?['businessId'] != _businessId) {
-        throw IntegrationException('Integration not found', 'INTEGRATION_NOT_FOUND');
+        throw IntegrationException(
+            'Integration not found', 'INTEGRATION_NOT_FOUND');
       }
 
       data!['id'] = doc.id;
       return Integration.fromMap(data);
     } on FirebaseException catch (e) {
-      throw IntegrationException('Failed to fetch integration: ${e.message}', 'FIRESTORE_ERROR');
+      throw IntegrationException(
+          'Failed to fetch integration: ${e.message}', 'FIRESTORE_ERROR');
     } on IntegrationException {
       rethrow;
     } catch (e) {
-      throw IntegrationException('Unexpected error while fetching integration', 'UNKNOWN_ERROR');
+      throw IntegrationException(
+          'Unexpected error while fetching integration', 'UNKNOWN_ERROR');
     }
   }
 
@@ -791,30 +875,35 @@ class IntegrationService {
     required Map<String, String> credentials,
   }) async {
     _validateBusinessId();
-    
+
     if (platformId.isEmpty) {
-      throw IntegrationException('Platform ID is required', 'INVALID_PLATFORM_ID');
+      throw IntegrationException(
+          'Platform ID is required', 'INVALID_PLATFORM_ID');
     }
-    
+
     if (credentials.isEmpty) {
-      throw IntegrationException('Credentials are required', 'MISSING_CREDENTIALS');
+      throw IntegrationException(
+          'Credentials are required', 'MISSING_CREDENTIALS');
     }
 
     try {
       // Check if integration already exists for this platform
-      final existingQuery = await CollectionReferences
-          .integrationsForPlatform(_businessId, platformId)
+      final existingQuery = await CollectionReferences.integrationsForPlatform(
+              _businessId, platformId)
           .where('status', isNotEqualTo: 'deleted')
           .get();
-          
+
       if (existingQuery.docs.isNotEmpty) {
-        throw IntegrationException('Integration already exists for this platform', 'DUPLICATE_INTEGRATION');
+        throw IntegrationException(
+            'Integration already exists for this platform',
+            'DUPLICATE_INTEGRATION');
       }
 
       // Validate credentials with platform
       final isValid = await _validateCredentials(platformId, credentials);
       if (!isValid) {
-        throw IntegrationException('Invalid credentials provided', 'INVALID_CREDENTIALS');
+        throw IntegrationException(
+            'Invalid credentials provided', 'INVALID_CREDENTIALS');
       }
 
       // Get platform details
@@ -831,6 +920,7 @@ class IntegrationService {
         platformId: platformId,
         platformName: platform['name'],
         platformIcon: platform['icon'],
+        channel: _getChannelFromPlatform(platform['name']),
         status: 'connected',
         createdAt: DateTime.now(),
         settings: settings,
@@ -852,55 +942,60 @@ class IntegrationService {
 
       return integration;
     } on FirebaseException catch (e) {
-      throw IntegrationException('Failed to connect platform: ${e.message}', 'FIRESTORE_ERROR');
+      throw IntegrationException(
+          'Failed to connect platform: ${e.message}', 'FIRESTORE_ERROR');
     } on IntegrationException {
       rethrow;
     } catch (e) {
-      throw IntegrationException('Unexpected error while connecting platform', 'UNKNOWN_ERROR');
+      throw IntegrationException(
+          'Unexpected error while connecting platform', 'UNKNOWN_ERROR');
     }
   }
 
   Future<void> disconnectIntegration(String integrationId) async {
     _validateBusinessId();
-    
+
     if (integrationId.isEmpty) {
-      throw IntegrationException('Integration ID is required', 'INVALID_INTEGRATION_ID');
+      throw IntegrationException(
+          'Integration ID is required', 'INVALID_INTEGRATION_ID');
     }
 
     try {
       // Check if integration exists
-      final doc = await CollectionReferences.integrations
-          .doc(integrationId)
-          .get();
-          
+      final doc =
+          await CollectionReferences.integrations.doc(integrationId).get();
+
       if (!doc.exists) {
-        throw IntegrationException('Integration not found', 'INTEGRATION_NOT_FOUND');
-      }
-      
-      final data = doc.data() as Map<String, dynamic>?;
-      
-      // Verify integration belongs to the business
-      if (data?['businessId'] != _businessId) {
-        throw IntegrationException('Integration not found', 'INTEGRATION_NOT_FOUND');
-      }
-      
-      if (data?['status'] == 'disconnected') {
-        throw IntegrationException('Integration is already disconnected', 'ALREADY_DISCONNECTED');
+        throw IntegrationException(
+            'Integration not found', 'INTEGRATION_NOT_FOUND');
       }
 
-      await CollectionReferences.integrations
-          .doc(integrationId)
-          .update({
+      final data = doc.data() as Map<String, dynamic>?;
+
+      // Verify integration belongs to the business
+      if (data?['businessId'] != _businessId) {
+        throw IntegrationException(
+            'Integration not found', 'INTEGRATION_NOT_FOUND');
+      }
+
+      if (data?['status'] == 'disconnected') {
+        throw IntegrationException(
+            'Integration is already disconnected', 'ALREADY_DISCONNECTED');
+      }
+
+      await CollectionReferences.integrations.doc(integrationId).update({
         'status': 'disconnected',
         'disconnectedAt': FieldValue.serverTimestamp(),
         'disconnectedBy': _businessId,
       });
     } on FirebaseException catch (e) {
-      throw IntegrationException('Failed to disconnect integration: ${e.message}', 'FIRESTORE_ERROR');
+      throw IntegrationException(
+          'Failed to disconnect integration: ${e.message}', 'FIRESTORE_ERROR');
     } on IntegrationException {
       rethrow;
     } catch (e) {
-      throw IntegrationException('Unexpected error while disconnecting integration', 'UNKNOWN_ERROR');
+      throw IntegrationException(
+          'Unexpected error while disconnecting integration', 'UNKNOWN_ERROR');
     }
   }
 
@@ -909,73 +1004,79 @@ class IntegrationService {
     required IntegrationSettings settings,
   }) async {
     _validateBusinessId();
-    
+
     if (integrationId.isEmpty) {
-      throw IntegrationException('Integration ID is required', 'INVALID_INTEGRATION_ID');
+      throw IntegrationException(
+          'Integration ID is required', 'INVALID_INTEGRATION_ID');
     }
 
     try {
       // Check if integration exists and is active
-      final doc = await CollectionReferences.integrations
-          .doc(integrationId)
-          .get();
-          
+      final doc =
+          await CollectionReferences.integrations.doc(integrationId).get();
+
       if (!doc.exists) {
-        throw IntegrationException('Integration not found', 'INTEGRATION_NOT_FOUND');
+        throw IntegrationException(
+            'Integration not found', 'INTEGRATION_NOT_FOUND');
       }
-      
+
       final data = doc.data() as Map<String, dynamic>?;
-      
+
       // Verify integration belongs to the business
       if (data?['businessId'] != _businessId) {
-        throw IntegrationException('Integration not found', 'INTEGRATION_NOT_FOUND');
+        throw IntegrationException(
+            'Integration not found', 'INTEGRATION_NOT_FOUND');
       }
-      
+
       final status = data?['status'];
       if (status == 'disconnected' || status == 'deleted') {
-        throw IntegrationException('Cannot update settings for inactive integration', 'INTEGRATION_INACTIVE');
+        throw IntegrationException(
+            'Cannot update settings for inactive integration',
+            'INTEGRATION_INACTIVE');
       }
 
       // Validate sync interval
       if (settings.autoSync && settings.syncInterval < 5) {
-        throw IntegrationException('Sync interval must be at least 5 minutes', 'INVALID_SYNC_INTERVAL');
+        throw IntegrationException('Sync interval must be at least 5 minutes',
+            'INVALID_SYNC_INTERVAL');
       }
 
-      await CollectionReferences.integrations
-          .doc(integrationId)
-          .update({
+      await CollectionReferences.integrations.doc(integrationId).update({
         'settings': settings.toMap(),
         'updatedAt': FieldValue.serverTimestamp(),
         'updatedBy': _businessId,
       });
     } on FirebaseException catch (e) {
-      throw IntegrationException('Failed to update integration settings: ${e.message}', 'FIRESTORE_ERROR');
+      throw IntegrationException(
+          'Failed to update integration settings: ${e.message}',
+          'FIRESTORE_ERROR');
     } on IntegrationException {
       rethrow;
     } catch (e) {
-      throw IntegrationException('Unexpected error while updating settings', 'UNKNOWN_ERROR');
+      throw IntegrationException(
+          'Unexpected error while updating settings', 'UNKNOWN_ERROR');
     }
   }
 
   /// Triggers manual sync for an integration
   Future<void> syncIntegration(String integrationId) async {
     _validateBusinessId();
-    
+
     if (integrationId.isEmpty) {
-      throw IntegrationException('Integration ID is required', 'INVALID_INTEGRATION_ID');
+      throw IntegrationException(
+          'Integration ID is required', 'INVALID_INTEGRATION_ID');
     }
 
     try {
       final integration = await fetchIntegration(integrationId);
-      
+
       if (integration.status != 'connected') {
-        throw IntegrationException('Can only sync connected integrations', 'INTEGRATION_NOT_CONNECTED');
+        throw IntegrationException('Can only sync connected integrations',
+            'INTEGRATION_NOT_CONNECTED');
       }
 
       // Update last sync timestamp and increment sync count
-      await CollectionReferences.integrations
-          .doc(integrationId)
-          .update({
+      await CollectionReferences.integrations.doc(integrationId).update({
         'lastSyncAt': FieldValue.serverTimestamp(),
         'syncCount': FieldValue.increment(1),
         'lastSyncStatus': 'success',
@@ -983,53 +1084,56 @@ class IntegrationService {
 
       // TODO: Implement actual platform synchronization logic
       // This would involve calling the respective platform APIs
-      
     } on FirebaseException catch (e) {
-      throw IntegrationException('Failed to sync integration: ${e.message}', 'FIRESTORE_ERROR');
+      throw IntegrationException(
+          'Failed to sync integration: ${e.message}', 'FIRESTORE_ERROR');
     } on IntegrationException {
       rethrow;
     } catch (e) {
-      throw IntegrationException('Unexpected error during sync', 'UNKNOWN_ERROR');
+      throw IntegrationException(
+          'Unexpected error during sync', 'UNKNOWN_ERROR');
     }
   }
 
   /// Soft delete an integration (marks as deleted instead of removing)
   Future<void> deleteIntegration(String integrationId) async {
     _validateBusinessId();
-    
+
     if (integrationId.isEmpty) {
-      throw IntegrationException('Integration ID is required', 'INVALID_INTEGRATION_ID');
+      throw IntegrationException(
+          'Integration ID is required', 'INVALID_INTEGRATION_ID');
     }
 
     try {
-      final doc = await CollectionReferences.integrations
-          .doc(integrationId)
-          .get();
-          
+      final doc =
+          await CollectionReferences.integrations.doc(integrationId).get();
+
       if (!doc.exists) {
-        throw IntegrationException('Integration not found', 'INTEGRATION_NOT_FOUND');
+        throw IntegrationException(
+            'Integration not found', 'INTEGRATION_NOT_FOUND');
       }
 
       final data = doc.data() as Map<String, dynamic>?;
-      
+
       // Verify integration belongs to the business
       if (data?['businessId'] != _businessId) {
-        throw IntegrationException('Integration not found', 'INTEGRATION_NOT_FOUND');
+        throw IntegrationException(
+            'Integration not found', 'INTEGRATION_NOT_FOUND');
       }
 
-      await CollectionReferences.integrations
-          .doc(integrationId)
-          .update({
+      await CollectionReferences.integrations.doc(integrationId).update({
         'status': 'deleted',
         'deletedAt': FieldValue.serverTimestamp(),
         'deletedBy': _businessId,
       });
     } on FirebaseException catch (e) {
-      throw IntegrationException('Failed to delete integration: ${e.message}', 'FIRESTORE_ERROR');
+      throw IntegrationException(
+          'Failed to delete integration: ${e.message}', 'FIRESTORE_ERROR');
     } on IntegrationException {
       rethrow;
     } catch (e) {
-      throw IntegrationException('Unexpected error while deleting integration', 'UNKNOWN_ERROR');
+      throw IntegrationException(
+          'Unexpected error while deleting integration', 'UNKNOWN_ERROR');
     }
   }
 
@@ -1052,7 +1156,7 @@ class IntegrationService {
       case 'magento':
         return credentials.containsKey('accessToken') &&
             credentials.containsKey('storeUrl');
-            
+
       // Payment Platforms
       case 'stripe':
         return credentials.containsKey('publishableKey') &&
@@ -1072,7 +1176,7 @@ class IntegrationService {
       case 'flutterwave':
         return credentials.containsKey('publicKey') &&
             credentials.containsKey('secretKey');
-            
+
       // Social Media Platforms
       case 'facebook':
         return credentials.containsKey('appId') &&
@@ -1097,7 +1201,7 @@ class IntegrationService {
       case 'telegram':
         return credentials.containsKey('botToken') &&
             credentials.containsKey('chatId');
-            
+
       // Review & Feedback Platforms
       case 'google_business':
         return credentials.containsKey('placeId') &&
@@ -1130,7 +1234,7 @@ class IntegrationService {
         return credentials.containsKey('consumerKey') &&
             credentials.containsKey('consumerSecret') &&
             credentials.containsKey('storeUrl');
-            
+
       default:
         return credentials.isNotEmpty;
     }
@@ -1141,12 +1245,12 @@ class IntegrationService {
     // Return e-commerce and marketplace platforms for online stores
     final platformIds = [
       'shopify',
-      'woocommerce', 
+      'woocommerce',
       'magento',
       'amazon',
       'ebay',
     ];
-    
+
     final platforms = <Map<String, dynamic>>[];
     for (final platformId in platformIds) {
       final platformDetails = await _getPlatformDetails(platformId);
@@ -1157,7 +1261,7 @@ class IntegrationService {
         'category': platformDetails['category'],
       });
     }
-    
+
     return platforms;
   }
 
@@ -1165,7 +1269,8 @@ class IntegrationService {
   Future<bool> hasIntegrationForPlatform(String platformId) async {
     try {
       final integrations = await fetchIntegrations();
-      return integrations.any((integration) => integration.platformId == platformId);
+      return integrations
+          .any((integration) => integration.platformId == platformId);
     } catch (e) {
       // If there's an error fetching integrations, assume no integration exists
       return false;
@@ -1205,7 +1310,7 @@ class IntegrationService {
           'icon': 'assets/icons/ebay.png',
           'category': 'marketplace',
         };
-        
+
       // Payment Platforms
       case 'stripe':
         return {
@@ -1243,7 +1348,7 @@ class IntegrationService {
           'icon': 'assets/icons/flutterwave.png',
           'category': 'payment',
         };
-        
+
       // Social Media Platforms
       case 'facebook':
         return {
@@ -1281,7 +1386,7 @@ class IntegrationService {
           'icon': 'assets/icons/telegram.png',
           'category': 'social',
         };
-        
+
       // Review & Feedback Platforms
       case 'google_business':
         return {
@@ -1343,13 +1448,35 @@ class IntegrationService {
           'icon': 'assets/icons/woocommerce_reviews.png',
           'category': 'reviews',
         };
-        
+
       default:
         return {
           'name': 'Custom Platform',
           'icon': 'assets/icons/platform.png',
           'category': 'other',
         };
+    }
+  }
+
+  /// Get channel name from platform name
+  String _getChannelFromPlatform(String platformName) {
+    switch (platformName.toLowerCase()) {
+      case 'instagram business':
+      case 'instagram':
+        return 'instagram';
+      case 'facebook pages':
+      case 'facebook':
+        return 'facebook';
+      case 'messenger':
+        return 'messenger';
+      case 'whatsapp business':
+      case 'whatsapp':
+        return 'whatsapp';
+      case 'tiktok business':
+      case 'tiktok':
+        return 'tiktok';
+      default:
+        return platformName.toLowerCase().replaceAll(' ', '_');
     }
   }
 }

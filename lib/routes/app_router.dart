@@ -8,6 +8,8 @@ import 'package:vendor_app/screens/stores/store_detail_screen.dart';
 import 'package:vendor_app/screens/main/analytics_screen.dart';
 import 'package:vendor_app/screens/main/main_screen.dart';
 import 'package:vendor_app/screens/main/media_detail_screen.dart';
+import 'package:vendor_app/screens/integrations/meta_integration_screen.dart';
+import 'package:vendor_app/screens/integrations/tiktok_integration_screen.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:vendor_app/models/store.dart';
 
@@ -23,6 +25,8 @@ class AppRouter {
   static const String analytics = '/analytics';
   static const String productDetail = '/product-detail';
   static const String mediaDetail = '/media-detail';
+  static const String metaIntegration = '/meta-integration';
+  static const String tikTokIntegration = '/tiktok-integration';
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -57,6 +61,11 @@ class AppRouter {
             media: args['media'] as AssetEntity,
           ),
         );
+      case metaIntegration:
+        return MaterialPageRoute(builder: (_) => const MetaIntegrationScreen());
+      case tikTokIntegration:
+        return MaterialPageRoute(
+            builder: (_) => const TikTokIntegrationScreen());
       default:
         return MaterialPageRoute(
           builder: (_) => Scaffold(

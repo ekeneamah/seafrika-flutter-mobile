@@ -17,6 +17,7 @@ class User {
   final String firstName;
   final String lastName;
   final String? businessName; // Made optional
+  final String? accessToken; // Access token for third-party integrations
   final String? businessAddress; // Made optional
   final String? country; // Made optional
   final String? state; // Made optional
@@ -30,7 +31,7 @@ class User {
   final List<String> permissions;
   final Map<String, List<UserRole>> storeRoles;
   final bool defaultPasswordChanged;
-  
+
   // Optional personal attributes
   final DateTime? dateOfBirth;
   final DateTime? weddingAnniversary;
@@ -46,6 +47,7 @@ class User {
     required this.firstName,
     required this.lastName,
     this.businessName, // Made optional
+    this.accessToken, // Access token for integrations
     this.businessAddress, // Made optional
     this.country, // Made optional
     this.state, // Made optional
@@ -113,12 +115,12 @@ class User {
       debugPrint("created at is Timestamp $map['createdAt']");
       createdAt = (map['createdAt'] as Timestamp).toDate();
     } else if (map['createdAt'] is String) {
-       debugPrint("created at is String $map['createdAt']");
+      debugPrint("created at is String $map['createdAt']");
       createdAt = DateTime.parse(map['createdAt']);
     } else {
       createdAt = DateTime.now(); // Fallback
     }
-    
+
     // Handle timestamp or string for lastLoginAt
     DateTime? lastLoginAt;
     if (map['lastLoginAt'] is Timestamp) {
@@ -126,7 +128,7 @@ class User {
     } else if (map['lastLoginAt'] is String) {
       lastLoginAt = DateTime.parse(map['lastLoginAt']);
     }
-    
+
     return User(
       id: map['id'] ?? '',
       businessId: map['businessId'] ?? '',
@@ -135,6 +137,7 @@ class User {
       firstName: map['firstName'] ?? '',
       lastName: map['lastName'] ?? '',
       businessName: map['businessName'] ?? '',
+      accessToken: map['accessToken'],
       businessAddress: map['businessAddress'] ?? '',
       country: map['country'] ?? '',
       state: map['state'] ?? '',
@@ -180,7 +183,7 @@ class User {
 
   factory User.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-    
+
     // Handle timestamp or string for createdAt
     DateTime createdAt;
     if (data['createdAt'] is Timestamp) {
@@ -190,7 +193,7 @@ class User {
     } else {
       createdAt = DateTime.now(); // Fallback
     }
-    
+
     // Handle timestamp or string for lastLoginAt
     DateTime? lastLoginAt;
     if (data['lastLoginAt'] is Timestamp) {
@@ -198,7 +201,7 @@ class User {
     } else if (data['lastLoginAt'] is String) {
       lastLoginAt = DateTime.parse(data['lastLoginAt']);
     }
-    
+
     return User(
       id: data['id'] ?? '',
       businessId: data['businessId'] ?? '',

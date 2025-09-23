@@ -109,9 +109,11 @@ class NavigationDrawer extends ConsumerWidget {
                   const SizedBox(height: 12),
                   // Business selection
                   GestureDetector(
-                    onTap: () => NavigationService.navigateTo(AppRoutes.businessOnboarding),
+                    onTap: () => NavigationService.navigateTo(
+                        AppRoutes.businessOnboarding),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(16),
@@ -128,7 +130,10 @@ class NavigationDrawer extends ConsumerWidget {
                           Flexible(
                             child: Text(
                               selectedBusiness?.name ?? 'Select Business',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
                                     color: Colors.white,
                                     fontWeight: FontWeight.w500,
                                   ),
@@ -174,10 +179,9 @@ class NavigationDrawer extends ConsumerWidget {
             onTap: () => NavigationService.navigateTo(AppRoutes.serviceList),
             isSelected: currentRoute == AppRoutes.serviceList,
           ),
-      
-          
+
           const Divider(),
-        
+
           _buildDrawerItem(
             icon: Icons.shopping_cart,
             title: 'Orders',
@@ -214,7 +218,16 @@ class NavigationDrawer extends ConsumerWidget {
             onTap: () => NavigationService.navigateToAnalytics(),
             isSelected: currentRoute == Routes.analytics,
           ),
-         
+          _buildDrawerItem(
+            icon: Icons.share,
+            title: 'Social Media Integration',
+            onTap: () {
+              Navigator.of(context).pop(); // Close drawer first
+              Navigator.of(context).pushNamed('/meta-integration');
+            },
+            isSelected: currentRoute == '/meta-integration',
+          ),
+
           _buildDrawerItem(
             icon: Icons.shopping_bag,
             title: 'Purchase Orders',

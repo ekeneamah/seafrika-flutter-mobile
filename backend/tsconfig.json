@@ -20,5 +20,8 @@
     "paths": {
       "@/*": ["src/*"]
     }
-  }
+  },
+  "exclude": [
+    "src/webhooks/archived/**/*"
+  ]
 }

@@ -31,6 +31,15 @@ import 'package:vendor_app/screens/integrations/integration_management_screen.da
 import 'package:vendor_app/screens/integrations/add_integration_screen.dart';
 import 'package:vendor_app/screens/integrations/integration_settings_screen.dart';
 import 'package:vendor_app/screens/integrations/instagram_integration_screen.dart';
+import 'package:vendor_app/screens/integrations/facebook_pages_integration_screen.dart';
+import 'package:vendor_app/screens/integrations/facebook_insights_screen.dart';
+import 'package:vendor_app/screens/integrations/facebook_dashboard_screen.dart';
+import 'package:vendor_app/screens/integrations/messenger_integration_screen.dart';
+import 'package:vendor_app/screens/integrations/meta_integration_screen.dart';
+import 'package:vendor_app/screens/integrations/facebook_integration_screen.dart';
+import 'package:vendor_app/screens/integrations/whatsapp_integration_screen.dart';
+import 'package:vendor_app/screens/integrations/tiktok_integration_screen.dart';
+import 'package:vendor_app/screens/integrations/generic_integration_dashboard.dart';
 import 'package:vendor_app/screens/integrations/instagram_analytics_screen.dart';
 import 'package:vendor_app/screens/integrations/instagram_posts_screen.dart';
 import 'package:vendor_app/screens/tasks/task_list_screen.dart';
@@ -115,7 +124,18 @@ class AppRoutes {
   static const String addIntegration = '/integrations/add';
   static const String integrationSettings = '/integrations/settings';
   static const String instagramIntegration = '/integrations/instagram';
+  static const String facebookPagesIntegration = '/integrations/facebook-pages';
+  static const String messengerIntegration = '/integrations/messenger';
+  static const String facebookIntegration = '/integrations/facebook';
+  static const String whatsappIntegration = '/integrations/whatsapp';
+  static const String tiktokIntegration = '/integrations/tiktok';
+  static const String tiktokIntegrationAlt =
+      '/tiktok-integration'; // Alternative route for TikTok
+  static const String genericIntegrationDashboard = '/integrations/generic';
+  static const String metaIntegration = '/meta-integration';
   static const String instagramAnalytics = '/integrations/instagram/analytics';
+  static const String facebookInsights = '/integrations/facebook/insights';
+  static const String facebookPosts = '/integrations/facebook/posts';
   static const String instagramPosts = '/integrations/instagram/posts';
   static const String taskList = '/tasks';
   static const String createTask = '/create-task';
@@ -158,7 +178,8 @@ class AppRoutes {
   static const String editInventory = '/inventory/edit';
   static const String inventoryDetail = '/inventory/detail';
   static const String businessInventoryDetail = '/business_inventory/detail';
-  static const String businessInventoryManagement = '/business_inventory/management';
+  static const String businessInventoryManagement =
+      '/business_inventory/management';
   static const String notifications = '/notifications';
   static const String notificationDetail = '/notifications/detail';
   static const String accountSettings = '/settings/account';
@@ -304,8 +325,76 @@ class AppRoutes {
           ),
         );
       case instagramIntegration:
+        final args = settings.arguments as Map<String, dynamic>?;
         return MaterialPageRoute(
-          builder: (context) => const InstagramIntegrationScreen(),
+          builder: (context) => InstagramIntegrationScreen(
+            integrationId: args?['integrationId'],
+          ),
+        );
+      case facebookPagesIntegration:
+        final args = settings.arguments as Map<String, dynamic>?;
+        return MaterialPageRoute(
+          builder: (context) => FacebookPagesIntegrationScreen(
+            integrationId: args?['integrationId'],
+          ),
+        );
+      case messengerIntegration:
+        final args = settings.arguments as Map<String, dynamic>?;
+        return MaterialPageRoute(
+          builder: (context) => MessengerIntegrationScreen(
+            integrationId: args?['integrationId'],
+          ),
+        );
+      case facebookIntegration:
+        final args = settings.arguments as Map<String, dynamic>?;
+        return MaterialPageRoute(
+          builder: (context) => FacebookIntegrationScreen(
+            integrationId: args?['integrationId'],
+          ),
+        );
+      case facebookInsights:
+        return MaterialPageRoute(
+          builder: (context) => FacebookInsightsScreen(),
+        );
+      case facebookPosts:
+        final args = settings.arguments as Map<String, dynamic>?;
+        return MaterialPageRoute(
+          builder: (context) => FacebookDashboardScreen(
+            integrationId: args?['integrationId'] ?? '',
+            initialTab: args?['initialTab'] ?? 0, // Default to posts tab
+          ),
+        );
+      case whatsappIntegration:
+        final args = settings.arguments as Map<String, dynamic>?;
+        return MaterialPageRoute(
+          builder: (context) => WhatsAppIntegrationScreen(
+            integrationId: args?['integrationId'],
+          ),
+        );
+      case tiktokIntegration:
+        final args = settings.arguments as Map<String, dynamic>?;
+        return MaterialPageRoute(
+          builder: (context) => TikTokIntegrationScreen(
+            integrationId: args?['integrationId'],
+          ),
+        );
+      case tiktokIntegrationAlt:
+        final args = settings.arguments as Map<String, dynamic>?;
+        return MaterialPageRoute(
+          builder: (context) => TikTokIntegrationScreen(
+            integrationId: args?['integrationId'],
+          ),
+        );
+      case genericIntegrationDashboard:
+        final args = settings.arguments as Map<String, dynamic>;
+        return MaterialPageRoute(
+          builder: (context) => GenericIntegrationDashboard(
+            integrationId: args['integrationId'],
+          ),
+        );
+      case metaIntegration:
+        return MaterialPageRoute(
+          builder: (context) => const MetaIntegrationScreen(),
         );
       case instagramAnalytics:
         final args = settings.arguments as Map<String, dynamic>;
@@ -539,7 +628,7 @@ class AppRoutes {
           builder: (context) => Consumer(
             builder: (context, ref, child) => StoreInventoryDetailScreen(
               businessId: args['businessId'] ?? 'default-business',
-              storeId: args['storeId'] ?? 'default-store', 
+              storeId: args['storeId'] ?? 'default-store',
               inventoryId: args['inventoryId'] ?? 'unknown',
             ),
           ),
@@ -556,7 +645,8 @@ class AppRoutes {
       case businessInventoryManagement:
         return MaterialPageRoute(
           builder: (context) => Consumer(
-            builder: (context, ref, child) => const BusinessInventoryManagementScreen(),
+            builder: (context, ref, child) =>
+                const BusinessInventoryManagementScreen(),
           ),
         );
       case notifications:
@@ -629,11 +719,14 @@ class AppRoutes {
       case businessList:
         return MaterialPageRoute(builder: (_) => const BusinessListScreen());
       case createBusiness:
-        return MaterialPageRoute(builder: (_) => const BusinessManagementScreen());
+        return MaterialPageRoute(
+            builder: (_) => const BusinessManagementScreen());
       case businessManagement:
-        return MaterialPageRoute(builder: (_) => const BusinessManagementScreen());
+        return MaterialPageRoute(
+            builder: (_) => const BusinessManagementScreen());
       case businessOnboarding:
-        return MaterialPageRoute(builder: (_) => const BusinessOnboardingScreen());
+        return MaterialPageRoute(
+            builder: (_) => const BusinessOnboardingScreen());
       case editBusiness:
         final businessId = settings.arguments as String?;
         return MaterialPageRoute(
@@ -658,7 +751,8 @@ class _OrderDetailWrapper extends ConsumerStatefulWidget {
   const _OrderDetailWrapper({required this.orderId});
 
   @override
-  ConsumerState<_OrderDetailWrapper> createState() => _OrderDetailWrapperState();
+  ConsumerState<_OrderDetailWrapper> createState() =>
+      _OrderDetailWrapperState();
 }
 
 class _OrderDetailWrapperState extends ConsumerState<_OrderDetailWrapper> {
@@ -676,7 +770,7 @@ class _OrderDetailWrapperState extends ConsumerState<_OrderDetailWrapper> {
     try {
       final orderService = ref.read(orderManagementServiceProvider);
       final orderDetails = await orderService.getOrderDetails(widget.orderId);
-      
+
       setState(() {
         _orderDetails = orderDetails;
         _isLoading = false;

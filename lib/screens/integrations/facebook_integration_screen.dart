@@ -11,18 +11,25 @@ import 'package:vendor_app/services/integration_service.dart';
 import 'package:vendor_app/services/facebook_service.dart';
 import 'package:vendor_app/widgets/integration_app_bar.dart';
 import 'package:vendor_app/theme/app_theme.dart';
-import 'package:vendor_app/screens/integrations/facebook_enhanced_dashboard_screen.dart';
+import 'facebook_enhanced_dashboard_screen.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class FacebookIntegrationScreen extends ConsumerStatefulWidget {
-  const FacebookIntegrationScreen({super.key});
+  final String? integrationId;
+
+  const FacebookIntegrationScreen({
+    super.key,
+    this.integrationId,
+  });
 
   @override
-  ConsumerState<FacebookIntegrationScreen> createState() => _FacebookIntegrationScreenState();
+  ConsumerState<FacebookIntegrationScreen> createState() =>
+      _FacebookIntegrationScreenState();
 }
 
-class _FacebookIntegrationScreenState extends ConsumerState<FacebookIntegrationScreen> {
+class _FacebookIntegrationScreenState
+    extends ConsumerState<FacebookIntegrationScreen> {
   bool _isLoading = false;
   String? _error;
   Integration? _currentIntegration;
@@ -60,10 +67,27 @@ class _FacebookIntegrationScreenState extends ConsumerState<FacebookIntegrationS
         return;
       }
 
-      final integrations = await integrationService.fetchIntegrations();
-      final facebookIntegration = integrations
-          .where((integration) => integration.platformId == 'facebook')
-          .firstOrNull;
+      Integration? facebookIntegration;
+
+      // If integrationId is provided, fetch that specific integration
+      if (widget.integrationId != null) {
+        try {
+          facebookIntegration =
+              await integrationService.fetchIntegration(widget.integrationId!);
+        } catch (e) {
+          setState(() {
+            _error = 'Failed to load integration: $e';
+            _isLoading = false;
+          });
+          return;
+        }
+      } else {
+        // Otherwise, search for any Facebook integration
+        final integrations = await integrationService.fetchIntegrations();
+        facebookIntegration = integrations
+            .where((integration) => integration.channel == 'facebook')
+            .firstOrNull;
+      }
 
       if (facebookIntegration != null) {
         setState(() {
@@ -84,18 +108,20 @@ class _FacebookIntegrationScreenState extends ConsumerState<FacebookIntegrationS
 
   Future<void> _loadFacebookPage() async {
     if (_currentIntegration == null) return;
-    
+
     final businessId = ref.read(selectedBusinessIdProvider);
     final authService = ref.read(authServiceProvider);
     if (businessId == null) return;
 
     try {
       final response = await http.get(
-        Uri.parse('https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/integrations/facebook/${_currentIntegration!.id}/page-info'),
+        Uri.parse(
+            'https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/integrations/facebook/${_currentIntegration!.id}/page-info'),
         headers: {
           'Business-ID': businessId,
           'User-ID': authService.currentUser?.id ?? '',
-          'Authorization': 'Bearer ${authService.currentUser?.accessToken ?? ''}',
+          'Authorization':
+              'Bearer ${authService.currentUser?.accessToken ?? ''}',
           'Content-Type': 'application/json',
         },
       );
@@ -109,7 +135,8 @@ class _FacebookIntegrationScreenState extends ConsumerState<FacebookIntegrationS
         final errorBody = json.decode(response.body);
         setState(() {
           _facebookPage = null;
-          _error = 'Failed to load Facebook page: ${errorBody['message'] ?? 'Unknown error'}';
+          _error =
+              'Failed to load Facebook page: ${errorBody['message'] ?? 'Unknown error'}';
         });
       }
     } catch (e) {
@@ -136,12 +163,12 @@ class _FacebookIntegrationScreenState extends ConsumerState<FacebookIntegrationS
     });
 
     try {
-      // Get Facebook auth URL from backend
+      // Get Facebook auth URL from backend (same as Instagram since Facebook Page management uses same OAuth flow)
       final authService = ref.read(authServiceProvider);
       final response = await http.get(
         Uri.parse(
-          'https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/config/facebook/auth-url'
-          '?redirect_uri=${Uri.encodeComponent('https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/config/facebook/oauth/redirect')}'
+          'https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/v1/config/facebook/instagram/auth-url'
+          '?redirect_uri=${Uri.encodeComponent('https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/v1/config/facebook/oauth/redirect')}'
           '&state=${Uri.encodeComponent('vendor_${DateTime.now().millisecondsSinceEpoch}')}',
         ),
         headers: {
@@ -151,40 +178,42 @@ class _FacebookIntegrationScreenState extends ConsumerState<FacebookIntegrationS
         },
       );
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final authUrl = data['auth_url'];
+      if (response.statusCode != 200) {
+        final errorBody = json.decode(response.body);
+        throw Exception(
+            'Failed to get authorization URL: ${errorBody['message'] ?? 'Unknown error'}');
+      }
 
-        // Launch Facebook OAuth URL
-        try {
-          final uri = Uri.parse(authUrl);
-          
-          if (await canLaunchUrl(uri)) {
-            await launchUrl(
-              uri,
-              mode: LaunchMode.externalApplication,
-            );
-          } else {
-            await launchUrl(
-              uri,
-              mode: LaunchMode.inAppWebView,
-            );
-          }
-          
-          _showAuthInstructions();
-        } catch (launchError) {
-          try {
-            await launchUrl(
-              Uri.parse(authUrl),
-              mode: LaunchMode.platformDefault,
-            );
-            _showAuthInstructions();
-          } catch (e) {
-            await _handleUrlLaunchFailure(authUrl);
-          }
+      final data = json.decode(response.body);
+      final authUrl = data['auth_url'];
+
+      // Launch Facebook OAuth URL
+      try {
+        final uri = Uri.parse(authUrl);
+
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(
+            uri,
+            mode: LaunchMode.externalApplication,
+          );
+        } else {
+          await launchUrl(
+            uri,
+            mode: LaunchMode.inAppWebView,
+          );
         }
-      } else {
-        throw Exception('Failed to get authorization URL');
+
+        _showAuthInstructions();
+      } catch (launchError) {
+        try {
+          await launchUrl(
+            Uri.parse(authUrl),
+            mode: LaunchMode.platformDefault,
+          );
+          _showAuthInstructions();
+        } catch (e) {
+          await _handleUrlLaunchFailure(authUrl);
+        }
       }
     } catch (e) {
       setState(() {
@@ -239,7 +268,7 @@ class _FacebookIntegrationScreenState extends ConsumerState<FacebookIntegrationS
   Future<void> _handleUrlLaunchFailure(String authUrl) async {
     try {
       await Clipboard.setData(ClipboardData(text: authUrl));
-      
+
       if (mounted) {
         showDialog(
           context: context,
@@ -249,9 +278,11 @@ class _FacebookIntegrationScreenState extends ConsumerState<FacebookIntegrationS
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('We couldn\'t open the Facebook authorization page automatically.'),
+                const Text(
+                    'We couldn\'t open the Facebook authorization page automatically.'),
                 const SizedBox(height: 12),
-                const Text('The authorization URL has been copied to your clipboard.'),
+                const Text(
+                    'The authorization URL has been copied to your clipboard.'),
                 const SizedBox(height: 12),
                 const Text('Please:'),
                 const Text('1. Open your browser'),
@@ -297,7 +328,8 @@ class _FacebookIntegrationScreenState extends ConsumerState<FacebookIntegrationS
       }
     } catch (e) {
       setState(() {
-        _error = 'Could not launch Facebook authorization. Please try again or contact support.';
+        _error =
+            'Could not launch Facebook authorization. Please try again or contact support.';
         _isLoading = false;
       });
     }
@@ -314,7 +346,7 @@ class _FacebookIntegrationScreenState extends ConsumerState<FacebookIntegrationS
 
   Future<void> _checkAuthorizationAndNavigate() async {
     final businessId = ref.read(selectedBusinessIdProvider);
-    
+
     if (businessId == null) {
       setState(() {
         _isLoading = false;
@@ -325,7 +357,7 @@ class _FacebookIntegrationScreenState extends ConsumerState<FacebookIntegrationS
 
     try {
       final integrationService = ref.read(integrationServiceProvider);
-      
+
       if (integrationService == null) {
         setState(() {
           _isLoading = false;
@@ -337,17 +369,18 @@ class _FacebookIntegrationScreenState extends ConsumerState<FacebookIntegrationS
       // Check if integration already exists
       final integrations = await integrationService.fetchIntegrations();
       final existingIntegration = integrations
-          .where((integration) => integration.platformId == 'facebook')
+          .where((integration) => integration.channel == 'facebook')
           .firstOrNull;
 
-      if (existingIntegration != null && (existingIntegration.status == 'active' || existingIntegration.status == 'connected')) {
+      if (existingIntegration != null &&
+          (existingIntegration.status == 'active' ||
+              existingIntegration.status == 'connected')) {
         await _navigateToFacebookDashboard(existingIntegration);
         return;
       }
 
       // Try to create integration from backend
       await _createIntegrationFromBackend(integrationService, businessId);
-
     } catch (e) {
       setState(() {
         _error = 'Failed to check authorization status: $e';
@@ -356,12 +389,14 @@ class _FacebookIntegrationScreenState extends ConsumerState<FacebookIntegrationS
     }
   }
 
-  Future<void> _createIntegrationFromBackend(integrationService, String businessId) async {
+  Future<void> _createIntegrationFromBackend(
+      integrationService, String businessId) async {
     try {
       // Try to fetch page from backend (indicates successful OAuth)
-      final pageUrl = 'https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/config/facebook/page-info';
+      final pageUrl =
+          'https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/v1/config/facebook/page-info';
       final authService = ref.read(authServiceProvider);
-      
+
       final response = await http.get(
         Uri.parse(pageUrl),
         headers: {
@@ -373,19 +408,20 @@ class _FacebookIntegrationScreenState extends ConsumerState<FacebookIntegrationS
 
       if (response.statusCode == 200) {
         final pageData = json.decode(response.body);
-        
+
         // Create the integration using the service
-        final newIntegration = await integrationService.createFacebookIntegration(
+        final newIntegration =
+            await integrationService.createFacebookIntegration(
           pageId: pageData['id'],
           pageAccessToken: pageData['access_token'],
-          accessToken: pageData['user_access_token'] ?? pageData['access_token'],
+          accessToken:
+              pageData['user_access_token'] ?? pageData['access_token'],
           userId: pageData['user_id'] ?? 'unknown',
           pageData: pageData,
         );
 
         // Success! Navigate to dashboard
         await _navigateToFacebookDashboard(newIntegration);
-
       } else {
         setState(() {
           _isLoading = false;
@@ -394,7 +430,7 @@ class _FacebookIntegrationScreenState extends ConsumerState<FacebookIntegrationS
       }
     } catch (e) {
       setState(() {
-        _isLoading = false,
+        _isLoading = false;
       });
       _showAuthorizationRetryDialog();
     }
@@ -419,7 +455,7 @@ class _FacebookIntegrationScreenState extends ConsumerState<FacebookIntegrationS
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (context) => const FacebookEnhancedDashboardScreen(),
+            builder: (context) => const FacebookDashboardScreen(),
           ),
         );
       }
@@ -436,9 +472,11 @@ class _FacebookIntegrationScreenState extends ConsumerState<FacebookIntegrationS
           children: [
             Text('We\'re still processing your Facebook authorization.'),
             SizedBox(height: 12),
-            Text('This can take a few moments. Please try again or wait a bit longer.'),
+            Text(
+                'This can take a few moments. Please try again or wait a bit longer.'),
             SizedBox(height: 12),
-            Text('Note: If you completed the Facebook authorization in your browser, the integration should be created soon.'),
+            Text(
+                'Note: If you completed the Facebook authorization in your browser, the integration should be created soon.'),
           ],
         ),
         actions: [
@@ -491,9 +529,9 @@ class _FacebookIntegrationScreenState extends ConsumerState<FacebookIntegrationS
         if (integrationService == null) {
           throw Exception('No business selected');
         }
-        
+
         await integrationService.disconnectIntegration(_currentIntegration!.id);
-        
+
         setState(() {
           _currentIntegration = null;
           _facebookPage = null;
@@ -517,7 +555,7 @@ class _FacebookIntegrationScreenState extends ConsumerState<FacebookIntegrationS
   @override
   Widget build(BuildContext context) {
     final businessId = ref.watch(selectedBusinessIdProvider);
-    
+
     if (businessId == null) {
       return Scaffold(
         appBar: IntegrationAppBar(
@@ -569,7 +607,8 @@ class _FacebookIntegrationScreenState extends ConsumerState<FacebookIntegrationS
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+                      Icon(Icons.error_outline,
+                          size: 64, color: Colors.red[300]),
                       const SizedBox(height: 16),
                       Text(
                         _error!,
@@ -919,10 +958,14 @@ class _FacebookIntegrationScreenState extends ConsumerState<FacebookIntegrationS
             ),
           ),
           const SizedBox(height: 12),
-          _buildStepItem(1, 'Facebook Business Page', 'Create a Facebook business page if you don\'t have one'),
-          _buildStepItem(2, 'Admin Access', 'Ensure you have admin access to the Facebook page'),
-          _buildStepItem(3, 'Page Information', 'Complete your page with business details and contact info'),
-          _buildStepItem(4, 'Click Connect Above', 'Use the connect button to authorize SeaFrika'),
+          _buildStepItem(1, 'Facebook Business Page',
+              'Create a Facebook business page if you don\'t have one'),
+          _buildStepItem(2, 'Admin Access',
+              'Ensure you have admin access to the Facebook page'),
+          _buildStepItem(3, 'Page Information',
+              'Complete your page with business details and contact info'),
+          _buildStepItem(4, 'Click Connect Above',
+              'Use the connect button to authorize SeaFrika'),
         ],
       ),
     );
@@ -1037,7 +1080,8 @@ class _FacebookIntegrationScreenState extends ConsumerState<FacebookIntegrationS
               ),
               if (_facebookPage!['is_verified'] == true)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.blue,
                     borderRadius: BorderRadius.circular(12),
@@ -1053,24 +1097,25 @@ class _FacebookIntegrationScreenState extends ConsumerState<FacebookIntegrationS
                 ),
             ],
           ),
-          
-          if (_facebookPage!['about'] != null || _facebookPage!['description'] != null) ...[
+          if (_facebookPage!['about'] != null ||
+              _facebookPage!['description'] != null) ...[
             const SizedBox(height: 16),
             Text(
               _facebookPage!['about'] ?? _facebookPage!['description'] ?? '',
               style: const TextStyle(fontSize: 14),
             ),
           ],
-
           const SizedBox(height: 16),
           Row(
             children: [
               if (_facebookPage!['fan_count'] != null) ...[
-                _buildStatChip('Fans', _formatCount(_facebookPage!['fan_count'])),
+                _buildStatChip(
+                    'Fans', _formatCount(_facebookPage!['fan_count'])),
                 const SizedBox(width: 8),
               ],
               if (_facebookPage!['followers_count'] != null) ...[
-                _buildStatChip('Followers', _formatCount(_facebookPage!['followers_count'])),
+                _buildStatChip('Followers',
+                    _formatCount(_facebookPage!['followers_count'])),
               ],
             ],
           ),
@@ -1128,7 +1173,7 @@ class _FacebookIntegrationScreenState extends ConsumerState<FacebookIntegrationS
                 () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (context) => const FacebookEnhancedDashboardScreen(),
+                      builder: (context) => const FacebookDashboardScreen(),
                     ),
                   );
                 },
@@ -1143,7 +1188,7 @@ class _FacebookIntegrationScreenState extends ConsumerState<FacebookIntegrationS
                 () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (context) => const FacebookEnhancedDashboardScreen(),
+                      builder: (context) => const FacebookDashboardScreen(),
                     ),
                   );
                 },
@@ -1162,7 +1207,7 @@ class _FacebookIntegrationScreenState extends ConsumerState<FacebookIntegrationS
                 () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (context) => const FacebookEnhancedDashboardScreen(),
+                      builder: (context) => const FacebookDashboardScreen(),
                     ),
                   );
                 },
@@ -1177,7 +1222,7 @@ class _FacebookIntegrationScreenState extends ConsumerState<FacebookIntegrationS
                 () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (context) => const FacebookEnhancedDashboardScreen(),
+                      builder: (context) => const FacebookDashboardScreen(),
                     ),
                   );
                 },
@@ -1189,7 +1234,8 @@ class _FacebookIntegrationScreenState extends ConsumerState<FacebookIntegrationS
     );
   }
 
-  Widget _buildActionCard(String title, String subtitle, IconData icon, VoidCallback onTap) {
+  Widget _buildActionCard(
+      String title, String subtitle, IconData icon, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),

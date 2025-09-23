@@ -14,13 +14,20 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class WhatsAppIntegrationScreen extends ConsumerStatefulWidget {
-  const WhatsAppIntegrationScreen({super.key});
+  final String? integrationId;
+
+  const WhatsAppIntegrationScreen({
+    super.key,
+    this.integrationId,
+  });
 
   @override
-  ConsumerState<WhatsAppIntegrationScreen> createState() => _WhatsAppIntegrationScreenState();
+  ConsumerState<WhatsAppIntegrationScreen> createState() =>
+      _WhatsAppIntegrationScreenState();
 }
 
-class _WhatsAppIntegrationScreenState extends ConsumerState<WhatsAppIntegrationScreen> {
+class _WhatsAppIntegrationScreenState
+    extends ConsumerState<WhatsAppIntegrationScreen> {
   bool _isLoading = false;
   String? _error;
   Integration? _currentIntegration;
@@ -58,10 +65,19 @@ class _WhatsAppIntegrationScreenState extends ConsumerState<WhatsAppIntegrationS
         return;
       }
 
-      final integrations = await integrationService.fetchIntegrations();
-      final whatsappIntegration = integrations
-          .where((integration) => integration.platformId == 'whatsapp')
-          .firstOrNull;
+      Integration? whatsappIntegration;
+
+      if (widget.integrationId != null) {
+        // Load specific integration by ID
+        whatsappIntegration =
+            await integrationService.fetchIntegration(widget.integrationId!);
+      } else {
+        // Load first WhatsApp integration for this business
+        final integrations = await integrationService.fetchIntegrations();
+        whatsappIntegration = integrations
+            .where((integration) => integration.channel == 'whatsapp')
+            .firstOrNull;
+      }
 
       if (whatsappIntegration != null) {
         setState(() {
@@ -82,18 +98,20 @@ class _WhatsAppIntegrationScreenState extends ConsumerState<WhatsAppIntegrationS
 
   Future<void> _loadWhatsAppProfile() async {
     if (_currentIntegration == null) return;
-    
+
     final businessId = ref.read(selectedBusinessIdProvider);
     final authService = ref.read(authServiceProvider);
     if (businessId == null) return;
 
     try {
       final response = await http.get(
-        Uri.parse('https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/integrations/whatsapp/${_currentIntegration!.id}/business-profile'),
+        Uri.parse(
+            'https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/integrations/whatsapp/${_currentIntegration!.id}/business-profile'),
         headers: {
           'Business-ID': businessId,
           'User-ID': authService.currentUser?.id ?? '',
-          'Authorization': 'Bearer ${authService.currentUser?.accessToken ?? ''}',
+          'Authorization':
+              'Bearer ${authService.currentUser?.accessToken ?? ''}',
           'Content-Type': 'application/json',
         },
       );
@@ -107,7 +125,8 @@ class _WhatsAppIntegrationScreenState extends ConsumerState<WhatsAppIntegrationS
         final errorBody = json.decode(response.body);
         setState(() {
           _whatsappProfile = null;
-          _error = 'Failed to load WhatsApp profile: ${errorBody['message'] ?? 'Unknown error'}';
+          _error =
+              'Failed to load WhatsApp profile: ${errorBody['message'] ?? 'Unknown error'}';
         });
       }
     } catch (e) {
@@ -170,10 +189,14 @@ class _WhatsAppIntegrationScreenState extends ConsumerState<WhatsAppIntegrationS
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
-              _buildSetupStep('1', 'Meta Business Account', 'Create a Meta Business account at business.facebook.com'),
-              _buildSetupStep('2', 'Phone Number Verification', 'Add and verify your business phone number'),
-              _buildSetupStep('3', 'WhatsApp Business Account', 'Create a WhatsApp Business account'),
-              _buildSetupStep('4', 'API Access', 'Apply for WhatsApp Business API access'),
+              _buildSetupStep('1', 'Meta Business Account',
+                  'Create a Meta Business account at business.facebook.com'),
+              _buildSetupStep('2', 'Phone Number Verification',
+                  'Add and verify your business phone number'),
+              _buildSetupStep('3', 'WhatsApp Business Account',
+                  'Create a WhatsApp Business account'),
+              _buildSetupStep(
+                  '4', 'API Access', 'Apply for WhatsApp Business API access'),
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(12),
@@ -187,7 +210,8 @@ class _WhatsAppIntegrationScreenState extends ConsumerState<WhatsAppIntegrationS
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.warning, color: Colors.orange.shade700, size: 20),
+                        Icon(Icons.warning,
+                            color: Colors.orange.shade700, size: 20),
                         const SizedBox(width: 8),
                         const Text(
                           'Important Note',
@@ -311,7 +335,8 @@ class _WhatsAppIntegrationScreenState extends ConsumerState<WhatsAppIntegrationS
     );
   }
 
-  Future<void> _createWhatsAppIntegration(Map<String, String> credentials) async {
+  Future<void> _createWhatsAppIntegration(
+      Map<String, String> credentials) async {
     setState(() => _isLoading = true);
 
     try {
@@ -324,8 +349,8 @@ class _WhatsAppIntegrationScreenState extends ConsumerState<WhatsAppIntegrationS
         phoneNumberId: credentials['phone_number_id']!,
         accessToken: credentials['access_token']!,
         businessAccountId: credentials['business_account_id']!,
-        appId: credentials['app_id']!,
-        webhookVerifyToken: credentials['webhook_verify_token'],
+        verifyToken: credentials['webhook_verify_token'] ?? '',
+        businessProfile: _whatsappProfile ?? {},
       );
 
       setState(() {
@@ -391,9 +416,9 @@ class _WhatsAppIntegrationScreenState extends ConsumerState<WhatsAppIntegrationS
         if (integrationService == null) {
           throw Exception('No business selected');
         }
-        
+
         await integrationService.disconnectIntegration(_currentIntegration!.id);
-        
+
         setState(() {
           _currentIntegration = null;
           _whatsappProfile = null;
@@ -466,7 +491,7 @@ class _WhatsAppIntegrationScreenState extends ConsumerState<WhatsAppIntegrationS
   @override
   Widget build(BuildContext context) {
     final businessId = ref.watch(selectedBusinessIdProvider);
-    
+
     if (businessId == null) {
       return Scaffold(
         appBar: IntegrationAppBar(
@@ -518,7 +543,8 @@ class _WhatsAppIntegrationScreenState extends ConsumerState<WhatsAppIntegrationS
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+                      Icon(Icons.error_outline,
+                          size: 64, color: Colors.red[300]),
                       const SizedBox(height: 16),
                       Text(
                         _error!,
@@ -868,11 +894,15 @@ class _WhatsAppIntegrationScreenState extends ConsumerState<WhatsAppIntegrationS
             ),
           ),
           const SizedBox(height: 12),
-          _buildSetupStep('1', 'Meta Business Account', 'Register at business.facebook.com'),
-          _buildSetupStep('2', 'Business Verification', 'Complete business verification process'),
-          _buildSetupStep('3', 'Phone Number', 'Add and verify business phone number'),
+          _buildSetupStep('1', 'Meta Business Account',
+              'Register at business.facebook.com'),
+          _buildSetupStep('2', 'Business Verification',
+              'Complete business verification process'),
+          _buildSetupStep(
+              '3', 'Phone Number', 'Add and verify business phone number'),
           _buildSetupStep('4', 'API Access', 'Apply for WhatsApp Business API'),
-          _buildSetupStep('5', 'App Creation', 'Create Meta app with WhatsApp product'),
+          _buildSetupStep(
+              '5', 'App Creation', 'Create Meta app with WhatsApp product'),
         ],
       ),
     );
@@ -1040,7 +1070,8 @@ class _WhatsAppIntegrationScreenState extends ConsumerState<WhatsAppIntegrationS
     );
   }
 
-  Widget _buildActionCard(String title, String subtitle, IconData icon, VoidCallback onTap) {
+  Widget _buildActionCard(
+      String title, String subtitle, IconData icon, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),

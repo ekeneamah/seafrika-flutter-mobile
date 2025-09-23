@@ -37,6 +37,15 @@ async function bootstrap() {
     }),
   );
 
+  // Conditional middleware to prevent raw body parsing on file upload routes
+  app.use((req, res, next) => {
+    // Skip raw body parsing for multipart file upload routes
+    if (req.path === '/api/v1/webhooks/tiktok/upload-verification') {
+      return next();
+    }
+    next();
+  });
+
   // API prefix
   app.setGlobalPrefix('api/v1');
 
@@ -45,7 +54,7 @@ async function bootstrap() {
     .setTitle('Seafrika API')
     .setDescription('The Seafrika Vendor Platform API')
     .setVersion('1.0')
-    .addBearerAuth()
+    //.addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);

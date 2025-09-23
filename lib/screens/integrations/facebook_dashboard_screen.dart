@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:vendor_app/models/integration.dart';
 import 'package:vendor_app/providers/service_providers.dart';
 import 'package:vendor_app/providers/business_context_provider.dart';
 import 'package:vendor_app/widgets/integration_app_bar.dart';
-import 'package:vendor_app/theme/app_theme.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -19,16 +17,16 @@ class FacebookDashboardScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<FacebookDashboardScreen> createState() => _FacebookDashboardScreenState();
+  ConsumerState<FacebookDashboardScreen> createState() =>
+      _FacebookDashboardScreenState();
 }
 
-class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScreen>
+class _FacebookDashboardScreenState
+    extends ConsumerState<FacebookDashboardScreen>
     with TickerProviderStateMixin {
-  
   late TabController _tabController;
   bool _isLoading = false;
   String? _error;
-  Integration? _integration;
   Map<String, dynamic>? _pageInfo;
   List<Map<String, dynamic>> _posts = [];
   List<Map<String, dynamic>> _comments = [];
@@ -85,17 +83,14 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
     }
 
     final integrations = await integrationService.fetchIntegrations();
-    final integration = integrations
-        .where((i) => i.id == widget.integrationId)
-        .firstOrNull;
+    final integration =
+        integrations.where((i) => i.id == widget.integrationId).firstOrNull;
 
     if (integration == null) {
       throw Exception('Integration not found');
     }
 
-    setState(() {
-      _integration = integration;
-    });
+    // Integration loaded successfully
   }
 
   Future<void> _loadPageInfo() async {
@@ -105,11 +100,13 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
 
     try {
       final response = await http.get(
-        Uri.parse('https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/integrations/facebook/${widget.integrationId}/page-info'),
+        Uri.parse(
+            'https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/integrations/facebook/${widget.integrationId}/page-info'),
         headers: {
           'Business-ID': businessId,
           'User-ID': authService.currentUser?.id ?? '',
-          'Authorization': 'Bearer ${authService.currentUser?.accessToken ?? ''}',
+          'Authorization':
+              'Bearer ${authService.currentUser?.accessToken ?? ''}',
           'Content-Type': 'application/json',
         },
       );
@@ -132,11 +129,13 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
 
     try {
       final response = await http.get(
-        Uri.parse('https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/integrations/facebook/${widget.integrationId}/posts'),
+        Uri.parse(
+            'https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/integrations/facebook/${widget.integrationId}/posts'),
         headers: {
           'Business-ID': businessId,
           'User-ID': authService.currentUser?.id ?? '',
-          'Authorization': 'Bearer ${authService.currentUser?.accessToken ?? ''}',
+          'Authorization':
+              'Bearer ${authService.currentUser?.accessToken ?? ''}',
           'Content-Type': 'application/json',
         },
       );
@@ -159,11 +158,13 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
 
     try {
       final response = await http.get(
-        Uri.parse('https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/integrations/facebook/${widget.integrationId}/comments'),
+        Uri.parse(
+            'https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/integrations/facebook/${widget.integrationId}/comments'),
         headers: {
           'Business-ID': businessId,
           'User-ID': authService.currentUser?.id ?? '',
-          'Authorization': 'Bearer ${authService.currentUser?.accessToken ?? ''}',
+          'Authorization':
+              'Bearer ${authService.currentUser?.accessToken ?? ''}',
           'Content-Type': 'application/json',
         },
       );
@@ -186,11 +187,13 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
 
     try {
       final response = await http.get(
-        Uri.parse('https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/integrations/facebook/${widget.integrationId}/messages'),
+        Uri.parse(
+            'https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/integrations/facebook/${widget.integrationId}/messages'),
         headers: {
           'Business-ID': businessId,
           'User-ID': authService.currentUser?.id ?? '',
-          'Authorization': 'Bearer ${authService.currentUser?.accessToken ?? ''}',
+          'Authorization':
+              'Bearer ${authService.currentUser?.accessToken ?? ''}',
           'Content-Type': 'application/json',
         },
       );
@@ -198,7 +201,8 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         setState(() {
-          _messages = List<Map<String, dynamic>>.from(data['conversations'] ?? []);
+          _messages =
+              List<Map<String, dynamic>>.from(data['conversations'] ?? []);
         });
       }
     } catch (e) {
@@ -213,11 +217,13 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
 
     try {
       final response = await http.get(
-        Uri.parse('https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/integrations/facebook/${widget.integrationId}/insights'),
+        Uri.parse(
+            'https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/integrations/facebook/${widget.integrationId}/insights'),
         headers: {
           'Business-ID': businessId,
           'User-ID': authService.currentUser?.id ?? '',
-          'Authorization': 'Bearer ${authService.currentUser?.accessToken ?? ''}',
+          'Authorization':
+              'Bearer ${authService.currentUser?.accessToken ?? ''}',
           'Content-Type': 'application/json',
         },
       );
@@ -250,11 +256,13 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
       }
 
       final response = await http.post(
-        Uri.parse('https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/integrations/facebook/${widget.integrationId}/posts'),
+        Uri.parse(
+            'https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/integrations/facebook/${widget.integrationId}/posts'),
         headers: {
           'Business-ID': businessId,
           'User-ID': authService.currentUser?.id ?? '',
-          'Authorization': 'Bearer ${authService.currentUser?.accessToken ?? ''}',
+          'Authorization':
+              'Bearer ${authService.currentUser?.accessToken ?? ''}',
           'Content-Type': 'application/json',
         },
         body: json.encode(payload),
@@ -296,11 +304,13 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
 
     try {
       final response = await http.post(
-        Uri.parse('https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/integrations/facebook/${widget.integrationId}/comments/$commentId/reply'),
+        Uri.parse(
+            'https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/integrations/facebook/${widget.integrationId}/comments/$commentId/reply'),
         headers: {
           'Business-ID': businessId,
           'User-ID': authService.currentUser?.id ?? '',
-          'Authorization': 'Bearer ${authService.currentUser?.accessToken ?? ''}',
+          'Authorization':
+              'Bearer ${authService.currentUser?.accessToken ?? ''}',
           'Content-Type': 'application/json',
         },
         body: json.encode({'message': message}),
@@ -355,7 +365,8 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+                      Icon(Icons.error_outline,
+                          size: 64, color: Colors.red[300]),
                       const SizedBox(height: 16),
                       Text(
                         _error!,
@@ -522,13 +533,15 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                if (post['likes'] != null && post['likes']['summary'] != null) ...[
+                if (post['likes'] != null &&
+                    post['likes']['summary'] != null) ...[
                   Icon(Icons.thumb_up, size: 16, color: Colors.blue[600]),
                   const SizedBox(width: 4),
                   Text('${post['likes']['summary']['total_count']}'),
                   const SizedBox(width: 16),
                 ],
-                if (post['comments'] != null && post['comments']['summary'] != null) ...[
+                if (post['comments'] != null &&
+                    post['comments']['summary'] != null) ...[
                   Icon(Icons.comment, size: 16, color: Colors.grey[600]),
                   const SizedBox(width: 4),
                   Text('${post['comments']['summary']['total_count']}'),
@@ -742,7 +755,7 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
           children: [
             // Page overview
             if (_pageInfo != null) _buildPageOverview(),
-            
+
             const SizedBox(height: 24),
 
             // Analytics cards
@@ -764,7 +777,8 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
                     SizedBox(height: 16),
                     Text(
                       'Analytics not available',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                     ),
                     SizedBox(height: 8),
                     Text('Analytics data will appear when available'),
@@ -833,9 +847,7 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
                 ),
               ],
             ),
-            
             const SizedBox(height: 16),
-            
             Row(
               children: [
                 if (_pageInfo!['fan_count'] != null) ...[
@@ -876,7 +888,8 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
         _buildStatCard('Posts', _posts.length.toString(), Icons.post_add),
         _buildStatCard('Comments', _comments.length.toString(), Icons.comment),
         _buildStatCard('Messages', _messages.length.toString(), Icons.message),
-        _buildStatCard('Reach', _insights?['reach']?.toString() ?? '0', Icons.visibility),
+        _buildStatCard(
+            'Reach', _insights?['reach']?.toString() ?? '0', Icons.visibility),
       ],
     );
   }

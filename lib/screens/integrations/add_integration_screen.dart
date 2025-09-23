@@ -6,14 +6,15 @@ import 'package:vendor_app/services/integration_service.dart';
 import 'package:vendor_app/widgets/error_view.dart' as error;
 import 'package:vendor_app/widgets/loading_view.dart';
 import 'package:vendor_app/widgets/integration_app_bar.dart';
-import 'package:vendor_app/screens/integrations/facebook_integration_screen.dart';
 import 'package:vendor_app/screens/integrations/whatsapp_integration_screen.dart';
+import 'package:vendor_app/utils/business_preferences_helper.dart';
 
 class AddIntegrationScreen extends ConsumerStatefulWidget {
   const AddIntegrationScreen({super.key});
 
   @override
-  ConsumerState<AddIntegrationScreen> createState() => _AddIntegrationScreenState();
+  ConsumerState<AddIntegrationScreen> createState() =>
+      _AddIntegrationScreenState();
 }
 
 class _AddIntegrationScreenState extends ConsumerState<AddIntegrationScreen> {
@@ -136,7 +137,12 @@ class _AddIntegrationScreenState extends ConsumerState<AddIntegrationScreen> {
         'id': 'twitter',
         'name': 'Twitter',
         'icon': 'assets/icons/twitter.png',
-        'fields': ['consumerKey', 'consumerSecret', 'accessToken', 'accessTokenSecret'],
+        'fields': [
+          'consumerKey',
+          'consumerSecret',
+          'accessToken',
+          'accessTokenSecret'
+        ],
         'description': 'Share products and engage customers on Twitter',
       },
       {
@@ -244,8 +250,56 @@ class _AddIntegrationScreenState extends ConsumerState<AddIntegrationScreen> {
     super.dispose();
   }
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkBusinessSelection();
+    });
+  }
+
+  Future<void> _checkBusinessSelection() async {
+    final hasSelected = await BusinessPreferencesHelper.hasSelectedBusiness();
+    if (!hasSelected && mounted) {
+      _showBusinessSelectionDialog();
+    }
+  }
+
+  void _showBusinessSelectionDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Business Selection Required'),
+          content: const Text(
+            'You need to select a business before you can add integrations. '
+            'Would you like to go to the business selection screen?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close dialog
+                Navigator.of(context).pop(); // Go back to previous screen
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close dialog
+                Navigator.pushNamed(context, '/business-selection');
+              },
+              child: const Text('Select Business'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _initializeControllers(String platformId) {
-    final platform = _getAllPlatforms().firstWhere((p) => p['id'] == platformId);
+    final platform =
+        _getAllPlatforms().firstWhere((p) => p['id'] == platformId);
     for (final field in platform['fields']) {
       _controllers[field] = TextEditingController();
     }
@@ -287,7 +341,7 @@ class _AddIntegrationScreenState extends ConsumerState<AddIntegrationScreen> {
       case 'woocommerce':
       case 'magento':
         return Icons.store;
-      // Marketplace  
+      // Marketplace
       case 'amazon':
       case 'ebay':
         return Icons.shopping_cart;
@@ -391,10 +445,12 @@ class _AddIntegrationScreenState extends ConsumerState<AddIntegrationScreen> {
       case 'shopDomain':
         return 'Shop Domain';
       default:
-        return field.replaceAllMapped(
-          RegExp(r'([A-Z])'),
-          (match) => ' ${match.group(1)}',
-        ).trim();
+        return field
+            .replaceAllMapped(
+              RegExp(r'([A-Z])'),
+              (match) => ' ${match.group(1)}',
+            )
+            .trim();
     }
   }
 
@@ -462,10 +518,10 @@ class _AddIntegrationScreenState extends ConsumerState<AddIntegrationScreen> {
 
   bool _isSecureField(String field) {
     return field.toLowerCase().contains('secret') ||
-           field.toLowerCase().contains('key') ||
-           field.toLowerCase().contains('token') ||
-           field == 'certId' ||
-           field == 'serviceAccountKey';
+        field.toLowerCase().contains('key') ||
+        field.toLowerCase().contains('token') ||
+        field == 'certId' ||
+        field == 'serviceAccountKey';
   }
 
   TextInputType _getKeyboardType(String field) {
@@ -551,44 +607,24 @@ class _AddIntegrationScreenState extends ConsumerState<AddIntegrationScreen> {
   @override
   Widget build(BuildContext context) {
     final businessId = ref.watch(selectedBusinessIdProvider);
-    
-    // Show error if no business is selected
+
+    // If no business is selected, show a simple loading scaffold
+    // The dialog will handle the business selection prompt
     if (businessId == null) {
       return Scaffold(
         appBar: IntegrationAppBar(
           title: 'Add Integration',
         ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.business_outlined, size: 64, color: Colors.grey[400]),
-              const SizedBox(height: 16),
-              Text(
-                'No Business Selected',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey[700],
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Please select a business to add integrations',
-                style: TextStyle(color: Colors.grey[600]),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Go Back'),
-              ),
-            ],
-          ),
+        body: const Center(
+          child: CircularProgressIndicator(),
         ),
       );
     }
 
+    return _buildMainContent();
+  }
+
+  Widget _buildMainContent() {
     return Scaffold(
       appBar: IntegrationAppBar(
         title: 'Add Integration',
@@ -616,9 +652,9 @@ class _AddIntegrationScreenState extends ConsumerState<AddIntegrationScreen> {
                 Text(
                   'Connect Your Platforms',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -681,21 +717,25 @@ class _AddIntegrationScreenState extends ConsumerState<AddIntegrationScreen> {
                           // Category Accordions
                           Expanded(
                             child: SingleChildScrollView(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
                               child: Column(
                                 children: [
                                   // Build accordion for each category
                                   ..._platformsByCategory.keys.map((category) {
-                                    final platforms = _getCategoryPlatforms(category);
-                                    if (platforms.isEmpty && _searchQuery.isNotEmpty) {
+                                    final platforms =
+                                        _getCategoryPlatforms(category);
+                                    if (platforms.isEmpty &&
+                                        _searchQuery.isNotEmpty) {
                                       return const SizedBox.shrink();
                                     }
-                                    
-                                    return _buildCategoryAccordion(category, platforms);
+
+                                    return _buildCategoryAccordion(
+                                        category, platforms);
                                   }).toList(),
-                                  
+
                                   const SizedBox(height: 24),
-                                  
+
                                   // Help Section
                                   Container(
                                     width: double.infinity,
@@ -703,10 +743,12 @@ class _AddIntegrationScreenState extends ConsumerState<AddIntegrationScreen> {
                                     decoration: BoxDecoration(
                                       color: Colors.blue.shade50,
                                       borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(color: Colors.blue.shade200),
+                                      border: Border.all(
+                                          color: Colors.blue.shade200),
                                     ),
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Row(
                                           children: [
@@ -756,14 +798,15 @@ class _AddIntegrationScreenState extends ConsumerState<AddIntegrationScreen> {
   }
 
   // Get filtered platforms based on search query
-  List<Map<String, dynamic>> _getFilteredPlatforms(List<Map<String, dynamic>> platforms) {
+  List<Map<String, dynamic>> _getFilteredPlatforms(
+      List<Map<String, dynamic>> platforms) {
     if (_searchQuery.isEmpty) return platforms;
-    
+
     return platforms.where((platform) {
       final name = platform['name'].toString().toLowerCase();
       final description = platform['description'].toString().toLowerCase();
       final query = _searchQuery.toLowerCase();
-      
+
       return name.contains(query) || description.contains(query);
     }).toList();
   }
@@ -774,7 +817,8 @@ class _AddIntegrationScreenState extends ConsumerState<AddIntegrationScreen> {
     return _getFilteredPlatforms(platforms);
   }
 
-  Widget _buildCategoryAccordion(String category, List<Map<String, dynamic>> platforms) {
+  Widget _buildCategoryAccordion(
+      String category, List<Map<String, dynamic>> platforms) {
     final isExpanded = _expandedCategories[category] ?? false;
     final categoryName = _getCategoryDisplayName(category);
     final categoryIcon = _getCategoryIcon(category);
@@ -800,7 +844,7 @@ class _AddIntegrationScreenState extends ConsumerState<AddIntegrationScreen> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: categoryColor.withOpacity(0.1),
-                borderRadius: isExpanded 
+                borderRadius: isExpanded
                     ? const BorderRadius.only(
                         topLeft: Radius.circular(12),
                         topRight: Radius.circular(12),
@@ -917,7 +961,7 @@ class _AddIntegrationScreenState extends ConsumerState<AddIntegrationScreen> {
     final String platformId = platform['id'];
     final String platformName = platform['name'];
     final String description = platform['description'];
-    
+
     return Card(
       elevation: 3,
       shape: RoundedRectangleBorder(
@@ -1004,15 +1048,13 @@ class _AddIntegrationScreenState extends ConsumerState<AddIntegrationScreen> {
     // Navigate to specific integration screens
     switch (platformId) {
       case 'instagram':
-        Navigator.pushNamed(context, '/integrations/instagram');
+        Navigator.pushNamed(context, '/meta-integration');
         break;
       case 'facebook':
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const FacebookIntegrationScreen(),
-          ),
-        );
+        Navigator.pushNamed(context, '/meta-integration');
+        break;
+      case 'tiktok':
+        Navigator.pushNamed(context, '/tiktok-integration');
         break;
       case 'whatsapp_business':
         Navigator.push(

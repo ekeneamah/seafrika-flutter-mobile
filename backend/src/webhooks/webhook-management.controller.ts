@@ -8,7 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { InstagramWebhookService } from './instagram-webhook.service';
+import { MetaService } from './meta/meta.service';
 // import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('Webhook Management')
@@ -17,33 +17,43 @@ import { InstagramWebhookService } from './instagram-webhook.service';
 @ApiBearerAuth()
 export class WebhookManagementController {
   constructor(
-    private readonly instagramWebhookService: InstagramWebhookService,
+    private readonly metaService: MetaService,
   ) {}
 
-  @Get('instagram/events/:accountId')
-  @ApiOperation({ summary: 'Get Instagram webhook events for an account' })
-  @ApiResponse({ status: 200, description: 'Webhook events retrieved successfully' })
-  async getInstagramEvents(
-    @Param('accountId') accountId: string,
-    @Query('limit') limit?: number,
-  ) {
-    return this.instagramWebhookService.getWebhookEvents(
-      accountId,
-      limit || 50,
-    );
+  @Get('meta/channels')
+  @ApiOperation({ summary: 'Get available Meta integration channels' })
+  @ApiResponse({ status: 200, description: 'Meta channels retrieved successfully' })
+  async getMetaChannels() {
+    return {
+      success: true,
+      data: this.metaService.getAllChannels(),
+    };
   }
 
-  @Get('instagram/media/:accountId')
-  @ApiOperation({ summary: 'Get Instagram media events for an account' })
-  @ApiResponse({ status: 200, description: 'Media events retrieved successfully' })
-  async getInstagramMediaEvents(
-    @Param('accountId') accountId: string,
-    @Query('limit') limit?: number,
-  ) {
-    return this.instagramWebhookService.getMediaEvents(
-      accountId,
-      limit || 50,
+  @Get('meta/credentials/:businessId')
+  @ApiOperation({ summary: 'Get Meta credentials status for business' })
+  @ApiResponse({ status: 200, description: 'Credentials status retrieved successfully' })
+  async getCredentialsStatus(@Param('businessId') businessId: string) {
+    const integrations = await this.metaService.getBusinessIntegrations(businessId);
+    
+    // Get first Facebook integration for user-level info
+    const facebookIntegration = integrations.find(i => 
+      i.channel === 'facebook_pages' || i.channel === 'messenger'
     );
+    
+    const pagesCount = integrations.filter(i => i.credentials.pageInfo).length;
+    
+    return {
+      success: true,
+      data: {
+        hasCredentials: integrations.length > 0,
+        userId: facebookIntegration?.credentials?.userId,
+        scopes: facebookIntegration?.credentials?.scopes || [],
+        pagesCount: pagesCount,
+        expiresAt: facebookIntegration?.credentials?.expiresAt,
+        integrationsCount: integrations.length,
+      },
+    };
   }
 
   @Get('status')
@@ -52,12 +62,16 @@ export class WebhookManagementController {
   async getWebhookStatus() {
     return {
       status: 'active',
-      services: ['instagram'],
+      services: ['meta', 'whatsapp'],
       endpoints: {
-        instagram: {
-          verification: '/api/webhooks/instagram',
-          notification: '/api/webhooks/instagram',
-          test: '/api/webhooks/instagram/test',
+        meta: {
+          verification: '/webhooks/meta',
+          notification: '/webhooks/meta',
+          oauth: '/api/config/meta/oauth/redirect',
+        },
+        whatsapp: {
+          verification: '/webhooks/whatsapp',
+          notification: '/webhooks/whatsapp',
         },
       },
       timestamp: new Date().toISOString(),
