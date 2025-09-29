@@ -13,7 +13,8 @@ class OrderManagementScreen extends ConsumerStatefulWidget {
   const OrderManagementScreen({super.key});
 
   @override
-  ConsumerState<OrderManagementScreen> createState() => _OrderManagementScreenState();
+  ConsumerState<OrderManagementScreen> createState() =>
+      _OrderManagementScreenState();
 }
 
 class _OrderManagementScreenState extends ConsumerState<OrderManagementScreen>
@@ -70,7 +71,7 @@ class _OrderManagementScreenState extends ConsumerState<OrderManagementScreen>
         status: _selectedStatus,
         limit: 50,
       );
-      
+
       if (mounted) {
         setState(() {
           _orders = orders;
@@ -231,7 +232,7 @@ class _OrderManagementScreenState extends ConsumerState<OrderManagementScreen>
           ),
         );
       }
-      
+
       return const EmptyView(
         icon: Icons.receipt_long,
         title: 'No Orders Found',
@@ -269,8 +270,8 @@ class _OrderManagementScreenState extends ConsumerState<OrderManagementScreen>
                   Text(
                     'Order #${order.id.substring(0, 8)}',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   _buildStatusChip(order.status),
                 ],
@@ -284,8 +285,8 @@ class _OrderManagementScreenState extends ConsumerState<OrderManagementScreen>
               Text(
                 '${order.items.length} items • \$${order.total.toStringAsFixed(2)}',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[600],
-                ),
+                      color: Colors.grey[600],
+                    ),
               ),
               const SizedBox(height: 8),
               Row(
@@ -298,7 +299,8 @@ class _OrderManagementScreenState extends ConsumerState<OrderManagementScreen>
                   ),
                   const Spacer(),
                   if (order.trackingNumber != null) ...[
-                    Icon(Icons.local_shipping, size: 16, color: Colors.grey[600]),
+                    Icon(Icons.local_shipping,
+                        size: 16, color: Colors.grey[600]),
                     const SizedBox(width: 4),
                     Text(
                       order.trackingNumber!,
@@ -347,7 +349,7 @@ class _OrderManagementScreenState extends ConsumerState<OrderManagementScreen>
 
     switch (status) {
       case OrderStatus.pending:
-                      backgroundColor = Colors.orange.shade100.withValues(alpha: 1.0);
+        backgroundColor = Colors.orange.shade100.withValues(alpha: 1.0);
         textColor = Colors.orange.shade800;
         break;
       case OrderStatus.confirmed:
@@ -447,8 +449,8 @@ class _OrderManagementScreenState extends ConsumerState<OrderManagementScreen>
           Text(
             'Order Analytics',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+                  fontWeight: FontWeight.bold,
+                ),
           ),
           const SizedBox(height: 16),
           GridView.count(
@@ -488,8 +490,8 @@ class _OrderManagementScreenState extends ConsumerState<OrderManagementScreen>
           Text(
             'Order Status Distribution',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+                  fontWeight: FontWeight.bold,
+                ),
           ),
           const SizedBox(height: 16),
           ..._buildStatusCards(analytics['statusCounts'] ?? {}),
@@ -522,9 +524,9 @@ class _OrderManagementScreenState extends ConsumerState<OrderManagementScreen>
             Text(
               value,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
             ),
             Text(
               title,
@@ -541,7 +543,7 @@ class _OrderManagementScreenState extends ConsumerState<OrderManagementScreen>
     return statusCounts.entries.map((entry) {
       final status = entry.key;
       final count = entry.value;
-      
+
       return Card(
         margin: const EdgeInsets.only(bottom: 8),
         child: ListTile(
@@ -550,8 +552,8 @@ class _OrderManagementScreenState extends ConsumerState<OrderManagementScreen>
           trailing: Text(
             '$count',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+                  fontWeight: FontWeight.bold,
+                ),
           ),
         ),
       );
@@ -664,7 +666,7 @@ class _OrderManagementScreenState extends ConsumerState<OrderManagementScreen>
     try {
       final orderService = ref.read(orderManagementServiceProvider);
       final orderDetails = await orderService.getOrderDetails(order.id);
-      
+
       if (!mounted) return;
 
       Navigator.push(
@@ -687,18 +689,21 @@ class _OrderManagementScreenState extends ConsumerState<OrderManagementScreen>
   Future<void> _trackOrder(Order order) async {
     try {
       final orderService = ref.read(orderManagementServiceProvider);
-      final delivery = await orderService.getDeliveryTrackingByOrderId(order.id);
-      
+      final delivery =
+          await orderService.getDeliveryTrackingByOrderId(order.id);
+
       if (!mounted) return;
 
       if (delivery != null) {
         // TODO: Navigate to proper delivery tracking screen
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Delivery tracking screen - coming soon')),
+          const SnackBar(
+              content: Text('Delivery tracking screen - coming soon')),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No delivery tracking available for this order')),
+          const SnackBar(
+              content: Text('No delivery tracking available for this order')),
         );
       }
     } catch (e) {
@@ -715,7 +720,7 @@ class _OrderManagementScreenState extends ConsumerState<OrderManagementScreen>
       final orderService = ref.read(orderManagementServiceProvider);
       // Load order tasks
       await orderService.getOrderTasks(order.id);
-      
+
       if (!mounted) return;
 
       // TODO: Navigate to proper order tasks screen
@@ -735,10 +740,11 @@ class _OrderManagementScreenState extends ConsumerState<OrderManagementScreen>
     try {
       final orderService = ref.read(orderManagementServiceProvider);
       await orderService.updateOrderStatus(order.id, OrderStatus.confirmed);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Order confirmed and processing started')),
+          const SnackBar(
+              content: Text('Order confirmed and processing started')),
         );
         _loadOrders();
       }

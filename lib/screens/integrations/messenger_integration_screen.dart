@@ -35,6 +35,12 @@ class _MessengerIntegrationScreenState
   String? _error;
   Integration? _currentIntegration;
 
+  // Analytics data
+  Map<String, dynamic>? _analyticsData;
+  List<Map<String, dynamic>>? _conversationsData;
+  bool _isLoadingAnalytics = false;
+  bool _isLoadingConversations = false;
+
   @override
   void initState() {
     super.initState();
@@ -55,20 +61,74 @@ class _MessengerIntegrationScreenState
         throw Exception('No business selected');
       }
 
-      final integrations = await integrationService.fetchIntegrations();
-      final integration = integrations.firstWhere(
-        (i) => i.id == widget.integrationId,
-        orElse: () => throw Exception('Integration not found'),
-      );
+      final integration =
+          await integrationService.fetchIntegration(widget.integrationId!);
 
       setState(() {
         _currentIntegration = integration;
         _isLoading = false;
       });
+
+      // Load analytics and conversations data
+      _loadAnalyticsData();
+      _loadConversationsData();
     } catch (e) {
       setState(() {
         _error = e.toString();
         _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadAnalyticsData() async {
+    if (widget.integrationId == null) return;
+
+    setState(() {
+      _isLoadingAnalytics = true;
+    });
+
+    debugPrint('Loading analytics for integration ${widget.integrationId}');
+
+    try {
+      final integrationService = ref.read(integrationServiceProvider);
+      if (integrationService == null) return;
+
+      final analytics =
+          await integrationService.getMessengerAnalytics(widget.integrationId!);
+      setState(() {
+        _analyticsData = analytics;
+        _isLoadingAnalytics = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading analytics: $e');
+      setState(() {
+        _isLoadingAnalytics = false;
+      });
+    }
+  }
+
+  Future<void> _loadConversationsData() async {
+    if (widget.integrationId == null) return;
+
+    setState(() {
+      _isLoadingConversations = true;
+    });
+
+    try {
+      final integrationService = ref.read(integrationServiceProvider);
+      if (integrationService == null) return;
+
+      final conversations = await integrationService
+          .getMessengerConversations(widget.integrationId!);
+      setState(() {
+        _conversationsData = List<Map<String, dynamic>>.from(
+            conversations['conversations'] ?? []);
+        _isLoadingConversations = false;
+      });
+    } catch (e) {
+      print('Error loading conversations: $e');
+      setState(() {
+        _isLoadingConversations = false;
       });
     }
   }
@@ -247,7 +307,9 @@ class _MessengerIntegrationScreenState
               Expanded(
                 child: _buildAnalyticsCard(
                   title: 'Total Messages',
-                  value: '1,247',
+                  value: _isLoadingAnalytics
+                      ? '...'
+                      : (_analyticsData?['totalMessages']?.toString() ?? '0'),
                   icon: Icons.chat_bubble_outline,
                   color: _messengerBlue,
                 ),
@@ -255,8 +317,11 @@ class _MessengerIntegrationScreenState
               const SizedBox(width: 12),
               Expanded(
                 child: _buildAnalyticsCard(
-                  title: 'This Week',
-                  value: '89',
+                  title: 'Conversations',
+                  value: _isLoadingAnalytics
+                      ? '...'
+                      : (_analyticsData?['totalConversations']?.toString() ??
+                          '0'),
                   icon: Icons.trending_up,
                   color: Colors.green,
                 ),
@@ -271,7 +336,9 @@ class _MessengerIntegrationScreenState
               Expanded(
                 child: _buildAnalyticsCard(
                   title: 'Avg Response',
-                  value: '12 min',
+                  value: _isLoadingAnalytics
+                      ? '...'
+                      : '${_analyticsData?['averageResponseTime']?.toString() ?? '0'} min',
                   icon: Icons.timer_outlined,
                   color: Colors.orange,
                 ),
@@ -280,7 +347,10 @@ class _MessengerIntegrationScreenState
               Expanded(
                 child: _buildAnalyticsCard(
                   title: 'Active Chats',
-                  value: '23',
+                  value: _isLoadingAnalytics
+                      ? '...'
+                      : (_analyticsData?['activeConversations']?.toString() ??
+                          '0'),
                   icon: Icons.people_outline,
                   color: Colors.purple,
                 ),
@@ -315,33 +385,51 @@ class _MessengerIntegrationScreenState
           const SizedBox(height: 16),
 
           // Message Items
-          _buildMessageItem(
-            customerName: 'Sarah Johnson',
-            lastMessage: 'Hi, I have a question about my order...',
-            timestamp: '2 min ago',
-            isUnread: true,
-          ),
-
-          _buildMessageItem(
-            customerName: 'Mike Chen',
-            lastMessage: 'Thank you for the quick response!',
-            timestamp: '15 min ago',
-            isUnread: false,
-          ),
-
-          _buildMessageItem(
-            customerName: 'Lisa Rodriguez',
-            lastMessage: 'When will my package arrive?',
-            timestamp: '1 hour ago',
-            isUnread: true,
-          ),
-
-          _buildMessageItem(
-            customerName: 'John Smith',
-            lastMessage: 'Perfect, exactly what I needed.',
-            timestamp: '3 hours ago',
-            isUnread: false,
-          ),
+          if (_isLoadingConversations)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24.0),
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else if (_conversationsData?.isEmpty ?? true)
+            Container(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.chat_bubble_outline,
+                    size: 48,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No conversations yet',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Start engaging with customers through Messenger to see conversations here.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey[500],
+                        ),
+                  ),
+                ],
+              ),
+            )
+          else
+            ...(_conversationsData?.map((conversation) => _buildMessageItem(
+                      customerName:
+                          conversation['customerName'] ?? 'Unknown Customer',
+                      lastMessage: conversation['lastMessage'] ?? 'No message',
+                      timestamp: _formatTimestamp(conversation['timestamp']),
+                      isUnread: conversation['unread'] ?? false,
+                      avatarUrl: conversation['customerAvatar'],
+                    )) ??
+                []),
 
           const SizedBox(height: 24),
 
@@ -447,6 +535,7 @@ class _MessengerIntegrationScreenState
     required String lastMessage,
     required String timestamp,
     required bool isUnread,
+    String? avatarUrl,
   }) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -466,13 +555,20 @@ class _MessengerIntegrationScreenState
               CircleAvatar(
                 radius: 20,
                 backgroundColor: _messengerBlue.withOpacity(0.1),
-                child: Text(
-                  customerName[0].toUpperCase(),
-                  style: TextStyle(
-                    color: _messengerBlue,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                backgroundImage: avatarUrl?.isNotEmpty == true
+                    ? NetworkImage(avatarUrl!)
+                    : null,
+                child: avatarUrl?.isNotEmpty == true
+                    ? null
+                    : Text(
+                        customerName.isNotEmpty
+                            ? customerName[0].toUpperCase()
+                            : '?',
+                        style: TextStyle(
+                          color: _messengerBlue,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -600,5 +696,38 @@ class _MessengerIntegrationScreenState
         content: Text('Disconnect functionality coming soon!'),
       ),
     );
+  }
+
+  String _formatTimestamp(dynamic timestamp) {
+    if (timestamp == null) return 'Unknown';
+
+    try {
+      late DateTime dateTime;
+
+      if (timestamp is String) {
+        dateTime = DateTime.parse(timestamp);
+      } else if (timestamp is DateTime) {
+        dateTime = timestamp;
+      } else {
+        return 'Unknown';
+      }
+
+      final now = DateTime.now();
+      final difference = now.difference(dateTime);
+
+      if (difference.inMinutes < 1) {
+        return 'Just now';
+      } else if (difference.inMinutes < 60) {
+        return '${difference.inMinutes} min ago';
+      } else if (difference.inHours < 24) {
+        return '${difference.inHours} hour${difference.inHours > 1 ? 's' : ''} ago';
+      } else if (difference.inDays < 7) {
+        return '${difference.inDays} day${difference.inDays > 1 ? 's' : ''} ago';
+      } else {
+        return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+      }
+    } catch (e) {
+      return 'Unknown';
+    }
   }
 }

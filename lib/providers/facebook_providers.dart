@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vendor_app/services/facebook_service.dart';
 import 'package:vendor_app/models/facebook_models.dart';
@@ -51,7 +52,7 @@ class FacebookAuthNotifier extends StateNotifier<FacebookAuthState> {
     String? token,
   }) async {
     state = state.copyWith(isLoading: true, error: null);
-    
+
     try {
       final result = await _facebookService.authenticateFacebook(
         code: code,
@@ -60,7 +61,7 @@ class FacebookAuthNotifier extends StateNotifier<FacebookAuthState> {
         userId: userId,
         token: token,
       );
-      
+
       final user = FacebookUser.fromJson(result['user']);
       state = state.copyWith(
         isAuthenticated: true,
@@ -76,19 +77,21 @@ class FacebookAuthNotifier extends StateNotifier<FacebookAuthState> {
   }
 
   Future<void> loadUserProfile({
+    String? integrationId,
     required String businessId,
     String? userId,
     String? token,
   }) async {
     state = state.copyWith(isLoading: true, error: null);
-    
+
     try {
       final result = await _facebookService.getUserProfile(
+        integrationId: integrationId,
         businessId: businessId,
         userId: userId,
         token: token,
       );
-      
+
       final user = FacebookUser.fromJson(result);
       state = state.copyWith(
         isAuthenticated: true,
@@ -109,14 +112,14 @@ class FacebookAuthNotifier extends StateNotifier<FacebookAuthState> {
     String? token,
   }) async {
     state = state.copyWith(isLoading: true);
-    
+
     try {
       await _facebookService.disconnectFacebook(
         businessId: businessId,
         userId: userId,
         token: token,
       );
-      
+
       state = FacebookAuthState();
     } catch (e) {
       state = state.copyWith(
@@ -127,7 +130,8 @@ class FacebookAuthNotifier extends StateNotifier<FacebookAuthState> {
   }
 }
 
-final facebookAuthProvider = StateNotifierProvider<FacebookAuthNotifier, FacebookAuthState>((ref) {
+final facebookAuthProvider =
+    StateNotifierProvider<FacebookAuthNotifier, FacebookAuthState>((ref) {
   final facebookService = ref.watch(facebookServiceProvider);
   return FacebookAuthNotifier(facebookService);
 });
@@ -168,20 +172,35 @@ class FacebookPagesNotifier extends StateNotifier<FacebookPagesState> {
   FacebookPagesNotifier(this._facebookService) : super(FacebookPagesState());
 
   Future<void> loadPages({
+    String? integrationId,
     required String businessId,
     String? userId,
     String? token,
   }) async {
     state = state.copyWith(isLoading: true, error: null);
-    
+
     try {
       final pagesData = await _facebookService.getUserPages(
+        integrationId: integrationId,
         businessId: businessId,
         userId: userId,
         token: token,
       );
-      
-      final pages = pagesData.map((pageData) => FacebookPage.fromJson(pageData)).toList();
+
+      debugPrint('🔍 FacebookPagesProvider: Raw pages data from service:');
+      for (int i = 0; i < pagesData.length; i++) {
+        debugPrint('   Page $i RAW DATA: ${pagesData[i]}');
+        debugPrint('   Page $i KEYS: ${(pagesData[i] as Map).keys.toList()}');
+      }
+
+      final pages =
+          pagesData.map((pageData) => FacebookPage.fromJson(pageData)).toList();
+
+      debugPrint('🔍 FacebookPagesProvider: Parsed ${pages.length} pages');
+      for (int i = 0; i < pages.length; i++) {
+        debugPrint('   Parsed Page $i: ${pages[i].toJson()}');
+      }
+
       state = state.copyWith(
         pages: pages,
         isLoading: false,
@@ -217,7 +236,8 @@ class FacebookPagesNotifier extends StateNotifier<FacebookPagesState> {
   }
 }
 
-final facebookPagesProvider = StateNotifierProvider<FacebookPagesNotifier, FacebookPagesState>((ref) {
+final facebookPagesProvider =
+    StateNotifierProvider<FacebookPagesNotifier, FacebookPagesState>((ref) {
   final facebookService = ref.watch(facebookServiceProvider);
   return FacebookPagesNotifier(facebookService);
 });
@@ -262,7 +282,7 @@ class FacebookPostsNotifier extends StateNotifier<FacebookPostsState> {
     String? token,
   }) async {
     state = state.copyWith(isLoading: true, error: null);
-    
+
     try {
       final postsData = await _facebookService.getPagePosts(
         pageId: pageId,
@@ -272,8 +292,43 @@ class FacebookPostsNotifier extends StateNotifier<FacebookPostsState> {
         userId: userId,
         token: token,
       );
-      
-      final posts = postsData.map((postData) => FacebookPost.fromJson(postData)).toList();
+
+      final posts =
+          postsData.map((postData) => FacebookPost.fromJson(postData)).toList();
+      state = state.copyWith(
+        posts: posts,
+        isLoading: false,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        error: e.toString(),
+        isLoading: false,
+      );
+    }
+  }
+
+  Future<void> loadIntegrationPosts({
+    required String integrationId,
+    required String businessId,
+    int? limit,
+    String? fields,
+    String? userId,
+    String? token,
+  }) async {
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      final postsData = await _facebookService.getIntegrationPosts(
+        integrationId: integrationId,
+        businessId: businessId,
+        limit: limit,
+        fields: fields,
+        userId: userId,
+        token: token,
+      );
+
+      final posts =
+          postsData.map((postData) => FacebookPost.fromJson(postData)).toList();
       state = state.copyWith(
         posts: posts,
         isLoading: false,
@@ -307,7 +362,7 @@ class FacebookPostsNotifier extends StateNotifier<FacebookPostsState> {
         userId: userId,
         token: token,
       );
-      
+
       // Reload posts after creating
       await loadPagePosts(
         pageId: pageId,
@@ -339,7 +394,7 @@ class FacebookPostsNotifier extends StateNotifier<FacebookPostsState> {
         userId: userId,
         token: token,
       );
-      
+
       // Reload posts after uploading
       await loadPagePosts(
         pageId: pageId,
@@ -373,7 +428,7 @@ class FacebookPostsNotifier extends StateNotifier<FacebookPostsState> {
         userId: userId,
         token: token,
       );
-      
+
       // Reload posts after uploading
       await loadPagePosts(
         pageId: pageId,
@@ -399,7 +454,7 @@ class FacebookPostsNotifier extends StateNotifier<FacebookPostsState> {
         userId: userId,
         token: token,
       );
-      
+
       // Remove post from state
       state = state.copyWith(
         posts: state.posts.where((post) => post.id != postId).toList(),
@@ -470,7 +525,8 @@ class FacebookPostsNotifier extends StateNotifier<FacebookPostsState> {
   }
 }
 
-final facebookPostsProvider = StateNotifierProvider<FacebookPostsNotifier, FacebookPostsState>((ref) {
+final facebookPostsProvider =
+    StateNotifierProvider<FacebookPostsNotifier, FacebookPostsState>((ref) {
   final facebookService = ref.watch(facebookServiceProvider);
   return FacebookPostsNotifier(facebookService);
 });
@@ -504,7 +560,8 @@ class FacebookMessagesState {
 class FacebookMessagesNotifier extends StateNotifier<FacebookMessagesState> {
   final FacebookService _facebookService;
 
-  FacebookMessagesNotifier(this._facebookService) : super(FacebookMessagesState());
+  FacebookMessagesNotifier(this._facebookService)
+      : super(FacebookMessagesState());
 
   Future<void> loadConversationMessages({
     required String conversationId,
@@ -514,7 +571,7 @@ class FacebookMessagesNotifier extends StateNotifier<FacebookMessagesState> {
     String? token,
   }) async {
     state = state.copyWith(isLoading: true, error: null);
-    
+
     try {
       final messagesData = await _facebookService.getConversationMessages(
         conversationId: conversationId,
@@ -523,8 +580,10 @@ class FacebookMessagesNotifier extends StateNotifier<FacebookMessagesState> {
         userId: userId,
         token: token,
       );
-      
-      final messages = messagesData.map((messageData) => FacebookMessage.fromJson(messageData)).toList();
+
+      final messages = messagesData
+          .map((messageData) => FacebookMessage.fromJson(messageData))
+          .toList();
       state = state.copyWith(
         messages: messages,
         isLoading: false,
@@ -560,15 +619,19 @@ class FacebookMessagesNotifier extends StateNotifier<FacebookMessagesState> {
   }
 }
 
-final facebookMessagesProvider = StateNotifierProvider<FacebookMessagesNotifier, FacebookMessagesState>((ref) {
+final facebookMessagesProvider =
+    StateNotifierProvider<FacebookMessagesNotifier, FacebookMessagesState>(
+        (ref) {
   final facebookService = ref.watch(facebookServiceProvider);
   return FacebookMessagesNotifier(facebookService);
 });
 
 // Facebook Insights Provider
-final facebookInsightsProvider = FutureProvider.family<List<FacebookInsights>, Map<String, dynamic>>((ref, params) async {
+final facebookInsightsProvider =
+    FutureProvider.family<List<FacebookInsights>, Map<String, dynamic>>(
+        (ref, params) async {
   final facebookService = ref.watch(facebookServiceProvider);
-  
+
   final result = await facebookService.getPageInsights(
     pageId: params['pageId'] as String,
     businessId: params['businessId'] as String,
@@ -577,20 +640,27 @@ final facebookInsightsProvider = FutureProvider.family<List<FacebookInsights>, M
     userId: params['userId'] as String?,
     token: params['token'] as String?,
   );
-  
-  return (result['data'] as List?)?.map((insightData) => FacebookInsights.fromJson(insightData)).toList() ?? [];
+
+  return (result['data'] as List?)
+          ?.map((insightData) => FacebookInsights.fromJson(insightData))
+          .toList() ??
+      [];
 });
 
 // Facebook Page Roles Provider
-final facebookPageRolesProvider = FutureProvider.family<List<FacebookPageRole>, Map<String, String>>((ref, params) async {
+final facebookPageRolesProvider =
+    FutureProvider.family<List<FacebookPageRole>, Map<String, String>>(
+        (ref, params) async {
   final facebookService = ref.watch(facebookServiceProvider);
-  
+
   final rolesData = await facebookService.getPageRoles(
     pageId: params['pageId']!,
     businessId: params['businessId']!,
     userId: params['userId'],
     token: params['token'],
   );
-  
-  return rolesData.map((roleData) => FacebookPageRole.fromJson(roleData)).toList();
+
+  return rolesData
+      .map((roleData) => FacebookPageRole.fromJson(roleData))
+      .toList();
 });

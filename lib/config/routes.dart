@@ -31,12 +31,10 @@ import 'package:vendor_app/screens/integrations/integration_management_screen.da
 import 'package:vendor_app/screens/integrations/add_integration_screen.dart';
 import 'package:vendor_app/screens/integrations/integration_settings_screen.dart';
 import 'package:vendor_app/screens/integrations/instagram_integration_screen.dart';
-import 'package:vendor_app/screens/integrations/facebook_pages_integration_screen.dart';
 import 'package:vendor_app/screens/integrations/facebook_insights_screen.dart';
-import 'package:vendor_app/screens/integrations/facebook_dashboard_screen.dart';
+import 'package:vendor_app/screens/integrations/facebook_enhanced_dashboard_screen.dart';
 import 'package:vendor_app/screens/integrations/messenger_integration_screen.dart';
 import 'package:vendor_app/screens/integrations/meta_integration_screen.dart';
-import 'package:vendor_app/screens/integrations/facebook_integration_screen.dart';
 import 'package:vendor_app/screens/integrations/whatsapp_integration_screen.dart';
 import 'package:vendor_app/screens/integrations/tiktok_integration_screen.dart';
 import 'package:vendor_app/screens/integrations/generic_integration_dashboard.dart';
@@ -136,6 +134,7 @@ class AppRoutes {
   static const String instagramAnalytics = '/integrations/instagram/analytics';
   static const String facebookInsights = '/integrations/facebook/insights';
   static const String facebookPosts = '/integrations/facebook/posts';
+  static const String facebookDashboard = '/integrations/facebook/dashboard';
   static const String instagramPosts = '/integrations/instagram/posts';
   static const String taskList = '/tasks';
   static const String createTask = '/create-task';
@@ -334,8 +333,9 @@ class AppRoutes {
       case facebookPagesIntegration:
         final args = settings.arguments as Map<String, dynamic>?;
         return MaterialPageRoute(
-          builder: (context) => FacebookPagesIntegrationScreen(
-            integrationId: args?['integrationId'],
+          builder: (context) => FacebookDashboardScreen(
+            integrationId: args?['integrationId'] ?? '',
+            initialTab: args?['initialTab'] ?? 0,
           ),
         );
       case messengerIntegration:
@@ -348,20 +348,21 @@ class AppRoutes {
       case facebookIntegration:
         final args = settings.arguments as Map<String, dynamic>?;
         return MaterialPageRoute(
-          builder: (context) => FacebookIntegrationScreen(
-            integrationId: args?['integrationId'],
+          builder: (context) => FacebookDashboardScreen(
+            integrationId: args?['integrationId'] ?? '',
+            initialTab: args?['initialTab'] ?? 0,
           ),
         );
       case facebookInsights:
         return MaterialPageRoute(
           builder: (context) => FacebookInsightsScreen(),
         );
-      case facebookPosts:
+      case facebookDashboard:
         final args = settings.arguments as Map<String, dynamic>?;
         return MaterialPageRoute(
           builder: (context) => FacebookDashboardScreen(
             integrationId: args?['integrationId'] ?? '',
-            initialTab: args?['initialTab'] ?? 0, // Default to posts tab
+            initialTab: args?['initialTab'] ?? 0,
           ),
         );
       case whatsappIntegration:

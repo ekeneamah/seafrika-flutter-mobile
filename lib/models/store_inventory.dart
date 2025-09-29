@@ -4,7 +4,7 @@ class StoreInventory {
   final String id;
   final String businessId;
   final String businessName; // Denormalized for efficient queries
-  final String vendorId;     // Owner/Vendor ID
+  final String vendorId; // Owner/Vendor ID
   final String storeId;
   final String productId;
   final String? inventoryId; // Deprecated, keeping for backward compatibility
@@ -19,7 +19,7 @@ class StoreInventory {
   final DateTime createdAt;
   final DateTime updatedAt;
   final String? displayImageUrl;
-  
+
   // Pre-computed fields to avoid client-side calculations
   final bool isLowStock;
   final double totalValue;
@@ -56,7 +56,8 @@ class StoreInventory {
       id: doc.id,
       storeId: data['storeId'] as String? ?? '',
       productId: data['productId'] as String? ?? '',
-      inventoryId: data['inventoryId'] as String?, // Nullable for backward compatibility
+      inventoryId:
+          data['inventoryId'] as String?, // Nullable for backward compatibility
       businessInventoryId: data['businessInventoryId'] as String?, // New field
       productName: data['productName'] as String? ?? 'Unknown Product',
       quantity: data['quantity'] as int? ?? 0,

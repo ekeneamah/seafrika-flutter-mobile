@@ -6,7 +6,7 @@ import '../models/business_inventory.dart';
 import '../providers/business_context_provider.dart';
 
 /// Business Inventory Provider with Cost Optimization
-/// 
+///
 /// This provider implements several strategies to minimize Firestore reads:
 /// 1. Pagination with configurable page sizes (default: 20 items)
 /// 2. Debounced search queries (500ms delay) to prevent rapid-fire reads
@@ -16,18 +16,25 @@ import '../providers/business_context_provider.dart';
 /// 6. Smart category/search filtering to only fetch when needed
 
 // Provider for business inventory service
-final businessInventoryServiceProvider = Provider<BusinessInventoryService>((ref) {
+final businessInventoryServiceProvider =
+    Provider<BusinessInventoryService>((ref) {
   return BusinessInventoryService();
 });
 
 // Cost-optimized provider for one-time reads (no continuous streaming)
-final businessInventoryOnceProvider = FutureProvider.family<List<BusinessInventory>, 
-    ({String businessId, String? searchQuery, String? category, int limit})>((ref, params) async {
+final businessInventoryOnceProvider = FutureProvider.family<
+    List<BusinessInventory>,
+    ({
+      String businessId,
+      String? searchQuery,
+      String? category,
+      int limit
+    })>((ref, params) async {
   final service = ref.watch(businessInventoryServiceProvider);
-  
+
   // Use a small limit for cost efficiency
   final effectiveLimit = params.limit > 0 ? params.limit : 10;
-  
+
   final snapshot = await service
       .streamBusinessInventory(
         businessId: params.businessId,
@@ -36,20 +43,27 @@ final businessInventoryOnceProvider = FutureProvider.family<List<BusinessInvento
         limit: effectiveLimit,
       )
       .first; // Get single snapshot, not continuous stream
-      
+
   return snapshot.docs
-      .map((doc) => BusinessInventory.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>))
+      .map((doc) => BusinessInventory.fromFirestore(
+          doc as DocumentSnapshot<Map<String, dynamic>>))
       .toList();
 });
 
 // Provider for business inventory stream with cost optimization
-final businessInventoryStreamProvider = StreamProvider.family<List<BusinessInventory>, 
-    ({String businessId, String? searchQuery, String? category, int limit})>((ref, params) {
+final businessInventoryStreamProvider = StreamProvider.family<
+    List<BusinessInventory>,
+    ({
+      String businessId,
+      String? searchQuery,
+      String? category,
+      int limit
+    })>((ref, params) {
   final service = ref.watch(businessInventoryServiceProvider);
-  
+
   // Use a reasonable default limit to control read costs
   final effectiveLimit = params.limit > 0 ? params.limit : 20;
-  
+
   return service
       .streamBusinessInventory(
         businessId: params.businessId,
@@ -58,12 +72,15 @@ final businessInventoryStreamProvider = StreamProvider.family<List<BusinessInven
         limit: effectiveLimit, // Limit reads per query
       )
       .map((snapshot) => snapshot.docs
-          .map((doc) => BusinessInventory.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>))
+          .map((doc) => BusinessInventory.fromFirestore(
+              doc as DocumentSnapshot<Map<String, dynamic>>))
           .toList());
 });
 
 // Provider for business inventory state management
-final businessInventoryProvider = StateNotifierProvider<BusinessInventoryNotifier, BusinessInventoryState>((ref) {
+final businessInventoryProvider =
+    StateNotifierProvider<BusinessInventoryNotifier, BusinessInventoryState>(
+        (ref) {
   final service = ref.watch(businessInventoryServiceProvider);
   return BusinessInventoryNotifier(service);
 });
@@ -143,7 +160,7 @@ class BusinessInventoryNotifier extends StateNotifier<BusinessInventoryState> {
   void setSearchQuery(String query) {
     // Cancel previous timer to avoid multiple rapid calls
     _searchDebounceTimer?.cancel();
-    
+
     // Debounce search queries by 500ms to reduce reads
     _searchDebounceTimer = Timer(Duration(milliseconds: 500), () {
       if (query != state.searchQuery) {
@@ -153,7 +170,8 @@ class BusinessInventoryNotifier extends StateNotifier<BusinessInventoryState> {
           lastDocument: null, // Reset pagination
           hasMore: true,
         );
-        _loadInventory(businessId: '', refresh: true); // Need to pass business ID
+        _loadInventory(
+            businessId: '', refresh: true); // Need to pass business ID
       }
     });
   }
@@ -196,12 +214,14 @@ class BusinessInventoryNotifier extends StateNotifier<BusinessInventoryState> {
           .first; // Use .first to get single snapshot, not continuous stream
 
       final newItems = snapshot.docs
-          .map((doc) => BusinessInventory.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>))
+          .map((doc) => BusinessInventory.fromFirestore(
+              doc as DocumentSnapshot<Map<String, dynamic>>))
           .toList();
 
       state = state.copyWith(
         items: refresh ? newItems : [...state.items, ...newItems],
-        lastDocument: newItems.isNotEmpty ? snapshot.docs.last : state.lastDocument,
+        lastDocument:
+            newItems.isNotEmpty ? snapshot.docs.last : state.lastDocument,
         hasMore: newItems.length >= state.pageSize,
         isLoading: false,
         lastFetch: DateTime.now(),
@@ -254,54 +274,62 @@ class BusinessInventoryNotifier extends StateNotifier<BusinessInventoryState> {
 
 /// Business Inventory Detail Provider
 /// Provides a single business inventory item by ID
-final businessInventoryDetailProvider = FutureProvider.family<BusinessInventory?, String>((ref, businessInventoryId) async {
+final businessInventoryDetailProvider =
+    FutureProvider.family<BusinessInventory?, String>(
+        (ref, businessInventoryId) async {
   final service = ref.watch(businessInventoryServiceProvider);
   return service.getBusinessInventoryById(businessInventoryId);
 });
 
 /// Simple Business Inventory List Provider
 /// Provides a list of all business inventory items for management screen
-final businessInventoryListProvider = FutureProvider<List<BusinessInventory>>((ref) async {
+final businessInventoryListProvider =
+    FutureProvider<List<BusinessInventory>>((ref) async {
   final service = ref.watch(businessInventoryServiceProvider);
   final businessContext = ref.watch(businessContextProvider);
-  
-  print('🏢 [BusinessInventoryListProvider] Business context: ${businessContext?.id}');
-  
+
+  print(
+      '🏢 [BusinessInventoryListProvider] Business context: ${businessContext?.id}');
+
   if (businessContext == null) {
     print('❌ [BusinessInventoryListProvider] No business context');
     throw Exception('No business selected');
   }
-  
-  print('📦 [BusinessInventoryListProvider] Fetching inventory for business: ${businessContext.id}');
-  
+
+  print(
+      '📦 [BusinessInventoryListProvider] Fetching inventory for business: ${businessContext.id}');
+
   final snapshot = await service
       .streamBusinessInventory(
         businessId: businessContext.id,
         limit: 100, // Get more items for management screen
       )
       .first; // Get single snapshot
-  
-  print('📦 [BusinessInventoryListProvider] Snapshot received: ${snapshot.docs.length} documents');
-      
+
+  print(
+      '📦 [BusinessInventoryListProvider] Snapshot received: ${snapshot.docs.length} documents');
+
   final items = snapshot.docs
-      .map((doc) => BusinessInventory.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>))
+      .map((doc) => BusinessInventory.fromFirestore(
+          doc as DocumentSnapshot<Map<String, dynamic>>))
       .toList();
-      
+
   print('✅ [BusinessInventoryListProvider] Returning ${items.length} items');
   return items;
 });
 
 /// Business Inventory Update Notifier
 /// Provides methods to update business inventory items with cost price history tracking
-final businessInventoryUpdateProvider = Provider<BusinessInventoryUpdateNotifier>((ref) {
+final businessInventoryUpdateProvider =
+    Provider<BusinessInventoryUpdateNotifier>((ref) {
   return BusinessInventoryUpdateNotifier(ref);
 });
 
 class BusinessInventoryUpdateNotifier {
   final Ref _ref;
-  
+
   BusinessInventoryUpdateNotifier(this._ref);
-  
+
   /// Update business inventory item with cost price history tracking
   Future<void> updateBusinessInventory({
     required String businessInventoryId,
@@ -314,11 +342,11 @@ class BusinessInventoryUpdateNotifier {
       updateData: updateData,
       changeReason: changeReason,
     );
-    
+
     // Refresh the business inventory list
     _ref.invalidate(businessInventoryListProvider);
   }
-  
+
   /// Update cost price with reason tracking
   Future<void> updateCostPrice({
     required String businessInventoryId,

@@ -33,7 +33,7 @@ export class TikTokConfigController {
 
     try {
       const authUrl = this.tikTokService.generateAuthUrl({
-        scopes: ['user.info.basic', 'video.publish'],
+        scopes: ['user.info.basic', 'video.list', 'video.upload'],
         redirectUri,
         state
       });
@@ -417,7 +417,7 @@ export class TikTokConfigController {
     const tikTokClientSecret = this.configService.get('TIKTOK_CLIENT_SECRET');
 
     const authUrl = this.tikTokService.generateAuthUrl({
-      scopes: ['user.info.basic', 'video.publish'],
+      scopes: ['user.info.basic', 'video.list', 'video.upload'],
       redirectUri,
       state: 'debug_test'
     });

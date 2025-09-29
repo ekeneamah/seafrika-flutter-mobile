@@ -56,7 +56,7 @@ class OrderManagementService {
       for (int i = 0; i < workflow.steps.length; i++) {
         final step = workflow.steps[i];
         final task = _createTaskFromWorkflowStep(order.id, step, i == 0);
-        
+
         final taskRef = _firestore
             .collection('vendors')
             .doc(_vendorId)
@@ -67,7 +67,7 @@ class OrderManagementService {
       }
 
       await batch.commit();
-      
+
       // Log activity
       await _logOrderActivity(
         order.id,
@@ -169,12 +169,12 @@ class OrderManagementService {
   }) async {
     try {
       Query query;
-      
+
       // Use flat collection structure with business filtering
       if (businessId != null) {
         // Use optimized collection reference for business orders
         query = CollectionReferences.ordersForBusiness(businessId);
-        
+
         // Apply additional filters
         if (status != null) {
           // Use composite index for better performance
@@ -189,9 +189,10 @@ class OrderManagementService {
         query = CollectionReferences.orders
             .where('vendorId', isEqualTo: _vendorId)
             .orderBy('createdAt', descending: true);
-            
+
         if (status != null) {
-          query = query.where('status', isEqualTo: status.toString().split('.').last);
+          query = query.where('status',
+              isEqualTo: status.toString().split('.').last);
         }
       }
 
@@ -213,7 +214,7 @@ class OrderManagementService {
       query = query.limit(limit);
 
       final snapshot = await query.get();
-      
+
       return snapshot.docs
           .map((doc) => Order.fromMap(doc.data() as Map<String, dynamic>))
           .toList();
@@ -227,13 +228,14 @@ class OrderManagementService {
   }
 
   /// Get pending orders for a business (optimized query)
-  Future<List<Order>> getPendingOrders(String businessId, {int limit = 10}) async {
+  Future<List<Order>> getPendingOrders(String businessId,
+      {int limit = 10}) async {
     try {
       final snapshot = await CollectionReferences.pendingOrders(businessId)
           .orderBy('createdAt', descending: true)
           .limit(limit)
           .get();
-          
+
       return snapshot.docs
           .map((doc) => Order.fromMap(doc.data() as Map<String, dynamic>))
           .toList();
@@ -254,11 +256,12 @@ class OrderManagementService {
     int limit = 50,
   }) async {
     try {
-      final snapshot = await CollectionReferences.ordersByDateRange(businessId, startDate, endDate)
+      final snapshot = await CollectionReferences.ordersByDateRange(
+              businessId, startDate, endDate)
           .orderBy('createdAt', descending: true)
           .limit(limit)
           .get();
-          
+
       return snapshot.docs
           .map((doc) => Order.fromMap(doc.data() as Map<String, dynamic>))
           .toList();
@@ -285,7 +288,8 @@ class OrderManagementService {
       await docRef.set(tracking.toMap());
 
       // Update order with tracking number
-      await _updateOrderTrackingNumber(tracking.orderId, tracking.trackingNumber);
+      await _updateOrderTrackingNumber(
+          tracking.orderId, tracking.trackingNumber);
 
       // Log initial delivery update
       await _addDeliveryUpdate(
@@ -486,7 +490,7 @@ class OrderManagementService {
       final taskDoc = await taskRef.get();
       if (taskDoc.exists) {
         final task = OrderTask.fromMap(taskDoc.data()!);
-        
+
         // Update workflow if task completed
         if (status == OrderTaskStatus.completed) {
           await _progressWorkflow(task.orderId, task.type);
@@ -518,9 +522,7 @@ class OrderManagementService {
           .orderBy('createdAt')
           .get();
 
-      return snapshot.docs
-          .map((doc) => OrderTask.fromMap(doc.data()))
-          .toList();
+      return snapshot.docs.map((doc) => OrderTask.fromMap(doc.data())).toList();
     } catch (e) {
       debugPrint('Get order tasks error: $e');
       throw OrderManagementException(
@@ -545,9 +547,7 @@ class OrderManagementService {
           .orderBy('dueDate')
           .get();
 
-      return snapshot.docs
-          .map((doc) => OrderTask.fromMap(doc.data()))
-          .toList();
+      return snapshot.docs.map((doc) => OrderTask.fromMap(doc.data())).toList();
     } catch (e) {
       debugPrint('Get assigned tasks error: $e');
       throw OrderManagementException(
@@ -587,7 +587,8 @@ class OrderManagementService {
     DateTime? toDate,
   }) async {
     try {
-      final from = fromDate ?? DateTime.now().subtract(const Duration(days: 30));
+      final from =
+          fromDate ?? DateTime.now().subtract(const Duration(days: 30));
       final to = toDate ?? DateTime.now();
 
       final ordersQuery = _firestore
@@ -598,13 +599,12 @@ class OrderManagementService {
           .where('createdAt', isLessThanOrEqualTo: to);
 
       final snapshot = await ordersQuery.get();
-      final orders = snapshot.docs
-          .map((doc) => Order.fromMap(doc.data()))
-          .toList();
+      final orders =
+          snapshot.docs.map((doc) => Order.fromMap(doc.data())).toList();
 
       // Calculate analytics
       final analytics = _calculateOrderAnalytics(orders);
-      
+
       return analytics;
     } catch (e) {
       debugPrint('Get order analytics error: $e');
@@ -641,9 +641,7 @@ class OrderManagementService {
         .where('orderId', isEqualTo: orderId)
         .get();
 
-    return snapshot.docs
-        .map((doc) => OrderTask.fromMap(doc.data()))
-        .toList();
+    return snapshot.docs.map((doc) => OrderTask.fromMap(doc.data())).toList();
   }
 
   Future<DeliveryTracking?> _getDeliveryTracking(String orderId) async {
@@ -743,7 +741,8 @@ class OrderManagementService {
     );
   }
 
-  OrderTask _createTaskFromWorkflowStep(String orderId, WorkflowStep step, bool isActive) {
+  OrderTask _createTaskFromWorkflowStep(
+      String orderId, WorkflowStep step, bool isActive) {
     return OrderTask(
       id: 'task_${orderId}_${step.id}_${DateTime.now().millisecondsSinceEpoch}',
       orderId: orderId,
@@ -779,7 +778,8 @@ class OrderManagementService {
     }
   }
 
-  Future<void> _updateWorkflowForStatus(String orderId, OrderStatus status) async {
+  Future<void> _updateWorkflowForStatus(
+      String orderId, OrderStatus status) async {
     // Implementation for updating workflow based on order status
     // This would progress the workflow to appropriate steps
   }
@@ -788,7 +788,8 @@ class OrderManagementService {
     // Implementation for progressing workflow when tasks complete
   }
 
-  Future<void> _updateOrderTrackingNumber(String orderId, String trackingNumber) async {
+  Future<void> _updateOrderTrackingNumber(
+      String orderId, String trackingNumber) async {
     await _firestore
         .collection('vendors')
         .doc(_vendorId)
@@ -843,8 +844,10 @@ class OrderManagementService {
 
   Map<String, dynamic> _calculateOrderAnalytics(List<Order> orders) {
     final totalOrders = orders.length;
-    final totalRevenue = orders.fold<double>(0, (sum, order) => sum + order.total);
-    final averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0.0;
+    final totalRevenue =
+        orders.fold<double>(0, (sum, order) => sum + order.total);
+    final averageOrderValue =
+        totalOrders > 0 ? totalRevenue / totalOrders : 0.0;
 
     final statusCounts = <String, int>{};
     for (final order in orders) {
@@ -857,8 +860,8 @@ class OrderManagementService {
       'totalRevenue': totalRevenue,
       'averageOrderValue': averageOrderValue,
       'statusCounts': statusCounts,
-      'completionRate': totalOrders > 0 
-          ? (statusCounts['delivered'] ?? 0) / totalOrders 
+      'completionRate': totalOrders > 0
+          ? (statusCounts['delivered'] ?? 0) / totalOrders
           : 0.0,
     };
   }

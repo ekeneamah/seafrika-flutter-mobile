@@ -207,34 +207,37 @@ export class MetaIntegrationService {
   /**
    * Get Facebook Page information
    */
-  async getPageInfo(businessId: string, pageId?: string): Promise<FacebookPage> {
-    const integrations = await this.getBusinessIntegrations(businessId);
+  async getPageInfo(integrationId: string, pageId?: string): Promise<FacebookPage> {
+    // Get the specific integration by ID
+    const integration = await this.getIntegrationDocument(integrationId);
+    
+    // Validate that this is a Facebook integration
+    if (integration.channel !== 'facebook_pages' && integration.channel !== 'messenger') {
+      throw new HttpException('Integration is not a Facebook Pages or Messenger integration', HttpStatus.BAD_REQUEST);
+    }
+    
+    if (integration.status !== 'active') {
+      throw new HttpException('Integration is not active', HttpStatus.BAD_REQUEST);
+    }
+    
+    if (!integration.credentials?.pageInfo) {
+      throw new HttpException('No page information available in integration', HttpStatus.BAD_REQUEST);
+    }
     
     let targetPageId: string;
     let pageAccessToken: string;
     
     if (pageId) {
-      // Find the specific page integration
-      const pageIntegration = integrations.find(i => 
-        (i.channel === 'facebook_pages' || i.channel === 'messenger') && 
-        i.credentials.pageInfo?.pageId === pageId
-      );
-      if (!pageIntegration) {
-        throw new HttpException('Page not found in integrations', HttpStatus.NOT_FOUND);
+      // Verify the requested pageId matches this integration's page
+      if (integration.credentials.pageInfo.pageId !== pageId) {
+        throw new HttpException('Requested page ID does not match this integration', HttpStatus.NOT_FOUND);
       }
-      targetPageId = pageIntegration.credentials.pageInfo.pageId;
-      pageAccessToken = pageIntegration.credentials.accessToken;
+      targetPageId = integration.credentials.pageInfo.pageId;
+      pageAccessToken = integration.credentials.pageInfo.accessToken;
     } else {
-      // Use the first available Facebook page integration
-      const pageIntegration = integrations.find(i => 
-        (i.channel === 'facebook_pages' || i.channel === 'messenger') && 
-        i.credentials.pageInfo
-      );
-      if (!pageIntegration) {
-        throw new HttpException('No pages available in integration', HttpStatus.BAD_REQUEST);
-      }
-      targetPageId = pageIntegration.credentials.pageInfo.pageId;
-      pageAccessToken = pageIntegration.credentials.accessToken;
+      // Use the integration's page info
+      targetPageId = integration.credentials.pageInfo.pageId;
+      pageAccessToken = integration.credentials.pageInfo.accessToken;
     }
 
     return this.makeGraphApiCall(`${targetPageId}`, pageAccessToken, {
@@ -265,6 +268,52 @@ export class MetaIntegrationService {
       const page = credentials.pages[0];
       targetPageId = page.pageId;
       pageAccessToken = page.accessToken;
+    }
+
+    const data = await this.makeGraphApiCall(`${targetPageId}/posts`, pageAccessToken, {
+      fields: 'id,message,story,created_time,updated_time,permalink_url,status_type,type,attachments,insights.metric(post_impressions,post_reach,post_engaged_users)',
+      limit
+    });
+
+    this.logger.log(`Fetched ${data.data } posts for page ${targetPageId}`);
+
+    return data.data || [];
+  }
+
+  /**
+   * Get Facebook page posts by integration ID
+   */
+  async getPagePostsByIntegration(integrationId: string, pageId?: string, limit: number = 25): Promise<FacebookPost[]> {
+    // Get the specific integration by ID
+    const integration = await this.getIntegrationDocument(integrationId);
+    
+    // Validate that this is a Facebook integration
+    if (integration.channel !== 'facebook_pages' && integration.channel !== 'messenger') {
+      throw new HttpException('Integration is not a Facebook Pages or Messenger integration', HttpStatus.BAD_REQUEST);
+    }
+    
+    if (integration.status !== 'active') {
+      throw new HttpException('Integration is not active', HttpStatus.BAD_REQUEST);
+    }
+    
+    if (!integration.credentials?.pageInfo) {
+      throw new HttpException('No page information available in integration', HttpStatus.BAD_REQUEST);
+    }
+    
+    let targetPageId: string;
+    let pageAccessToken: string;
+    
+    if (pageId) {
+      // Verify the requested pageId matches this integration's page
+      if (integration.credentials.pageInfo.pageId !== pageId) {
+        throw new HttpException('Requested page ID does not match this integration', HttpStatus.NOT_FOUND);
+      }
+      targetPageId = integration.credentials.pageInfo.pageId;
+      pageAccessToken = integration.credentials.pageInfo.accessToken;
+    } else {
+      // Use the integration's page info
+      targetPageId = integration.credentials.pageInfo.pageId;
+      pageAccessToken = integration.credentials.pageInfo.accessToken;
     }
 
     const data = await this.makeGraphApiCall(`${targetPageId}/posts`, pageAccessToken, {
@@ -674,7 +723,7 @@ export class MetaIntegrationService {
     const { accessToken } = integration.credentials;
     const { igUserId, pageToken } = await this.resolveInstagramUserId(
     integration,
-    pageTokenPlain ?? userTokenPlain, // prefer page token, fallback to user token if your impl supports it
+     userTokenPlain, // prefer page token, fallback to user token if your impl supports it
   );
   if (!igUserId) {
     throw new HttpException('No Instagram business account linked to this Page', HttpStatus.BAD_REQUEST);

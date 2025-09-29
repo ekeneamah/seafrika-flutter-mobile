@@ -35,11 +35,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    
+
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
     );
-    
+
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.3),
       end: Offset.zero,
@@ -76,10 +76,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
           );
 
       if (success && mounted) {
-        _showSnackBar('Password has been reset successfully! You can now sign in with your new password.', isError: false);
+        _showSnackBar(
+            'Password has been reset successfully! You can now sign in with your new password.',
+            isError: false);
         Navigator.pushReplacementNamed(context, AppRouter.login);
       } else if (mounted) {
-        _showSnackBar('Failed to reset password. Please try again.', isError: true);
+        _showSnackBar('Failed to reset password. Please try again.',
+            isError: true);
       }
     } catch (e) {
       if (mounted) {
@@ -164,7 +167,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
           ),
         ),
         const SizedBox(height: 24),
-        
+
         // Welcome text
         Text(
           'Set New Password',
@@ -240,7 +243,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
               },
             ),
             const SizedBox(height: 20),
-            
+
             // Confirm Password Field
             TextFormField(
               controller: _confirmPasswordController,
@@ -262,7 +265,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
                     color: AppTheme.earth,
                   ),
                   onPressed: () {
-                    setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
+                    setState(() =>
+                        _obscureConfirmPassword = !_obscureConfirmPassword);
                   },
                 ),
               ),
@@ -277,7 +281,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
               },
             ),
             const SizedBox(height: 32),
-            
+
             // Reset Password Button
             Container(
               decoration: BoxDecoration(
@@ -357,10 +361,16 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
             ],
           ),
           const SizedBox(height: 12),
-          _buildRequirement('At least 8 characters', _passwordController.text.length >= 8),
-          _buildRequirement('One uppercase letter', _passwordController.text.contains(RegExp(r'[A-Z]'))),
-          _buildRequirement('One number', _passwordController.text.contains(RegExp(r'[0-9]'))),
-          _buildRequirement('One special character', _passwordController.text.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))),
+          _buildRequirement(
+              'At least 8 characters', _passwordController.text.length >= 8),
+          _buildRequirement('One uppercase letter',
+              _passwordController.text.contains(RegExp(r'[A-Z]'))),
+          _buildRequirement('One number',
+              _passwordController.text.contains(RegExp(r'[0-9]'))),
+          _buildRequirement(
+              'One special character',
+              _passwordController.text
+                  .contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))),
         ],
       ),
     );
@@ -485,20 +495,20 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
               child: Column(
                 children: [
                   const SizedBox(height: 20),
-                  
+
                   // Hero Section
                   _buildHeroSection(),
                   const SizedBox(height: 32),
-                  
+
                   // Reset Form
                   _buildResetForm(),
                   const SizedBox(height: 20),
-                  
+
                   // Password Requirements (only show when password field is focused)
                   if (_passwordController.text.isNotEmpty)
                     _buildPasswordRequirements(),
                   const SizedBox(height: 20),
-                  
+
                   // Security Tips
                   _buildSecurityTips(),
                   const SizedBox(height: 20),

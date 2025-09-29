@@ -100,9 +100,10 @@ class ProductListItem extends StatelessWidget {
                         const SizedBox(width: 4),
                         Text(
                           '($reviews)',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Colors.grey[600],
-                              ),
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Colors.grey[600],
+                                  ),
                         ),
                       ],
                     ),
@@ -123,4 +124,4 @@ class ProductListItem extends StatelessWidget {
       ),
     );
   }
-} 
+}

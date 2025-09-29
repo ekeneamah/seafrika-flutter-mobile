@@ -19,7 +19,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vendor_app/config/theme.dart' as theme;
 import 'package:vendor_app/models/business_inventory.dart';
 import 'package:vendor_app/models/store.dart';
-import 'package:vendor_app/providers/business_inventory_provider.dart' hide businessInventoryServiceProvider;
+import 'package:vendor_app/providers/business_inventory_provider.dart'
+    hide businessInventoryServiceProvider;
 import 'package:vendor_app/providers/service_providers.dart';
 import 'package:vendor_app/providers/business_context_provider.dart';
 import 'package:vendor_app/services/inventory_allocation_service.dart';
@@ -517,7 +518,7 @@ void _showActionMenu(
 void _showStoreAllocationDialog(BuildContext context, WidgetRef ref,
     BusinessInventory businessInventory) async {
   AppLogger.info('_showStoreAllocationDialog called');
-  
+
   // Check if there's available quantity
   if (businessInventory.availableQuantity <= 0) {
     AppLogger.warning('No available quantity to allocate');
@@ -585,7 +586,7 @@ void _showStoreAllocationDialog(BuildContext context, WidgetRef ref,
       Navigator.of(context).pop();
     }
     AppLogger.error('Failed to load stores: $e');
-    
+
     // Check context before showing error dialog
     if (context.mounted) {
       _showErrorDialog(context, 'Error', 'Failed to load stores: $e');
@@ -904,7 +905,7 @@ void _showAddQuantityDialog(
               Text('Current Total: ${businessInventory.totalQuantity}'),
               Text('Available: ${businessInventory.availableQuantity}'),
               const SizedBox(height: 16),
-              
+
               // Quantity to add
               TextFormField(
                 controller: quantityController,
@@ -929,7 +930,7 @@ void _showAddQuantityDialog(
                 },
               ),
               const SizedBox(height: 12),
-              
+
               // Cost price
               TextFormField(
                 controller: costPriceController,
@@ -939,7 +940,8 @@ void _showAddQuantityDialog(
                   border: OutlineInputBorder(),
                   prefixText: 'KSh ',
                 ),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
                 ],
@@ -955,7 +957,7 @@ void _showAddQuantityDialog(
                 },
               ),
               const SizedBox(height: 12),
-              
+
               // Selling price
               TextFormField(
                 controller: sellingPriceController,
@@ -965,7 +967,8 @@ void _showAddQuantityDialog(
                   border: OutlineInputBorder(),
                   prefixText: 'KSh ',
                 ),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
                 ],
@@ -980,7 +983,7 @@ void _showAddQuantityDialog(
                 },
               ),
               const SizedBox(height: 12),
-              
+
               // Notes
               TextFormField(
                 controller: notesController,
@@ -1010,8 +1013,8 @@ void _showAddQuantityDialog(
                 businessInventory,
                 int.parse(quantityController.text),
                 double.parse(costPriceController.text),
-                sellingPriceController.text.isNotEmpty 
-                    ? double.parse(sellingPriceController.text) 
+                sellingPriceController.text.isNotEmpty
+                    ? double.parse(sellingPriceController.text)
                     : null,
                 notesController.text.isNotEmpty ? notesController.text : null,
               );
@@ -1050,7 +1053,7 @@ Future<void> _performAddQuantity(
 
   try {
     final businessInventoryService = ref.read(businessInventoryServiceProvider);
-    
+
     final success = await businessInventoryService.addQuantityToInventory(
       businessInventoryId: businessInventory.id,
       businessId: businessInventory.businessId,
@@ -1067,19 +1070,21 @@ Future<void> _performAddQuantity(
 
     if (success) {
       // Refresh the business inventory data
-      final _ = ref.refresh(businessInventoryDetailProvider(businessInventory.id));
-      
+      final _ =
+          ref.refresh(businessInventoryDetailProvider(businessInventory.id));
+
       // Show success message
       if (context.mounted) {
         _showSuccessDialog(
           context,
           'Quantity Added Successfully',
           'Added $quantityToAdd items to ${businessInventory.productName}.\n'
-          'New total quantity: ${businessInventory.totalQuantity + quantityToAdd}',
+              'New total quantity: ${businessInventory.totalQuantity + quantityToAdd}',
         );
       }
-      
-      AppLogger.info('Successfully added $quantityToAdd quantity to ${businessInventory.productName}');
+
+      AppLogger.info(
+          'Successfully added $quantityToAdd quantity to ${businessInventory.productName}');
     } else {
       if (context.mounted) {
         _showErrorDialog(
@@ -1095,7 +1100,7 @@ Future<void> _performAddQuantity(
     if (context.mounted) {
       Navigator.pop(context);
     }
-    
+
     // Show error message
     if (context.mounted) {
       _showErrorDialog(
@@ -1134,16 +1139,17 @@ Future<void> _performEditDetails(
 
   try {
     final businessInventoryService = ref.read(businessInventoryServiceProvider);
-    
+
     // Prepare update data
     final updateData = <String, dynamic>{
       'productName': productName,
       'category': category,
       'costPrice': costPrice,
       'sellingPrice': sellingPrice,
-      'totalValue': businessInventory.totalQuantity * costPrice, // Recalculate total value
+      'totalValue': businessInventory.totalQuantity *
+          costPrice, // Recalculate total value
     };
-    
+
     await businessInventoryService.updateBusinessInventory(
       businessInventoryId: businessInventory.id,
       updateData: updateData,
@@ -1156,8 +1162,9 @@ Future<void> _performEditDetails(
     }
 
     // Refresh the business inventory data
-    final _ = ref.refresh(businessInventoryDetailProvider(businessInventory.id));
-    
+    final _ =
+        ref.refresh(businessInventoryDetailProvider(businessInventory.id));
+
     // Show success message
     if (context.mounted) {
       _showSuccessDialog(
@@ -1166,14 +1173,15 @@ Future<void> _performEditDetails(
         'Inventory details for ${productName} have been updated successfully.',
       );
     }
-    
-    AppLogger.info('Successfully updated inventory details for ${businessInventory.productName}');
+
+    AppLogger.info(
+        'Successfully updated inventory details for ${businessInventory.productName}');
   } catch (e) {
     // Close loading dialog
     if (context.mounted) {
       Navigator.pop(context);
     }
-    
+
     // Show error message
     if (context.mounted) {
       _showErrorDialog(
@@ -1188,8 +1196,10 @@ Future<void> _performEditDetails(
 
 void _showEditDetailsDialog(
     BuildContext context, WidgetRef ref, BusinessInventory businessInventory) {
-  final productNameController = TextEditingController(text: businessInventory.productName);
-  final categoryController = TextEditingController(text: businessInventory.category);
+  final productNameController =
+      TextEditingController(text: businessInventory.productName);
+  final categoryController =
+      TextEditingController(text: businessInventory.category);
   final costPriceController = TextEditingController(
     text: businessInventory.costPrice.toStringAsFixed(2),
   );
@@ -1214,11 +1224,11 @@ void _showEditDetailsDialog(
                 Text(
                   'Edit details for inventory item',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[600],
-                  ),
+                        color: Colors.grey[600],
+                      ),
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Product Name
                 TextFormField(
                   controller: productNameController,
@@ -1235,7 +1245,7 @@ void _showEditDetailsDialog(
                   },
                 ),
                 const SizedBox(height: 12),
-                
+
                 // Category
                 TextFormField(
                   controller: categoryController,
@@ -1252,7 +1262,7 @@ void _showEditDetailsDialog(
                   },
                 ),
                 const SizedBox(height: 12),
-                
+
                 // Cost Price
                 TextFormField(
                   controller: costPriceController,
@@ -1262,9 +1272,11 @@ void _showEditDetailsDialog(
                     border: OutlineInputBorder(),
                     prefixText: 'KSh ',
                   ),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                    FilteringTextInputFormatter.allow(
+                        RegExp(r'^\d*\.?\d{0,2}')),
                   ],
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -1278,7 +1290,7 @@ void _showEditDetailsDialog(
                   },
                 ),
                 const SizedBox(height: 12),
-                
+
                 // Selling Price
                 TextFormField(
                   controller: sellingPriceController,
@@ -1288,9 +1300,11 @@ void _showEditDetailsDialog(
                     border: OutlineInputBorder(),
                     prefixText: 'KSh ',
                   ),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                    FilteringTextInputFormatter.allow(
+                        RegExp(r'^\d*\.?\d{0,2}')),
                   ],
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -1304,7 +1318,7 @@ void _showEditDetailsDialog(
                   },
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Current quantities info (read-only)
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -1319,13 +1333,16 @@ void _showEditDetailsDialog(
                       Text(
                         'Current Quantities (Read-only)',
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
                       const SizedBox(height: 8),
-                      Text('Total Quantity: ${businessInventory.totalQuantity}'),
-                      Text('Available Quantity: ${businessInventory.availableQuantity}'),
-                      Text('Allocated Quantity: ${businessInventory.totalQuantity - businessInventory.availableQuantity}'),
+                      Text(
+                          'Total Quantity: ${businessInventory.totalQuantity}'),
+                      Text(
+                          'Available Quantity: ${businessInventory.availableQuantity}'),
+                      Text(
+                          'Allocated Quantity: ${businessInventory.totalQuantity - businessInventory.availableQuantity}'),
                     ],
                   ),
                 ),
@@ -1343,17 +1360,22 @@ void _showEditDetailsDialog(
           onPressed: () async {
             if (formKey.currentState!.validate()) {
               // Check if any changes were made
-              final hasChanges = productNameController.text.trim() != businessInventory.productName ||
-                                categoryController.text.trim() != businessInventory.category ||
-                                double.parse(costPriceController.text) != businessInventory.costPrice ||
-                                double.parse(sellingPriceController.text) != businessInventory.sellingPrice;
-              
+              final hasChanges = productNameController.text.trim() !=
+                      businessInventory.productName ||
+                  categoryController.text.trim() !=
+                      businessInventory.category ||
+                  double.parse(costPriceController.text) !=
+                      businessInventory.costPrice ||
+                  double.parse(sellingPriceController.text) !=
+                      businessInventory.sellingPrice;
+
               if (!hasChanges) {
                 Navigator.pop(context);
-                _showInfoDialog(context, 'No Changes', 'No changes were made to the inventory details.');
+                _showInfoDialog(context, 'No Changes',
+                    'No changes were made to the inventory details.');
                 return;
               }
-              
+
               Navigator.pop(context);
               await _performEditDetails(
                 context,

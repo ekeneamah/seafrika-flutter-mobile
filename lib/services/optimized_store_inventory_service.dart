@@ -5,7 +5,7 @@ import '../models/optimized_store_inventory.dart';
 /// Implements strategic caching, batching, and query optimization
 class OptimizedStoreInventoryService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  
+
   // Cache to avoid repeated reads (implement TTL in production)
   static final Map<String, List<OptimizedStoreInventory>> _cache = {};
   static final Map<String, DateTime> _cacheTimestamps = {};
@@ -19,7 +19,7 @@ class OptimizedStoreInventoryService {
     bool forceRefresh = false,
   }) async {
     final cacheKey = '${businessId}_$storeId';
-    
+
     // Check cache first to avoid reads
     if (!forceRefresh && _isValidCache(cacheKey)) {
       return _cache[cacheKey]!;
@@ -39,7 +39,8 @@ class OptimizedStoreInventoryService {
           .get();
 
       final inventory = querySnapshot.docs
-          .map((doc) => OptimizedStoreInventory.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>))
+          .map((doc) => OptimizedStoreInventory.fromFirestore(
+              doc as DocumentSnapshot<Map<String, dynamic>>))
           .toList();
 
       // Cache results to avoid future reads
@@ -65,15 +66,17 @@ class OptimizedStoreInventoryService {
         .doc(storeId)
         .collection('inventory')
         .where('status', isEqualTo: 'active')
-        .where('lastUpdated', isGreaterThan: Timestamp.fromDate(
-          DateTime.now().subtract(Duration(days: 30)) // Only recent items
-        ))
+        .where('lastUpdated',
+            isGreaterThan: Timestamp.fromDate(
+                DateTime.now().subtract(Duration(days: 30)) // Only recent items
+                ))
         .orderBy('lastUpdated', descending: true)
         .orderBy('productName')
         .limit(50) // Reasonable limit for real-time updates
         .snapshots()
         .map((snapshot) => snapshot.docs
-            .map((doc) => OptimizedStoreInventory.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>))
+            .map((doc) => OptimizedStoreInventory.fromFirestore(
+                doc as DocumentSnapshot<Map<String, dynamic>>))
             .toList());
   }
 
@@ -96,7 +99,8 @@ class OptimizedStoreInventoryService {
           .get();
 
       return querySnapshot.docs
-          .map((doc) => OptimizedStoreInventory.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>))
+          .map((doc) => OptimizedStoreInventory.fromFirestore(
+              doc as DocumentSnapshot<Map<String, dynamic>>))
           .toList();
     } catch (e) {
       throw Exception('Failed to fetch low stock items: $e');
@@ -123,7 +127,7 @@ class OptimizedStoreInventoryService {
     }
 
     await batch.commit();
-    
+
     // Invalidate cache after updates
     _invalidateCache('${businessId}_$storeId');
   }
@@ -155,9 +159,10 @@ class OptimizedStoreInventoryService {
         .limit(25);
 
     final querySnapshot = await query.get();
-    
+
     return querySnapshot.docs
-        .map((doc) => OptimizedStoreInventory.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>))
+        .map((doc) => OptimizedStoreInventory.fromFirestore(
+            doc as DocumentSnapshot<Map<String, dynamic>>))
         .toList();
   }
 
@@ -208,18 +213,20 @@ class OptimizedStoreInventoryService {
     }
 
     final querySnapshot = await query.get();
-    
+
     return querySnapshot.docs
-        .map((doc) => OptimizedStoreInventory.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>))
+        .map((doc) => OptimizedStoreInventory.fromFirestore(
+            doc as DocumentSnapshot<Map<String, dynamic>>))
         .toList();
   }
 
   // Cache management methods
   bool _isValidCache(String cacheKey) {
-    if (!_cache.containsKey(cacheKey) || !_cacheTimestamps.containsKey(cacheKey)) {
+    if (!_cache.containsKey(cacheKey) ||
+        !_cacheTimestamps.containsKey(cacheKey)) {
       return false;
     }
-    
+
     final cacheTime = _cacheTimestamps[cacheKey]!;
     return DateTime.now().difference(cacheTime) < _cacheValidityDuration;
   }
@@ -236,7 +243,7 @@ class OptimizedStoreInventoryService {
 
   // Fallback method for summary computation (expensive)
   Future<Map<String, dynamic>> _computeInventorySummary(
-    String businessId, 
+    String businessId,
     String storeId,
   ) async {
     final inventoryItems = await getStoreInventory(
@@ -248,7 +255,8 @@ class OptimizedStoreInventoryService {
       'totalItems': inventoryItems.length,
       'lowStockCount': inventoryItems.where((item) => item.isLowStock).length,
       'totalValue': inventoryItems.fold<double>(
-        0, (sum, item) => sum + item.totalValue,
+        0,
+        (sum, item) => sum + item.totalValue,
       ),
       'categories': _groupByCategory(inventoryItems),
       'lastUpdated': Timestamp.now(),

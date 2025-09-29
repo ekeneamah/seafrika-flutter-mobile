@@ -178,4 +178,4 @@ class ReviewPlatform {
       'settings': settings,
     };
   }
-} 
+}

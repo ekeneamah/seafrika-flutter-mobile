@@ -83,7 +83,7 @@ class CostPriceHistory {
       quantityPurchased: data['quantityPurchased'] ?? 0,
       changedBy: data['changedBy'] ?? '',
       additionalData: data['additionalData'],
-      changedAt: data['changedAt'] is Timestamp 
+      changedAt: data['changedAt'] is Timestamp
           ? (data['changedAt'] as Timestamp).toDate()
           : DateTime.parse(data['changedAt']),
       status: data['status'] ?? 'active',
@@ -158,7 +158,7 @@ class CostPriceHistory {
   bool get isPriceIncrease => priceChange > 0;
   bool get isPriceDecrease => priceChange < 0;
   bool get isSignificantChange => percentageChange.abs() >= 10.0; // 10% or more
-  
+
   String get changeType {
     if (isPriceIncrease) return 'increase';
     if (isPriceDecrease) return 'decrease';

@@ -4,7 +4,7 @@
 /// - List view of all business inventory items
 /// - Search and filter capabilities
 /// - Add new inventory items
-/// - Edit existing inventory items  
+/// - Edit existing inventory items
 /// - Delete inventory items
 /// - View detailed information
 /// - Bulk operations
@@ -22,7 +22,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:vendor_app/config/theme.dart';
 import 'package:vendor_app/config/routes.dart';
 import 'package:vendor_app/models/business_inventory.dart';
-import 'package:vendor_app/providers/business_inventory_provider.dart' as biz_inventory;
+import 'package:vendor_app/providers/business_inventory_provider.dart'
+    as biz_inventory;
 import 'package:vendor_app/providers/business_inventory_provider.dart';
 import 'package:vendor_app/providers/business_context_provider.dart';
 import 'package:vendor_app/widgets/error_view.dart' as error_view;
@@ -34,10 +35,12 @@ class BusinessInventoryManagementScreen extends ConsumerStatefulWidget {
   const BusinessInventoryManagementScreen({Key? key}) : super(key: key);
 
   @override
-  ConsumerState<BusinessInventoryManagementScreen> createState() => _BusinessInventoryManagementScreenState();
+  ConsumerState<BusinessInventoryManagementScreen> createState() =>
+      _BusinessInventoryManagementScreenState();
 }
 
-class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInventoryManagementScreen> {
+class _BusinessInventoryManagementScreenState
+    extends ConsumerState<BusinessInventoryManagementScreen> {
   final TextEditingController _searchController = TextEditingController();
   final Set<String> _selectedItems = <String>{};
   String _selectedCategory = 'All';
@@ -64,27 +67,31 @@ class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInve
     ref.invalidate(biz_inventory.businessInventoryListProvider);
   }
 
-  List<BusinessInventory> _getFilteredAndSortedInventory(List<BusinessInventory> inventory) {
+  List<BusinessInventory> _getFilteredAndSortedInventory(
+      List<BusinessInventory> inventory) {
     List<BusinessInventory> filtered = inventory;
 
     // Apply search filter
     final searchQuery = _searchController.text.toLowerCase();
     if (searchQuery.isNotEmpty) {
-      filtered = filtered.where((item) =>
-          item.productName.toLowerCase().contains(searchQuery) ||
-          item.category.toLowerCase().contains(searchQuery) ||
-          (item.notes?.toLowerCase().contains(searchQuery) ?? false)
-      ).toList();
+      filtered = filtered
+          .where((item) =>
+              item.productName.toLowerCase().contains(searchQuery) ||
+              item.category.toLowerCase().contains(searchQuery) ||
+              (item.notes?.toLowerCase().contains(searchQuery) ?? false))
+          .toList();
     }
 
     // Apply category filter
     if (_selectedCategory != 'All') {
-      filtered = filtered.where((item) => item.category == _selectedCategory).toList();
+      filtered =
+          filtered.where((item) => item.category == _selectedCategory).toList();
     }
 
     // Apply low stock filter (consider items with less than 10 as low stock)
     if (_showLowStockOnly) {
-      filtered = filtered.where((item) => item.availableQuantity <= 10).toList();
+      filtered =
+          filtered.where((item) => item.availableQuantity <= 10).toList();
     }
 
     // Apply sorting
@@ -115,9 +122,10 @@ class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInve
   @override
   Widget build(BuildContext context) {
     final businessContext = ref.watch(businessContextProvider);
-    
-    print('🏢 [BusinessInventoryManagement] Business context: ${businessContext?.id}');
-    
+
+    print(
+        '🏢 [BusinessInventoryManagement] Business context: ${businessContext?.id}');
+
     if (businessContext == null) {
       print('❌ [BusinessInventoryManagement] No business context found');
       return Scaffold(
@@ -130,7 +138,7 @@ class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInve
         ),
       );
     }
-    
+
     // Use StreamBuilder to directly query the business inventory
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
@@ -171,13 +179,14 @@ class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInve
             .limit(100)
             .snapshots(),
         builder: (context, snapshot) {
-          print('📦 [BusinessInventoryManagement] Stream state: ${snapshot.connectionState}');
-          
+          print(
+              '📦 [BusinessInventoryManagement] Stream state: ${snapshot.connectionState}');
+
           if (snapshot.connectionState == ConnectionState.waiting) {
             print('⏳ [BusinessInventoryManagement] Loading...');
             return const loading_view.LoadingView();
           }
-          
+
           if (snapshot.hasError) {
             print('❌ [BusinessInventoryManagement] Error: ${snapshot.error}');
             return error_view.ErrorView(
@@ -185,42 +194,49 @@ class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInve
               onRetry: _loadInventory,
             );
           }
-          
+
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            print('📦 [BusinessInventoryManagement] No data found: ${snapshot.data?.docs.length ?? 0} items');
+            print(
+                '📦 [BusinessInventoryManagement] No data found: ${snapshot.data?.docs.length ?? 0} items');
             return _buildEmptyState();
           }
-          
+
           final documents = snapshot.data!.docs;
-          print('✅ [BusinessInventoryManagement] Data loaded: ${documents.length} items');
-          
+          print(
+              '✅ [BusinessInventoryManagement] Data loaded: ${documents.length} items');
+
           final inventory = documents
-              .map((doc) => BusinessInventory.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>))
+              .map((doc) => BusinessInventory.fromFirestore(
+                  doc as DocumentSnapshot<Map<String, dynamic>>))
               .toList();
-          
+
           final filteredInventory = _getFilteredAndSortedInventory(inventory);
-          final categories = ['All'] + inventory.map((e) => e.category).toSet().toList()..sort();
-          
+          final categories =
+              ['All'] + inventory.map((e) => e.category).toSet().toList()
+                ..sort();
+
           return Column(
             children: [
               _buildHeaderSection(categories),
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: _loadInventory,
-                  child: filteredInventory.isEmpty 
-                    ? _buildEmptyState()
-                    : _buildInventoryList(filteredInventory),
+                  child: filteredInventory.isEmpty
+                      ? _buildEmptyState()
+                      : _buildInventoryList(filteredInventory),
                 ),
               ),
             ],
           );
         },
       ),
-      floatingActionButton: _selectedItems.isEmpty ? FloatingActionButton(
-        onPressed: _navigateToCreateInventory,
-        backgroundColor: AppTheme.primary,
-        child: const Icon(Icons.add, color: Colors.white),
-      ) : null,
+      floatingActionButton: _selectedItems.isEmpty
+          ? FloatingActionButton(
+              onPressed: _navigateToCreateInventory,
+              backgroundColor: AppTheme.primary,
+              child: const Icon(Icons.add, color: Colors.white),
+            )
+          : null,
     );
   }
 
@@ -254,13 +270,14 @@ class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInve
                 hintStyle: TextStyle(color: AppTheme.earth),
                 prefixIcon: Icon(Icons.search, color: AppTheme.earth),
                 border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 16),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 0, vertical: 16),
               ),
               onChanged: (value) => setState(() {}),
             ),
           ),
           const SizedBox(height: 16),
-          
+
           // Filters Row
           Row(
             children: [
@@ -271,7 +288,8 @@ class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInve
                   decoration: BoxDecoration(
                     color: AppTheme.glass,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppTheme.earthLight.withOpacity(0.3)),
+                    border:
+                        Border.all(color: AppTheme.earthLight.withOpacity(0.3)),
                   ),
                   child: DropdownButton<String>(
                     value: _selectedCategory,
@@ -281,30 +299,35 @@ class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInve
                       'Category',
                       style: TextStyle(color: AppTheme.earth),
                     ),
-                    items: categories.map((category) => DropdownMenuItem(
-                      value: category,
-                      child: Text(
-                        category,
-                        style: TextStyle(color: AppTheme.textPrimary),
-                      ),
-                    )).toList(),
-                    onChanged: (value) => setState(() => _selectedCategory = value ?? 'All'),
+                    items: categories
+                        .map((category) => DropdownMenuItem(
+                              value: category,
+                              child: Text(
+                                category,
+                                style: TextStyle(color: AppTheme.textPrimary),
+                              ),
+                            ))
+                        .toList(),
+                    onChanged: (value) =>
+                        setState(() => _selectedCategory = value ?? 'All'),
                   ),
                 ),
               ),
               const SizedBox(width: 12),
-              
+
               // Low Stock Filter
               FilterChip(
                 label: Text(
                   'Low Stock',
                   style: TextStyle(
-                    color: _showLowStockOnly ? Colors.white : AppTheme.secondary,
+                    color:
+                        _showLowStockOnly ? Colors.white : AppTheme.secondary,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 selected: _showLowStockOnly,
-                onSelected: (selected) => setState(() => _showLowStockOnly = selected),
+                onSelected: (selected) =>
+                    setState(() => _showLowStockOnly = selected),
                 selectedColor: AppTheme.secondary,
                 backgroundColor: AppTheme.secondary.withOpacity(0.1),
                 checkmarkColor: Colors.white,
@@ -326,14 +349,16 @@ class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInve
       itemBuilder: (context, index) {
         final item = inventory[index];
         final isSelected = _selectedItems.contains(item.id);
-        
+
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
           decoration: BoxDecoration(
             color: AppTheme.glass,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: isSelected ? AppTheme.primary : AppTheme.earthLight.withOpacity(0.3),
+              color: isSelected
+                  ? AppTheme.primary
+                  : AppTheme.earthLight.withOpacity(0.3),
               width: isSelected ? 2 : 1,
             ),
             boxShadow: [
@@ -346,9 +371,9 @@ class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInve
           ),
           child: InkWell(
             borderRadius: BorderRadius.circular(20),
-            onTap: () => _selectedItems.isEmpty 
-              ? _navigateToInventoryDetail(item.id)
-              : _toggleSelection(item.id),
+            onTap: () => _selectedItems.isEmpty
+                ? _navigateToInventoryDetail(item.id)
+                : _toggleSelection(item.id),
             onLongPress: () => _toggleSelection(item.id),
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -360,9 +385,12 @@ class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInve
                       width: 20,
                       height: 20,
                       decoration: BoxDecoration(
-                        color: isSelected ? AppTheme.primary : Colors.transparent,
+                        color:
+                            isSelected ? AppTheme.primary : Colors.transparent,
                         border: Border.all(
-                          color: isSelected ? AppTheme.primary : AppTheme.earthLight,
+                          color: isSelected
+                              ? AppTheme.primary
+                              : AppTheme.earthLight,
                           width: 2,
                         ),
                         borderRadius: BorderRadius.circular(4),
@@ -377,7 +405,7 @@ class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInve
                     ),
                     const SizedBox(width: 12),
                   ],
-                  
+
                   // Product Image
                   Container(
                     width: 60,
@@ -386,27 +414,29 @@ class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInve
                       borderRadius: BorderRadius.circular(12),
                       color: AppTheme.whiteSmoke,
                     ),
-                    child: item.displayImageUrl != null && item.displayImageUrl!.isNotEmpty
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.network(
-                            item.displayImageUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Icon(
-                              Icons.inventory_2_outlined,
-                              color: AppTheme.earth,
-                              size: 24,
+                    child: item.displayImageUrl != null &&
+                            item.displayImageUrl!.isNotEmpty
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              item.displayImageUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Icon(
+                                Icons.inventory_2_outlined,
+                                color: AppTheme.earth,
+                                size: 24,
+                              ),
                             ),
+                          )
+                        : Icon(
+                            Icons.inventory_2_outlined,
+                            color: AppTheme.earth,
+                            size: 24,
                           ),
-                        )
-                      : Icon(
-                          Icons.inventory_2_outlined,
-                          color: AppTheme.earth,
-                          size: 24,
-                        ),
                   ),
                   const SizedBox(width: 16),
-                  
+
                   // Product Details
                   Expanded(
                     child: Column(
@@ -460,7 +490,7 @@ class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInve
                       ],
                     ),
                   ),
-                  
+
                   // Action Menu
                   if (_selectedItems.isEmpty)
                     Container(
@@ -530,9 +560,11 @@ class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInve
                             value: 'delete',
                             child: Row(
                               children: [
-                                Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                                Icon(Icons.delete_outline,
+                                    size: 18, color: Colors.red),
                                 SizedBox(width: 12),
-                                Text('Delete', style: TextStyle(color: Colors.red)),
+                                Text('Delete',
+                                    style: TextStyle(color: Colors.red)),
                               ],
                             ),
                           ),
@@ -549,12 +581,13 @@ class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInve
   }
 
   Widget _buildStatusChip(BusinessInventory item) {
-    final isLowStock = item.availableQuantity <= 10; // Consider less than 10 as low stock
+    final isLowStock =
+        item.availableQuantity <= 10; // Consider less than 10 as low stock
     final isOutOfStock = item.availableQuantity == 0;
-    
+
     Color chipColor;
     String statusText;
-    
+
     if (isOutOfStock) {
       chipColor = AppTheme.secondary;
       statusText = 'Out of Stock';
@@ -565,7 +598,7 @@ class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInve
       chipColor = AppTheme.primary;
       statusText = '${item.availableQuantity} in stock';
     }
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -622,7 +655,7 @@ class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInve
         const SizedBox(width: 4),
         Expanded(
           child: Text(
-            totalStores == 1 
+            totalStores == 1
                 ? '${stores.first.allocatedQuantity} units in ${stores.first.storeName}'
                 : '$totalAllocated units in $totalStores stores',
             style: TextStyle(
@@ -718,7 +751,8 @@ class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInve
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primary,
                   elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -769,7 +803,7 @@ class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInve
         break;
       case 'edit':
         Navigator.pushNamed(
-          context, 
+          context,
           AppRoutes.editInventory,
           arguments: {'inventory': item},
         );
@@ -788,7 +822,8 @@ class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInve
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Inventory Item'),
-        content: Text('Are you sure you want to delete "${item.productName}"? This action cannot be undone.'),
+        content: Text(
+            'Are you sure you want to delete "${item.productName}"? This action cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -799,7 +834,8 @@ class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInve
               Navigator.pop(context);
               _deleteItem(item.id);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.secondary),
+            style:
+                ElevatedButton.styleFrom(backgroundColor: AppTheme.secondary),
             child: const Text('Delete'),
           ),
         ],
@@ -812,7 +848,8 @@ class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInve
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Selected Items'),
-        content: Text('Are you sure you want to delete ${_selectedItems.length} selected items? This action cannot be undone.'),
+        content: Text(
+            'Are you sure you want to delete ${_selectedItems.length} selected items? This action cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -823,7 +860,8 @@ class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInve
               Navigator.pop(context);
               _deleteBulkItems();
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.secondary),
+            style:
+                ElevatedButton.styleFrom(backgroundColor: AppTheme.secondary),
             child: const Text('Delete All'),
           ),
         ],
@@ -854,8 +892,8 @@ class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInve
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            ...['name', 'quantity', 'value', 'updated'].map((option) => 
-              ListTile(
+            ...['name', 'quantity', 'value', 'updated'].map(
+              (option) => ListTile(
                 title: Text(_getSortLabel(option)),
                 leading: Radio<String>(
                   value: option,
@@ -865,13 +903,17 @@ class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInve
                     Navigator.pop(context);
                   },
                 ),
-                trailing: _sortBy == option ? IconButton(
-                  icon: Icon(_isAscending ? Icons.arrow_upward : Icons.arrow_downward),
-                  onPressed: () {
-                    setState(() => _isAscending = !_isAscending);
-                    Navigator.pop(context);
-                  },
-                ) : null,
+                trailing: _sortBy == option
+                    ? IconButton(
+                        icon: Icon(_isAscending
+                            ? Icons.arrow_upward
+                            : Icons.arrow_downward),
+                        onPressed: () {
+                          setState(() => _isAscending = !_isAscending);
+                          Navigator.pop(context);
+                        },
+                      )
+                    : null,
               ),
             ),
           ],
@@ -928,11 +970,16 @@ class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInve
 
   String _getSortLabel(String sortKey) {
     switch (sortKey) {
-      case 'name': return 'Product Name';
-      case 'quantity': return 'Available Quantity';
-      case 'value': return 'Total Value';
-      case 'updated': return 'Last Updated';
-      default: return sortKey;
+      case 'name':
+        return 'Product Name';
+      case 'quantity':
+        return 'Available Quantity';
+      case 'value':
+        return 'Total Value';
+      case 'updated':
+        return 'Last Updated';
+      default:
+        return sortKey;
     }
   }
 
@@ -954,7 +1001,9 @@ class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInve
     try {
       // TODO: Implement bulk delete functionality via service
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${_selectedItems.length} items deleted successfully')),
+        SnackBar(
+            content:
+                Text('${_selectedItems.length} items deleted successfully')),
       );
       setState(() => _selectedItems.clear());
       _loadInventory(); // Refresh the list
@@ -970,7 +1019,7 @@ class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInve
       text: item.costPrice.toStringAsFixed(2),
     );
     final reasonController = TextEditingController();
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -1029,7 +1078,8 @@ class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInve
             const SizedBox(height: 16),
             TextField(
               controller: costController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
               decoration: InputDecoration(
                 labelText: 'New Cost Price (NGN)',
                 hintText: 'Enter new cost price',
@@ -1050,7 +1100,8 @@ class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInve
               decoration: InputDecoration(
                 labelText: 'Reason for Change',
                 hintText: 'e.g., Supplier price increase, Market adjustment',
-                prefixIcon: Icon(Icons.comment_outlined, color: AppTheme.primary),
+                prefixIcon:
+                    Icon(Icons.comment_outlined, color: AppTheme.primary),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -1096,23 +1147,24 @@ class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInve
     String reason,
   ) async {
     final newCostPrice = double.tryParse(newCostPriceText);
-    
+
     if (newCostPrice == null || newCostPrice <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a valid cost price')),
       );
       return;
     }
-    
+
     if (reason.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please provide a reason for the price change')),
+        const SnackBar(
+            content: Text('Please provide a reason for the price change')),
       );
       return;
     }
-    
+
     Navigator.pop(context); // Close dialog
-    
+
     try {
       final updateNotifier = ref.read(businessInventoryUpdateProvider);
       await updateNotifier.updateCostPrice(
@@ -1120,14 +1172,14 @@ class _BusinessInventoryManagementScreenState extends ConsumerState<BusinessInve
         newCostPrice: newCostPrice,
         changeReason: reason.trim(),
       );
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Cost price updated successfully'),
           backgroundColor: Colors.green,
         ),
       );
-      
+
       _loadInventory(); // Refresh the list
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(

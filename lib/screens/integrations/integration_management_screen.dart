@@ -854,11 +854,11 @@ class _IntegrationManagementScreenState
                                             case 'facebook_pages':
                                               Navigator.pushNamed(
                                                 context,
-                                                AppRoutes
-                                                    .facebookPagesIntegration,
+                                                AppRoutes.facebookDashboard,
                                                 arguments: {
                                                   'integrationId':
-                                                      integration.id
+                                                      integration.id,
+                                                  'initialTab': 0,
                                                 },
                                               );
                                               break;
@@ -875,10 +875,11 @@ class _IntegrationManagementScreenState
                                             case 'facebook':
                                               Navigator.pushNamed(
                                                 context,
-                                                AppRoutes.facebookIntegration,
+                                                AppRoutes.facebookDashboard,
                                                 arguments: {
                                                   'integrationId':
-                                                      integration.id
+                                                      integration.id,
+                                                  'initialTab': 0,
                                                 },
                                               );
                                               break;

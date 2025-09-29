@@ -44,7 +44,7 @@ export class FacebookController {
     @Query('pageId') pageId?: string,
   ) {
     try {
-      return await this.metaIntegrationService.getPagePosts(integrationId, pageId, limit || 25);
+      return await this.metaIntegrationService.getPagePostsByIntegration(integrationId, pageId, limit || 25);
     } catch (error) {
       throw new HttpException(
         `Failed to get page posts: ${error.message}`,

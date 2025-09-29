@@ -50,7 +50,8 @@ class BusinessInventory {
   final Map<String, dynamic>? purchaseDetails;
   final String? displayImageUrl;
   final String? notes;
-  final Map<String, StoreDistribution>? storeDistribution; // Store allocation details
+  final Map<String, StoreDistribution>?
+      storeDistribution; // Store allocation details
   final DateTime createdAt;
   final DateTime updatedAt;
   final String status;
@@ -78,9 +79,10 @@ class BusinessInventory {
     required this.status,
   });
 
-  factory BusinessInventory.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
+  factory BusinessInventory.fromFirestore(
+      DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data()!;
-    
+
     // Parse store distribution
     Map<String, StoreDistribution>? storeDistribution;
     if (data['storeDistribution'] != null) {
@@ -92,7 +94,7 @@ class BusinessInventory {
         ),
       );
     }
-    
+
     return BusinessInventory(
       id: doc.id,
       businessId: data['businessId'] ?? '',
@@ -125,7 +127,7 @@ class BusinessInventory {
         (key, value) => MapEntry(key, value.toMap()),
       );
     }
-    
+
     return {
       'businessId': businessId,
       'productId': productId,
@@ -196,17 +198,17 @@ class BusinessInventory {
 
   bool get isLowStock => availableQuantity <= 10; // Configurable threshold
   bool get isOutOfStock => availableQuantity <= 0;
-  
+
   /// Get total quantity allocated to stores
   int get totalAllocatedQuantity {
     if (storeDistribution == null) return 0;
     return storeDistribution!.values
         .fold(0, (sum, distribution) => sum + distribution.allocatedQuantity);
   }
-  
+
   /// Get number of stores this item is distributed to
   int get numberOfStores => storeDistribution?.length ?? 0;
-  
+
   /// Get list of store names where this item is available
   List<String> get storeNames {
     if (storeDistribution == null) return [];
@@ -214,12 +216,12 @@ class BusinessInventory {
         .map((distribution) => distribution.storeName)
         .toList();
   }
-  
+
   /// Check if item is available in a specific store
   bool isAvailableInStore(String storeId) {
     return storeDistribution?.containsKey(storeId) ?? false;
   }
-  
+
   /// Get quantity in a specific store
   int getQuantityInStore(String storeId) {
     return storeDistribution?[storeId]?.allocatedQuantity ?? 0;

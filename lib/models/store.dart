@@ -1,7 +1,7 @@
 class Store {
   final String id;
-  final String businessId;   // renamed from vendorId
-  final String ownerId;      // now required
+  final String businessId; // renamed from vendorId
+  final String ownerId; // now required
   final String name;
   final String address;
   final String contactPerson;
@@ -32,7 +32,9 @@ class Store {
     this.coverImageUrl,
     this.description,
     this.phone,
-    this.email, required bool isDeleted, required bool isVerified,
+    this.email,
+    required bool isDeleted,
+    required bool isVerified,
     this.type,
     this.platform,
   });
@@ -77,7 +79,7 @@ class Store {
       email: map['email'] as String?,
       type: map['type'] as String?,
       platform: map['platform'] as String?,
-      isDeleted: map['isDeleted'] as bool? ?? false,  
+      isDeleted: map['isDeleted'] as bool? ?? false,
       isVerified: map['isVerified'] as bool? ?? false,
     );
   }
@@ -119,7 +121,7 @@ class Store {
       email: email ?? this.email,
       type: type ?? this.type,
       platform: platform ?? this.platform,
-      isDeleted: false,  // Assuming copy does not change deletion status
+      isDeleted: false, // Assuming copy does not change deletion status
       isVerified: false, // Assuming copy does not change verification status
     );
   }

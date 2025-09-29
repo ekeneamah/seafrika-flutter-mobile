@@ -26,36 +26,38 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _defaultPasswordController = TextEditingController();
-  
+
   // Personal attributes controllers
   final _dateOfBirthController = TextEditingController();
   final _weddingAnniversaryController = TextEditingController();
   final _addressController = TextEditingController();
   final _hobbiesController = TextEditingController();
   final _notesController = TextEditingController();
-  
+
   // Focus nodes for managing keyboard navigation
   final _firstNameFocusNode = FocusNode();
   final _lastNameFocusNode = FocusNode();
   final _emailFocusNode = FocusNode();
   final _phoneFocusNode = FocusNode();
   final _defaultPasswordFocusNode = FocusNode();
-  
+
   // Personal attributes focus nodes
   final _dateOfBirthFocusNode = FocusNode();
   final _weddingAnniversaryFocusNode = FocusNode();
   final _addressFocusNode = FocusNode();
   final _hobbiesFocusNode = FocusNode();
   final _notesFocusNode = FocusNode();
-  
+
   late AnimationController _fadeController;
   late AnimationController _slideController;
   late AnimationController _validationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _validationAnimation;
-  
-  final Set<app_models.UserRole> _selectedRoles = {app_models.UserRole.staff}; // Default role
+
+  final Set<app_models.UserRole> _selectedRoles = {
+    app_models.UserRole.staff
+  }; // Default role
   bool _isLoading = false;
   bool _obscureDefaultPassword = true;
   bool _isPersonalDetailsExpanded = false; // Accordion state
@@ -120,10 +122,10 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
 
   void _validateFirstNameRealTime() {
     final value = _firstNameController.text.trim();
-    final isValid = value.isNotEmpty && 
-        value.length >= 2 && 
+    final isValid = value.isNotEmpty &&
+        value.length >= 2 &&
         RegExp(r'^[a-zA-Z\s]+$').hasMatch(value);
-    
+
     if (_isFirstNameValid != isValid) {
       setState(() => _isFirstNameValid = isValid);
       _checkFormValidity();
@@ -132,10 +134,10 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
 
   void _validateLastNameRealTime() {
     final value = _lastNameController.text.trim();
-    final isValid = value.isNotEmpty && 
-        value.length >= 2 && 
+    final isValid = value.isNotEmpty &&
+        value.length >= 2 &&
         RegExp(r'^[a-zA-Z\s]+$').hasMatch(value);
-    
+
     if (_isLastNameValid != isValid) {
       setState(() => _isLastNameValid = isValid);
       _checkFormValidity();
@@ -144,9 +146,9 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
 
   void _validateEmailRealTime() {
     final value = _emailController.text.trim();
-    final isValid = value.isNotEmpty && 
+    final isValid = value.isNotEmpty &&
         RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value);
-    
+
     if (_isEmailValid != isValid) {
       setState(() => _isEmailValid = isValid);
       _checkFormValidity();
@@ -156,8 +158,9 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
   void _validatePhoneRealTime() {
     final value = _phoneController.text.trim();
     // Phone number is optional, so empty is valid
-    final isValid = value.isEmpty || RegExp(r'^\+?[\d\s\-\(\)]+$').hasMatch(value);
-    
+    final isValid =
+        value.isEmpty || RegExp(r'^\+?[\d\s\-\(\)]+$').hasMatch(value);
+
     if (_isPhoneValid != isValid) {
       setState(() => _isPhoneValid = isValid);
       _checkFormValidity();
@@ -167,7 +170,7 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
   void _validateDefaultPasswordRealTime() {
     final value = _defaultPasswordController.text;
     final isValid = value.isNotEmpty && value.length >= 6;
-    
+
     if (_isDefaultPasswordValid != isValid) {
       setState(() => _isDefaultPasswordValid = isValid);
       _checkFormValidity();
@@ -177,12 +180,13 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
   // Removed password validation methods
 
   void _checkFormValidity() {
-    final isValid = _isFirstNameValid && 
-                   _isLastNameValid && 
-                   _isEmailValid && 
-                   _isPhoneValid &&
-                   (widget.user != null || _isDefaultPasswordValid); // Password optional in edit mode
-    
+    final isValid = _isFirstNameValid &&
+        _isLastNameValid &&
+        _isEmailValid &&
+        _isPhoneValid &&
+        (widget.user != null ||
+            _isDefaultPasswordValid); // Password optional in edit mode
+
     if (_isFormValid != isValid) {
       setState(() => _isFormValid = isValid);
       if (isValid) {
@@ -200,28 +204,28 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
       _lastNameController.text = user.lastName;
       _emailController.text = user.email;
       _phoneController.text = user.phone ?? '';
-      
+
       // Populate personal details
-      _dateOfBirthController.text = user.dateOfBirth != null 
+      _dateOfBirthController.text = user.dateOfBirth != null
           ? DateFormat('MMM dd, yyyy').format(user.dateOfBirth!)
           : '';
-      _weddingAnniversaryController.text = user.weddingAnniversary != null 
+      _weddingAnniversaryController.text = user.weddingAnniversary != null
           ? DateFormat('MMM dd, yyyy').format(user.weddingAnniversary!)
           : '';
       _addressController.text = user.address ?? '';
       _hobbiesController.text = user.hobbies ?? '';
       _notesController.text = user.notes ?? '';
-      
+
       // Set the selected roles
       _selectedRoles.clear();
       _selectedRoles.addAll(user.roles);
-      
+
       // Validate the pre-populated fields
       _validateFirstNameRealTime();
       _validateLastNameRealTime();
       _validateEmailRealTime();
       _validatePhoneRealTime();
-      
+
       // For edit mode, we don't require password validation
       _isDefaultPasswordValid = true;
       _checkFormValidity();
@@ -235,14 +239,14 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
     _emailController.dispose();
     _phoneController.dispose();
     _defaultPasswordController.dispose();
-    
+
     // Personal details controllers
     _dateOfBirthController.dispose();
     _weddingAnniversaryController.dispose();
     _addressController.dispose();
     _hobbiesController.dispose();
     _notesController.dispose();
-    
+
     _fadeController.dispose();
     _slideController.dispose();
     _validationController.dispose();
@@ -251,14 +255,14 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
     _emailFocusNode.dispose();
     _phoneFocusNode.dispose();
     _defaultPasswordFocusNode.dispose();
-    
+
     // Personal details focus nodes
     _dateOfBirthFocusNode.dispose();
     _weddingAnniversaryFocusNode.dispose();
     _addressFocusNode.dispose();
     _hobbiesFocusNode.dispose();
     _notesFocusNode.dispose();
-    
+
     super.dispose();
   }
 
@@ -276,7 +280,7 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
 
     try {
       final userService = ref.read(userServiceProvider);
-      
+
       if (widget.user != null) {
         // Edit mode - update existing user
         await userService.updateUser(
@@ -284,18 +288,27 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
           firstName: _firstNameController.text.trim(),
           lastName: _lastNameController.text.trim(),
           email: _emailController.text.trim(),
-          phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
+          phone: _phoneController.text.trim().isEmpty
+              ? null
+              : _phoneController.text.trim(),
           roles: _selectedRoles.toList(),
           // Personal details
-          dateOfBirth: _dateOfBirthController.text.isEmpty 
-              ? null 
+          dateOfBirth: _dateOfBirthController.text.isEmpty
+              ? null
               : DateFormat('MMM dd, yyyy').parse(_dateOfBirthController.text),
-          weddingAnniversary: _weddingAnniversaryController.text.isEmpty 
-              ? null 
-              : DateFormat('MMM dd, yyyy').parse(_weddingAnniversaryController.text),
-          address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
-          hobbies: _hobbiesController.text.trim().isEmpty ? null : _hobbiesController.text.trim(),
-          notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+          weddingAnniversary: _weddingAnniversaryController.text.isEmpty
+              ? null
+              : DateFormat('MMM dd, yyyy')
+                  .parse(_weddingAnniversaryController.text),
+          address: _addressController.text.trim().isEmpty
+              ? null
+              : _addressController.text.trim(),
+          hobbies: _hobbiesController.text.trim().isEmpty
+              ? null
+              : _hobbiesController.text.trim(),
+          notes: _notesController.text.trim().isEmpty
+              ? null
+              : _notesController.text.trim(),
         );
 
         if (!mounted) return;
@@ -318,7 +331,8 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
             ),
             backgroundColor: AppTheme.accent,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
             duration: const Duration(seconds: 2),
           ),
@@ -326,11 +340,10 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
 
         // Navigate back
         Navigator.pop(context);
-
       } else {
         // Create mode - create new user
-        final auth = FirebaseAuth.instance;  // Get FirebaseAuth instance
-        
+        final auth = FirebaseAuth.instance; // Get FirebaseAuth instance
+
         // Create the user using the new method
         final user = await userService.addBusinessUser(
           email: _emailController.text.trim(),
@@ -339,19 +352,28 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
           defaultPassword: _defaultPasswordController.text,
           roles: _selectedRoles.toList(),
           teamIds: [], // Empty array for now, can be populated later
-          phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
+          phone: _phoneController.text.trim().isEmpty
+              ? null
+              : _phoneController.text.trim(),
           profileImage: null, // Can be added later
           auth: auth,
           // Personal details
-          dateOfBirth: _dateOfBirthController.text.isEmpty 
-              ? null 
+          dateOfBirth: _dateOfBirthController.text.isEmpty
+              ? null
               : DateFormat('MMM dd, yyyy').parse(_dateOfBirthController.text),
-          weddingAnniversary: _weddingAnniversaryController.text.isEmpty 
-              ? null 
-              : DateFormat('MMM dd, yyyy').parse(_weddingAnniversaryController.text),
-          address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
-          hobbies: _hobbiesController.text.trim().isEmpty ? null : _hobbiesController.text.trim(),
-          notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+          weddingAnniversary: _weddingAnniversaryController.text.isEmpty
+              ? null
+              : DateFormat('MMM dd, yyyy')
+                  .parse(_weddingAnniversaryController.text),
+          address: _addressController.text.trim().isEmpty
+              ? null
+              : _addressController.text.trim(),
+          hobbies: _hobbiesController.text.trim().isEmpty
+              ? null
+              : _hobbiesController.text.trim(),
+          notes: _notesController.text.trim().isEmpty
+              ? null
+              : _notesController.text.trim(),
         );
 
         if (!mounted) return;
@@ -374,7 +396,8 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
             ),
             backgroundColor: AppTheme.accent,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
             duration: const Duration(seconds: 2),
           ),
@@ -393,25 +416,27 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
           },
         );
       }
-
     } catch (e) {
       if (!mounted) return;
-      
+
       String errorMessage = 'Failed to create user';
-      
+
       // Extract user-friendly message from exception
       if (e.toString().contains('permission-denied')) {
-        errorMessage = 'Permission denied. Check your Firestore security rules and ensure you have proper permissions.';
+        errorMessage =
+            'Permission denied. Check your Firestore security rules and ensure you have proper permissions.';
       } else if (e.toString().contains('email already exists')) {
-        errorMessage = 'A user with this email already exists in this business.';
+        errorMessage =
+            'A user with this email already exists in this business.';
       } else if (e.toString().contains('network')) {
-        errorMessage = 'Network error. Please check your internet connection and try again.';
+        errorMessage =
+            'Network error. Please check your internet connection and try again.';
       } else {
         // Get the error message without the Exception prefix
         final message = e.toString().replaceAll('Exception: ', '');
         errorMessage = message;
       }
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -448,7 +473,8 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
   }
 
   // Helper method for date selection
-  Future<void> _selectDate(BuildContext context, TextEditingController controller) async {
+  Future<void> _selectDate(
+      BuildContext context, TextEditingController controller) async {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
@@ -468,23 +494,23 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
         );
       },
     );
-    
+
     if (picked != null) {
       controller.text = DateFormat('MMM dd, yyyy').format(picked);
     }
   }
-  
+
   // Responsive helper methods
   double _getHorizontalPadding(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     if (screenWidth > 1200) return 32.0; // Desktop
-    if (screenWidth > 800) return 24.0;  // Tablet
+    if (screenWidth > 800) return 24.0; // Tablet
     return 16.0; // Mobile
   }
 
   double _getCardPadding(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    if (screenWidth > 800) return 24.0;  // Tablet/Desktop
+    if (screenWidth > 800) return 24.0; // Tablet/Desktop
     return 16.0; // Mobile
   }
 
@@ -513,7 +539,7 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
       builder: (context, constraints) {
         // We only need cardPadding here
         final cardPadding = _getCardPadding(context);
-        
+
         return Container(
           width: double.infinity,
           margin: margin ?? EdgeInsets.symmetric(horizontal: 0, vertical: 8),
@@ -550,7 +576,7 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
     return LayoutBuilder(
       builder: (context, constraints) {
         final iconSize = _getIconSize(context);
-        
+
         return AnimatedSwitcher(
           duration: const Duration(milliseconds: 250),
           transitionBuilder: (Widget child, Animation<double> animation) {
@@ -619,7 +645,7 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
     return LayoutBuilder(
       builder: (context, constraints) {
         final horizontalPadding = _getHorizontalPadding(context);
-        
+
         return Column(
           children: [
             _buildRequiredFieldsCard(constraints, horizontalPadding),
@@ -631,11 +657,12 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
     );
   }
 
-  Widget _buildRequiredFieldsCard(BoxConstraints constraints, double horizontalPadding) {
+  Widget _buildRequiredFieldsCard(
+      BoxConstraints constraints, double horizontalPadding) {
     final shouldStack = _shouldStackFields(context);
     final iconSize = _getIconSize(context);
     final fontSize = _getFontSize(context, 18);
-    
+
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
       child: _buildModernCard(
@@ -681,7 +708,8 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
                               ),
                               const SizedBox(width: 8),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
                                   color: AppTheme.secondary.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(8),
@@ -730,7 +758,8 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
                           ),
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: AppTheme.secondary.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(8),
@@ -762,9 +791,12 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
                           keyboardType: TextInputType.name,
                           textCapitalization: TextCapitalization.words,
                           textInputAction: TextInputAction.next,
-                          prefixIcon: Icon(Icons.person_outline, color: AppTheme.primary),
-                          onSubmitted: (_) => FocusScope.of(context).requestFocus(_lastNameFocusNode),
-                          suffixIcon: _buildSuffixIcon(isValid: _isFirstNameValid),
+                          prefixIcon: Icon(Icons.person_outline,
+                              color: AppTheme.primary),
+                          onSubmitted: (_) => FocusScope.of(context)
+                              .requestFocus(_lastNameFocusNode),
+                          suffixIcon:
+                              _buildSuffixIcon(isValid: _isFirstNameValid),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Please enter first name';
@@ -783,9 +815,12 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
                           keyboardType: TextInputType.name,
                           textCapitalization: TextCapitalization.words,
                           textInputAction: TextInputAction.next,
-                          prefixIcon: Icon(Icons.person_outline, color: AppTheme.primary),
-                          onSubmitted: (_) => FocusScope.of(context).requestFocus(_emailFocusNode),
-                          suffixIcon: _buildSuffixIcon(isValid: _isLastNameValid),
+                          prefixIcon: Icon(Icons.person_outline,
+                              color: AppTheme.primary),
+                          onSubmitted: (_) => FocusScope.of(context)
+                              .requestFocus(_emailFocusNode),
+                          suffixIcon:
+                              _buildSuffixIcon(isValid: _isLastNameValid),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Please enter last name';
@@ -808,9 +843,12 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
                             keyboardType: TextInputType.name,
                             textCapitalization: TextCapitalization.words,
                             textInputAction: TextInputAction.next,
-                            prefixIcon: Icon(Icons.person_outline, color: AppTheme.primary),
-                            onSubmitted: (_) => FocusScope.of(context).requestFocus(_lastNameFocusNode),
-                            suffixIcon: _buildSuffixIcon(isValid: _isFirstNameValid),
+                            prefixIcon: Icon(Icons.person_outline,
+                                color: AppTheme.primary),
+                            onSubmitted: (_) => FocusScope.of(context)
+                                .requestFocus(_lastNameFocusNode),
+                            suffixIcon:
+                                _buildSuffixIcon(isValid: _isFirstNameValid),
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'Please enter first name';
@@ -831,9 +869,12 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
                             keyboardType: TextInputType.name,
                             textCapitalization: TextCapitalization.words,
                             textInputAction: TextInputAction.next,
-                            prefixIcon: Icon(Icons.person_outline, color: AppTheme.primary),
-                            onSubmitted: (_) => FocusScope.of(context).requestFocus(_emailFocusNode),
-                            suffixIcon: _buildSuffixIcon(isValid: _isLastNameValid),
+                            prefixIcon: Icon(Icons.person_outline,
+                                color: AppTheme.primary),
+                            onSubmitted: (_) => FocusScope.of(context)
+                                .requestFocus(_emailFocusNode),
+                            suffixIcon:
+                                _buildSuffixIcon(isValid: _isLastNameValid),
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'Please enter last name';
@@ -860,14 +901,18 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
                   label: 'Email',
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
-                  prefixIcon: Icon(Icons.email_outlined, color: AppTheme.primary),
-                  onSubmitted: (_) => FocusScope.of(context).requestFocus(_phoneFocusNode),
+                  prefixIcon:
+                      Icon(Icons.email_outlined, color: AppTheme.primary),
+                  onSubmitted: (_) =>
+                      FocusScope.of(context).requestFocus(_phoneFocusNode),
                   suffixIcon: _buildSuffixIcon(isValid: _isEmailValid),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter email';
                     }
-                    if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(value)) {
+                    if (!RegExp(
+                            r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+                        .hasMatch(value)) {
                       return 'Invalid email format';
                     }
                     return null;
@@ -886,11 +931,15 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
                   controller: _phoneController,
                   label: 'Phone Number',
                   keyboardType: TextInputType.phone,
-                  textInputAction: widget.user != null ? TextInputAction.done : TextInputAction.next,
-                  prefixIcon: Icon(Icons.phone_outlined, color: AppTheme.primary),
-                  onSubmitted: (_) => widget.user != null 
-                      ? _saveUser() 
-                      : FocusScope.of(context).requestFocus(_defaultPasswordFocusNode),
+                  textInputAction: widget.user != null
+                      ? TextInputAction.done
+                      : TextInputAction.next,
+                  prefixIcon:
+                      Icon(Icons.phone_outlined, color: AppTheme.primary),
+                  onSubmitted: (_) => widget.user != null
+                      ? _saveUser()
+                      : FocusScope.of(context)
+                          .requestFocus(_defaultPasswordFocusNode),
                   suffixIcon: _buildSuffixIcon(isValid: _isPhoneValid),
                   validator: (value) {
                     if (value != null && value.isNotEmpty) {
@@ -918,18 +967,22 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
                     keyboardType: TextInputType.visiblePassword,
                     textInputAction: TextInputAction.done,
                     textCapitalization: TextCapitalization.none,
-                    prefixIcon: Icon(Icons.lock_outline, color: AppTheme.secondary),
+                    prefixIcon:
+                        Icon(Icons.lock_outline, color: AppTheme.secondary),
                     onSubmitted: (_) => _saveUser(),
                     suffixIcon: _buildSuffixIcon(
                       isValid: _isDefaultPasswordValid,
                       actionButton: IconButton(
                         icon: Icon(
-                          _obscureDefaultPassword ? Icons.visibility_off : Icons.visibility,
+                          _obscureDefaultPassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
                           color: AppTheme.earth,
                           size: iconSize,
                         ),
                         onPressed: () {
-                          setState(() => _obscureDefaultPassword = !_obscureDefaultPassword);
+                          setState(() => _obscureDefaultPassword =
+                              !_obscureDefaultPassword);
                         },
                       ),
                     ),
@@ -953,10 +1006,11 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
     );
   }
 
-  Widget _buildOptionalFieldsCard(BoxConstraints constraints, double horizontalPadding) {
+  Widget _buildOptionalFieldsCard(
+      BoxConstraints constraints, double horizontalPadding) {
     final iconSize = _getIconSize(context);
     final fontSize = _getFontSize(context, 18);
-    
+
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
       child: _buildModernCard(
@@ -1001,7 +1055,8 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: AppTheme.earth.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
@@ -1029,14 +1084,14 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
                 ),
               ),
             ),
-            
+
             // Accordion Content
             AnimatedCrossFade(
               firstChild: const SizedBox.shrink(),
               secondChild: Column(
                 children: [
                   const SizedBox(height: 16),
-                  
+
                   // Date of Birth Field
                   ConstrainedBox(
                     constraints: BoxConstraints(
@@ -1047,15 +1102,17 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
                       label: 'Date of Birth',
                       keyboardType: TextInputType.datetime,
                       textInputAction: TextInputAction.next,
-                      prefixIcon: Icon(Icons.cake_outlined, color: AppTheme.primary),
-                      onSubmitted: (_) => FocusScope.of(context).requestFocus(_weddingAnniversaryFocusNode),
+                      prefixIcon:
+                          Icon(Icons.cake_outlined, color: AppTheme.primary),
+                      onSubmitted: (_) => FocusScope.of(context)
+                          .requestFocus(_weddingAnniversaryFocusNode),
                       focusNode: _dateOfBirthFocusNode,
                       onTap: () => _selectDate(context, _dateOfBirthController),
                       readOnly: true,
                     ),
                   ),
                   const SizedBox(height: 20),
-                  
+
                   // Wedding Anniversary Field
                   ConstrainedBox(
                     constraints: BoxConstraints(
@@ -1066,15 +1123,18 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
                       label: 'Wedding Anniversary',
                       keyboardType: TextInputType.datetime,
                       textInputAction: TextInputAction.next,
-                      prefixIcon: Icon(Icons.favorite_outline, color: AppTheme.primary),
-                      onSubmitted: (_) => FocusScope.of(context).requestFocus(_addressFocusNode),
+                      prefixIcon:
+                          Icon(Icons.favorite_outline, color: AppTheme.primary),
+                      onSubmitted: (_) => FocusScope.of(context)
+                          .requestFocus(_addressFocusNode),
                       focusNode: _weddingAnniversaryFocusNode,
-                      onTap: () => _selectDate(context, _weddingAnniversaryController),
+                      onTap: () =>
+                          _selectDate(context, _weddingAnniversaryController),
                       readOnly: true,
                     ),
                   ),
                   const SizedBox(height: 20),
-                  
+
                   // Address Field
                   ConstrainedBox(
                     constraints: BoxConstraints(
@@ -1086,14 +1146,16 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
                       keyboardType: TextInputType.streetAddress,
                       textInputAction: TextInputAction.next,
                       textCapitalization: TextCapitalization.words,
-                      prefixIcon: Icon(Icons.location_on_outlined, color: AppTheme.primary),
-                      onSubmitted: (_) => FocusScope.of(context).requestFocus(_hobbiesFocusNode),
+                      prefixIcon: Icon(Icons.location_on_outlined,
+                          color: AppTheme.primary),
+                      onSubmitted: (_) => FocusScope.of(context)
+                          .requestFocus(_hobbiesFocusNode),
                       focusNode: _addressFocusNode,
                       maxLines: 2,
                     ),
                   ),
                   const SizedBox(height: 20),
-                  
+
                   // Hobbies Field
                   ConstrainedBox(
                     constraints: BoxConstraints(
@@ -1105,14 +1167,16 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
                       keyboardType: TextInputType.text,
                       textInputAction: TextInputAction.next,
                       textCapitalization: TextCapitalization.sentences,
-                      prefixIcon: Icon(Icons.sports_esports_outlined, color: AppTheme.primary),
-                      onSubmitted: (_) => FocusScope.of(context).requestFocus(_notesFocusNode),
+                      prefixIcon: Icon(Icons.sports_esports_outlined,
+                          color: AppTheme.primary),
+                      onSubmitted: (_) =>
+                          FocusScope.of(context).requestFocus(_notesFocusNode),
                       focusNode: _hobbiesFocusNode,
                       maxLines: 2,
                     ),
                   ),
                   const SizedBox(height: 20),
-                  
+
                   // Notes Field
                   ConstrainedBox(
                     constraints: BoxConstraints(
@@ -1124,7 +1188,8 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
                       keyboardType: TextInputType.text,
                       textInputAction: TextInputAction.done,
                       textCapitalization: TextCapitalization.sentences,
-                      prefixIcon: Icon(Icons.note_outlined, color: AppTheme.primary),
+                      prefixIcon:
+                          Icon(Icons.note_outlined, color: AppTheme.primary),
                       onSubmitted: (_) => _saveUser(),
                       focusNode: _notesFocusNode,
                       maxLines: 3,
@@ -1132,8 +1197,8 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
                   ),
                 ],
               ),
-              crossFadeState: _isPersonalDetailsExpanded 
-                  ? CrossFadeState.showSecond 
+              crossFadeState: _isPersonalDetailsExpanded
+                  ? CrossFadeState.showSecond
                   : CrossFadeState.showFirst,
               duration: const Duration(milliseconds: 300),
             ),
@@ -1151,16 +1216,16 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
           builder: (context, constraints) {
             final fontSize = _getFontSize(context, 12);
             final iconSize = _getIconSize(context) - 4;
-            
+
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: _isFormValid 
+                color: _isFormValid
                     ? AppTheme.accent.withOpacity(0.1)
                     : AppTheme.earth.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: _isFormValid 
+                  color: _isFormValid
                       ? AppTheme.accent.withOpacity(0.3)
                       : AppTheme.earth.withOpacity(0.3),
                   width: 1,
@@ -1180,7 +1245,8 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
                       child: Text(
                         _isFormValid ? 'Ready' : 'Fill form',
                         style: TextStyle(
-                          color: _isFormValid ? AppTheme.accent : AppTheme.earth,
+                          color:
+                              _isFormValid ? AppTheme.accent : AppTheme.earth,
                           fontSize: fontSize,
                           fontWeight: FontWeight.w600,
                         ),
@@ -1203,7 +1269,7 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
         final horizontalPadding = _getHorizontalPadding(context);
         final iconSize = _getIconSize(context);
         final fontSize = _getFontSize(context, 18);
-        
+
         return Padding(
           padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
           child: _buildModernCard(
@@ -1261,7 +1327,7 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
                       final isSelected = _selectedRoles.contains(role);
                       final roleColor = _getRoleColor(role);
                       final isStaff = role == app_models.UserRole.staff;
-                      
+
                       return ConstrainedBox(
                         constraints: BoxConstraints(
                           maxWidth: constraints.maxWidth,
@@ -1282,7 +1348,8 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
                                   },
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 200),
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
                               decoration: BoxDecoration(
                                 color: isSelected
                                     ? roleColor.withOpacity(0.1)
@@ -1311,7 +1378,8 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
                                     isSelected
                                         ? Icons.check_circle
                                         : Icons.radio_button_unchecked,
-                                    color: isSelected ? roleColor : AppTheme.earth,
+                                    color:
+                                        isSelected ? roleColor : AppTheme.earth,
                                     size: iconSize - 2,
                                   ),
                                   const SizedBox(width: 6),
@@ -1319,9 +1387,12 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
                                     child: Text(
                                       _formatRoleName(role),
                                       style: TextStyle(
-                                        color: isSelected ? roleColor : AppTheme.earth,
-                                        fontWeight:
-                                            isSelected ? FontWeight.w600 : FontWeight.w500,
+                                        color: isSelected
+                                            ? roleColor
+                                            : AppTheme.earth,
+                                        fontWeight: isSelected
+                                            ? FontWeight.w600
+                                            : FontWeight.w500,
                                         fontSize: _getFontSize(context, 14),
                                       ),
                                       overflow: TextOverflow.ellipsis,
@@ -1364,7 +1435,7 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
         final horizontalPadding = _getHorizontalPadding(context);
         final iconSize = _getIconSize(context);
         final fontSize = _getFontSize(context, 16);
-        
+
         return Padding(
           padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
           child: _buildModernCard(
@@ -1392,10 +1463,11 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
                               : [],
                         ),
                         child: ElevatedButton(
-                          onPressed: (_isLoading || !_isFormValid) ? null : _saveUser,
+                          onPressed:
+                              (_isLoading || !_isFormValid) ? null : _saveUser,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: _isFormValid 
-                                ? AppTheme.primary 
+                            backgroundColor: _isFormValid
+                                ? AppTheme.primary
                                 : AppTheme.earth.withOpacity(0.5),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
@@ -1418,14 +1490,18 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(
-                                      _isFormValid ? Icons.save_outlined : Icons.edit_outlined,
+                                      _isFormValid
+                                          ? Icons.save_outlined
+                                          : Icons.edit_outlined,
                                       size: iconSize,
                                     ),
                                     const SizedBox(width: 8),
                                     Flexible(
                                       child: Text(
-                                        _isFormValid 
-                                            ? (widget.user != null ? 'Update User' : 'Create User') 
+                                        _isFormValid
+                                            ? (widget.user != null
+                                                ? 'Update User'
+                                                : 'Create User')
                                             : 'Complete Form First',
                                         style: TextStyle(
                                           fontWeight: FontWeight.w600,
@@ -1523,7 +1599,7 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
         ),
         leading: IconButton(
           icon: Icon(
-            Icons.arrow_back_ios, 
+            Icons.arrow_back_ios,
             color: AppTheme.textPrimary,
             size: _getIconSize(context),
           ),
@@ -1547,7 +1623,9 @@ class _CreateEditUserScreenState extends ConsumerState<CreateEditUserScreen>
                       _buildUserForm(),
                       _buildUserRoles(),
                       _buildSaveButton(),
-                      SizedBox(height: MediaQuery.of(context).viewInsets.bottom + 32),
+                      SizedBox(
+                          height:
+                              MediaQuery.of(context).viewInsets.bottom + 32),
                     ],
                   ),
                 ),

@@ -11,10 +11,12 @@ class BusinessOnboardingScreen extends ConsumerStatefulWidget {
   const BusinessOnboardingScreen({Key? key}) : super(key: key);
 
   @override
-  ConsumerState<BusinessOnboardingScreen> createState() => _BusinessOnboardingScreenState();
+  ConsumerState<BusinessOnboardingScreen> createState() =>
+      _BusinessOnboardingScreenState();
 }
 
-class _BusinessOnboardingScreenState extends ConsumerState<BusinessOnboardingScreen> {
+class _BusinessOnboardingScreenState
+    extends ConsumerState<BusinessOnboardingScreen> {
   int _currentStep = 0;
   List<Business> _userBusinesses = [];
   bool _isLoading = false;
@@ -31,7 +33,7 @@ class _BusinessOnboardingScreenState extends ConsumerState<BusinessOnboardingScr
       final authService = ref.read(authServiceProvider);
       final businessService = ref.read(businessServiceProvider);
       final user = authService.currentUser;
-      
+
       if (user != null) {
         final businesses = await businessService.getBusinessesByOwner(user.id);
         setState(() {
@@ -47,7 +49,8 @@ class _BusinessOnboardingScreenState extends ConsumerState<BusinessOnboardingScr
   }
 
   Future<void> _createNewBusiness() async {
-    final result = await NavigationService.navigateTo(AppRoutes.businessManagement);
+    final result =
+        await NavigationService.navigateTo(AppRoutes.businessManagement);
     if (result == true) {
       // Business was created successfully, reload the list
       await _loadUserBusinesses();
@@ -59,7 +62,7 @@ class _BusinessOnboardingScreenState extends ConsumerState<BusinessOnboardingScr
     try {
       final businessContext = ref.read(businessContextProvider.notifier);
       await businessContext.setSelectedBusiness(business);
-      
+
       // Navigate to main app
       NavigationService.navigateToAndClearStack(AppRoutes.home);
     } catch (e) {
@@ -102,16 +105,16 @@ class _BusinessOnboardingScreenState extends ConsumerState<BusinessOnboardingScr
               Text(
                 'Welcome to Vendor App!',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.primary,
-                ),
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primary,
+                    ),
               ),
               const SizedBox(height: 8),
               Text(
                 'Let\'s set up your business to get started',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: AppTheme.textSecondary,
-                ),
+                      color: AppTheme.textSecondary,
+                    ),
               ),
               const SizedBox(height: 32),
 
@@ -119,13 +122,16 @@ class _BusinessOnboardingScreenState extends ConsumerState<BusinessOnboardingScr
               LinearProgressIndicator(
                 value: (_currentStep + 1) / 2,
                 backgroundColor: Colors.grey[300],
-                valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primary),
+                valueColor:
+                    const AlwaysStoppedAnimation<Color>(AppTheme.primary),
               ),
               const SizedBox(height: 24),
 
               // Content based on current step
               Expanded(
-                child: _currentStep == 0 ? _buildCreateBusinessStep() : _buildSelectBusinessStep(),
+                child: _currentStep == 0
+                    ? _buildCreateBusinessStep()
+                    : _buildSelectBusinessStep(),
               ),
 
               // Bottom actions
@@ -152,8 +158,8 @@ class _BusinessOnboardingScreenState extends ConsumerState<BusinessOnboardingScr
           Text(
             'Create Your Business',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+                  fontWeight: FontWeight.bold,
+                ),
           ),
           const SizedBox(height: 16),
           Text(
@@ -161,15 +167,15 @@ class _BusinessOnboardingScreenState extends ConsumerState<BusinessOnboardingScr
             style: Theme.of(context).textTheme.bodyLarge,
           ),
           const SizedBox(height: 32),
-          
+
           // Features list
           _buildFeatureItem('Manage multiple stores and locations'),
           _buildFeatureItem('Track inventory and products'),
           _buildFeatureItem('Process orders and payments'),
           _buildFeatureItem('Analyze business performance'),
-          
+
           const SizedBox(height: 32),
-          
+
           // Create business button
           SizedBox(
             width: double.infinity,
@@ -196,8 +202,8 @@ class _BusinessOnboardingScreenState extends ConsumerState<BusinessOnboardingScr
         Text(
           'Select a Business',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+                fontWeight: FontWeight.bold,
+              ),
         ),
         const SizedBox(height: 16),
         Text(
@@ -205,7 +211,7 @@ class _BusinessOnboardingScreenState extends ConsumerState<BusinessOnboardingScr
           style: Theme.of(context).textTheme.bodyLarge,
         ),
         const SizedBox(height: 24),
-        
+
         Expanded(
           child: ListView.builder(
             itemCount: _userBusinesses.length,
@@ -217,7 +223,9 @@ class _BusinessOnboardingScreenState extends ConsumerState<BusinessOnboardingScr
                   leading: CircleAvatar(
                     backgroundColor: AppTheme.primary.withOpacity(0.1),
                     child: Text(
-                      business.name.isNotEmpty ? business.name[0].toUpperCase() : 'B',
+                      business.name.isNotEmpty
+                          ? business.name[0].toUpperCase()
+                          : 'B',
                       style: const TextStyle(
                         color: AppTheme.primary,
                         fontWeight: FontWeight.bold,
@@ -231,7 +239,8 @@ class _BusinessOnboardingScreenState extends ConsumerState<BusinessOnboardingScr
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (business.industry?.isNotEmpty == true) Text(business.industry!),
+                      if (business.industry?.isNotEmpty == true)
+                        Text(business.industry!),
                       if (business.country.isNotEmpty) Text(business.country),
                     ],
                   ),
@@ -242,7 +251,7 @@ class _BusinessOnboardingScreenState extends ConsumerState<BusinessOnboardingScr
             },
           ),
         ),
-        
+
         // Add another business button
         TextButton.icon(
           onPressed: _createNewBusiness,

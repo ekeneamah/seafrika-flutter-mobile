@@ -10,21 +10,23 @@ import 'dart:io';
 
 class FacebookPostCreatorScreen extends ConsumerStatefulWidget {
   final FacebookPage page;
-  
+
   const FacebookPostCreatorScreen({
     super.key,
     required this.page,
   });
 
   @override
-  ConsumerState<FacebookPostCreatorScreen> createState() => _FacebookPostCreatorScreenState();
+  ConsumerState<FacebookPostCreatorScreen> createState() =>
+      _FacebookPostCreatorScreenState();
 }
 
-class _FacebookPostCreatorScreenState extends ConsumerState<FacebookPostCreatorScreen> {
+class _FacebookPostCreatorScreenState
+    extends ConsumerState<FacebookPostCreatorScreen> {
   final _messageController = TextEditingController();
   final _linkController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  
+
   File? _selectedImage;
   File? _selectedVideo;
   bool _publishImmediately = true;
@@ -53,24 +55,24 @@ class _FacebookPostCreatorScreenState extends ConsumerState<FacebookPostCreatorS
             children: [
               // Page Info
               _buildPageInfo(),
-              
+
               const SizedBox(height: 24),
-              
+
               // Post Content
               _buildPostContent(),
-              
+
               const SizedBox(height: 24),
-              
+
               // Media Attachments
               _buildMediaSection(),
-              
+
               const SizedBox(height: 24),
-              
+
               // Additional Options
               _buildOptionsSection(),
-              
+
               const SizedBox(height: 32),
-              
+
               // Action Buttons
               _buildActionButtons(),
             ],
@@ -86,14 +88,19 @@ class _FacebookPostCreatorScreenState extends ConsumerState<FacebookPostCreatorS
       decoration: BoxDecoration(
         color: Theme.of(context).primaryColor.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Theme.of(context).primaryColor.withOpacity(0.3)),
+        border:
+            Border.all(color: Theme.of(context).primaryColor.withOpacity(0.3)),
       ),
       child: Row(
         children: [
           CircleAvatar(
             radius: 24,
-            backgroundImage: widget.page.picture != null ? NetworkImage(widget.page.picture!) : null,
-            child: widget.page.picture == null ? Text(widget.page.name[0].toUpperCase()) : null,
+            backgroundImage: widget.page.picture != null
+                ? NetworkImage(widget.page.picture!)
+                : null,
+            child: widget.page.picture == null
+                ? Text(widget.page.name[0].toUpperCase())
+                : null,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -102,10 +109,11 @@ class _FacebookPostCreatorScreenState extends ConsumerState<FacebookPostCreatorS
               children: [
                 Text(
                   widget.page.name,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  widget.page.category,
+                  widget.page.category ?? 'Business',
                   style: const TextStyle(fontSize: 14, color: Colors.grey),
                 ),
               ],
@@ -136,7 +144,6 @@ class _FacebookPostCreatorScreenState extends ConsumerState<FacebookPostCreatorS
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
-        
         TextFormField(
           controller: _messageController,
           decoration: const InputDecoration(
@@ -153,9 +160,7 @@ class _FacebookPostCreatorScreenState extends ConsumerState<FacebookPostCreatorS
             return null;
           },
         ),
-        
         const SizedBox(height: 16),
-        
         TextFormField(
           controller: _linkController,
           decoration: const InputDecoration(
@@ -179,7 +184,7 @@ class _FacebookPostCreatorScreenState extends ConsumerState<FacebookPostCreatorS
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
-        
+
         // Media Selection Buttons
         Row(
           children: [
@@ -200,9 +205,9 @@ class _FacebookPostCreatorScreenState extends ConsumerState<FacebookPostCreatorS
             ),
           ],
         ),
-        
+
         const SizedBox(height: 16),
-        
+
         // Selected Media Preview
         if (_selectedImage != null) _buildImagePreview(),
         if (_selectedVideo != null) _buildVideoPreview(),
@@ -287,7 +292,8 @@ class _FacebookPostCreatorScreenState extends ConsumerState<FacebookPostCreatorS
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(Icons.videocam, size: 32, color: Colors.grey),
-                    Text('Video Selected', style: TextStyle(color: Colors.grey)),
+                    Text('Video Selected',
+                        style: TextStyle(color: Colors.grey)),
                   ],
                 ),
               ),
@@ -326,7 +332,6 @@ class _FacebookPostCreatorScreenState extends ConsumerState<FacebookPostCreatorS
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
-        
         SwitchListTile(
           title: const Text('Publish immediately'),
           subtitle: const Text('Post will be published right away'),
@@ -371,7 +376,7 @@ class _FacebookPostCreatorScreenState extends ConsumerState<FacebookPostCreatorS
       maxHeight: 1080,
       imageQuality: 85,
     );
-    
+
     if (image != null) {
       setState(() {
         _selectedImage = File(image.path);
@@ -386,7 +391,7 @@ class _FacebookPostCreatorScreenState extends ConsumerState<FacebookPostCreatorS
       source: ImageSource.gallery,
       maxDuration: const Duration(minutes: 10),
     );
-    
+
     if (video != null) {
       setState(() {
         _selectedVideo = File(video.path);
@@ -397,53 +402,54 @@ class _FacebookPostCreatorScreenState extends ConsumerState<FacebookPostCreatorS
 
   void _createPost() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     setState(() => _isLoading = true);
-    
+
     try {
       final businessId = ref.read(selectedBusinessIdProvider);
       final authService = ref.read(authServiceProvider);
-      
+
       if (businessId == null) {
         throw Exception('No business selected');
       }
-      
+
       if (_selectedImage != null) {
         // Upload photo
         await ref.read(facebookPostsProvider.notifier).uploadPhoto(
-          pageId: widget.page.id,
-          photo: _selectedImage!,
-          businessId: businessId,
-          caption: _messageController.text,
-          published: _publishImmediately,
-          userId: authService.currentUser?.id,
-          token: authService.currentUser?.accessToken,
-        );
+              pageId: widget.page.id,
+              photo: _selectedImage!,
+              businessId: businessId,
+              caption: _messageController.text,
+              published: _publishImmediately,
+              userId: authService.currentUser?.id,
+              token: authService.currentUser?.accessToken,
+            );
       } else if (_selectedVideo != null) {
         // Upload video
         await ref.read(facebookPostsProvider.notifier).uploadVideo(
-          pageId: widget.page.id,
-          video: _selectedVideo!,
-          businessId: businessId,
-          title: 'Video Post',
-          description: _messageController.text,
-          published: _publishImmediately,
-          userId: authService.currentUser?.id,
-          token: authService.currentUser?.accessToken,
-        );
+              pageId: widget.page.id,
+              video: _selectedVideo!,
+              businessId: businessId,
+              title: 'Video Post',
+              description: _messageController.text,
+              published: _publishImmediately,
+              userId: authService.currentUser?.id,
+              token: authService.currentUser?.accessToken,
+            );
       } else {
         // Create text post
         await ref.read(facebookPostsProvider.notifier).createPost(
-          pageId: widget.page.id,
-          message: _messageController.text,
-          businessId: businessId,
-          link: _linkController.text.isNotEmpty ? _linkController.text : null,
-          published: _publishImmediately,
-          userId: authService.currentUser?.id,
-          token: authService.currentUser?.accessToken,
-        );
+              pageId: widget.page.id,
+              message: _messageController.text,
+              businessId: businessId,
+              link:
+                  _linkController.text.isNotEmpty ? _linkController.text : null,
+              published: _publishImmediately,
+              userId: authService.currentUser?.id,
+              token: authService.currentUser?.accessToken,
+            );
       }
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

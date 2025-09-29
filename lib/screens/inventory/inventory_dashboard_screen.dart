@@ -30,7 +30,8 @@ class InventoryDashboardScreen extends ConsumerStatefulWidget {
       _InventoryDashboardScreenState();
 }
 
-class _InventoryDashboardScreenState extends ConsumerState<InventoryDashboardScreen> {
+class _InventoryDashboardScreenState
+    extends ConsumerState<InventoryDashboardScreen> {
   bool _isLoading = false;
   Map<String, dynamic>? _analytics;
 
@@ -76,7 +77,8 @@ class _InventoryDashboardScreenState extends ConsumerState<InventoryDashboardScr
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to load inventory analytics: ${e.toString()}'),
+            content:
+                Text('Failed to load inventory analytics: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -104,7 +106,8 @@ class _InventoryDashboardScreenState extends ConsumerState<InventoryDashboardScr
     // Pass businessContext.id, businessContext.name, etc.
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Direct media add for ${businessContext.name} coming soon!'),
+        content:
+            Text('Direct media add for ${businessContext.name} coming soon!'),
         backgroundColor: Colors.orange,
       ),
     );
@@ -137,7 +140,8 @@ class _InventoryDashboardScreenState extends ConsumerState<InventoryDashboardScr
   String _formatStorageSize(int bytes) {
     if (bytes < 1024) return '${bytes}B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)}KB';
-    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)}MB';
+    if (bytes < 1024 * 1024 * 1024)
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)}MB';
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)}GB';
   }
 
@@ -166,7 +170,8 @@ class _InventoryDashboardScreenState extends ConsumerState<InventoryDashboardScr
             actions: [
               IconButton(
                 icon: const Icon(Icons.business),
-                onPressed: () => BusinessValidationHelper.validateBusinessSelection(context),
+                onPressed: () =>
+                    BusinessValidationHelper.validateBusinessSelection(context),
                 tooltip: 'Select Business',
               ),
             ],
@@ -198,7 +203,8 @@ class _InventoryDashboardScreenState extends ConsumerState<InventoryDashboardScr
                 const SizedBox(height: 24),
                 ElevatedButton.icon(
                   onPressed: () async {
-                    await BusinessValidationHelper.validateBusinessSelection(context);
+                    await BusinessValidationHelper.validateBusinessSelection(
+                        context);
                     if (mounted) _loadAnalytics();
                   },
                   icon: const Icon(Icons.business),
@@ -209,7 +215,7 @@ class _InventoryDashboardScreenState extends ConsumerState<InventoryDashboardScr
           ),
         );
       }
-      
+
       return Scaffold(
         body: error.ErrorView(
           message: 'Failed to load analytics',
@@ -261,9 +267,12 @@ class _InventoryDashboardScreenState extends ConsumerState<InventoryDashboardScr
               return IconButton(
                 icon: const Icon(Icons.business),
                 onPressed: businessContext == null
-                    ? () => BusinessValidationHelper.validateBusinessSelection(context)
+                    ? () => BusinessValidationHelper.validateBusinessSelection(
+                        context)
                     : null,
-                tooltip: businessContext == null ? 'Select Business' : businessContext.name,
+                tooltip: businessContext == null
+                    ? 'Select Business'
+                    : businessContext.name,
               );
             },
           ),
@@ -473,7 +482,8 @@ class _InventoryDashboardScreenState extends ConsumerState<InventoryDashboardScr
           ),
           IconButton(
             icon: const Icon(Icons.edit),
-            onPressed: () => NavigationService.navigateToEditInventory(item['id']),
+            onPressed: () =>
+                NavigationService.navigateToEditInventory(item['id']),
             tooltip: 'Edit',
           ),
         ],
@@ -497,7 +507,8 @@ class _InventoryDashboardScreenState extends ConsumerState<InventoryDashboardScr
     // TODO: Implement quick restock dialog with business context
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Quick restock for ${item['productName']} in ${businessContext.name} coming soon!'),
+        content: Text(
+            'Quick restock for ${item['productName']} in ${businessContext.name} coming soon!'),
         backgroundColor: Colors.green,
       ),
     );

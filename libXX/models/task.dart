@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum TaskPriority { low, medium, high, urgent }
+
 enum TaskType { product, service, review, complaint, booking, general }
+
 enum TaskStatus { pending, inProgress, completed, cancelled }
 
 class Task {
@@ -198,4 +200,4 @@ class TaskActivity {
       'createdAt': createdAt,
     };
   }
-} 
+}

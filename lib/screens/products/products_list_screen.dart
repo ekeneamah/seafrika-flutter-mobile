@@ -24,14 +24,14 @@ class _ProductsListScreenState extends ConsumerState<ProductsListScreen>
     with TickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  
+
   ProductFilter _selectedFilter = ProductFilter.all;
   String _searchQuery = '';
   List<Product> _filteredProducts = [];
   List<Product> _allProducts = [];
   bool _isLoading = true;
   String? _errorMessage;
-  
+
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
 
@@ -45,9 +45,9 @@ class _ProductsListScreenState extends ConsumerState<ProductsListScreen>
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _fadeController, curve: Curves.easeOut),
     );
-    
+
     _searchController.addListener(_onSearchChanged);
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadProducts();
     });
@@ -72,7 +72,7 @@ class _ProductsListScreenState extends ConsumerState<ProductsListScreen>
 
   Future<void> _validateBusinessContext() async {
     final businessContext = ref.read(businessContextProvider);
-    
+
     if (businessContext == null) {
       NavigationService.navigateToAndClearStack(AppRoutes.businessList);
       return;
@@ -81,7 +81,7 @@ class _ProductsListScreenState extends ConsumerState<ProductsListScreen>
 
   Future<void> _loadProducts({bool isRefresh = false}) async {
     await _validateBusinessContext();
-    
+
     if (isRefresh) {
       setState(() {
         _isLoading = true;
@@ -97,12 +97,12 @@ class _ProductsListScreenState extends ConsumerState<ProductsListScreen>
     try {
       final productService = ref.read(productServiceProvider);
       final businessContext = ref.read(businessContextProvider);
-      
+
       if (businessContext == null) return;
 
       // Fetch all products for the business (don't filter by status since Product model doesn't have it)
       await productService.fetchProducts(businessId: businessContext.id);
-      
+
       setState(() {
         _allProducts = List.from(productService.products);
         _isLoading = false;
@@ -114,7 +114,6 @@ class _ProductsListScreenState extends ConsumerState<ProductsListScreen>
       if (!_fadeController.isCompleted) {
         _fadeController.forward();
       }
-
     } catch (error) {
       setState(() {
         _isLoading = false;
@@ -125,23 +124,31 @@ class _ProductsListScreenState extends ConsumerState<ProductsListScreen>
 
   void _filterProducts() {
     List<Product> filtered = List.from(_allProducts);
-    
+
     // Apply search filter
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((product) {
-        return product.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-               product.description.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-               product.category.toLowerCase().contains(_searchQuery.toLowerCase());
+        return product.name
+                .toLowerCase()
+                .contains(_searchQuery.toLowerCase()) ||
+            product.description
+                .toLowerCase()
+                .contains(_searchQuery.toLowerCase()) ||
+            product.category.toLowerCase().contains(_searchQuery.toLowerCase());
       }).toList();
     }
-    
+
     // Apply status filter
     switch (_selectedFilter) {
       case ProductFilter.inStock:
-        filtered = filtered.where((product) => product.stock > 0 && !product.isLowStock).toList();
+        filtered = filtered
+            .where((product) => product.stock > 0 && !product.isLowStock)
+            .toList();
         break;
       case ProductFilter.lowStock:
-        filtered = filtered.where((product) => product.stock > 0 && product.isLowStock).toList();
+        filtered = filtered
+            .where((product) => product.stock > 0 && product.isLowStock)
+            .toList();
         break;
       case ProductFilter.all:
         // No additional filtering
@@ -174,7 +181,7 @@ class _ProductsListScreenState extends ConsumerState<ProductsListScreen>
 
   void _navigateToProductDetail(Product product) {
     Navigator.pushNamed(
-      context, 
+      context,
       AppRoutes.productDetail,
       arguments: {'productId': product.id},
     ).then((_) {
@@ -191,7 +198,7 @@ class _ProductsListScreenState extends ConsumerState<ProductsListScreen>
         children: ProductFilter.values.map((filter) {
           final isSelected = _selectedFilter == filter;
           String label;
-          
+
           switch (filter) {
             case ProductFilter.all:
               label = 'All Products';
@@ -263,8 +270,9 @@ class _ProductsListScreenState extends ConsumerState<ProductsListScreen>
     if (_filteredProducts.isEmpty) {
       return empty.EmptyView(
         icon: Icons.inventory_2_outlined,
-        title: _searchQuery.isNotEmpty ? 'No products found' : 'No products yet',
-        message: _searchQuery.isNotEmpty 
+        title:
+            _searchQuery.isNotEmpty ? 'No products found' : 'No products yet',
+        message: _searchQuery.isNotEmpty
             ? 'Try adjusting your search or filter criteria.'
             : 'Create your first product to get started with your catalog.',
         action: ElevatedButton(
@@ -328,14 +336,14 @@ class _ProductsListScreenState extends ConsumerState<ProductsListScreen>
     try {
       final productService = ref.read(productServiceProvider);
       await productService.deleteProduct(product.id);
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('${product.name} deleted successfully'),
           backgroundColor: Colors.green,
         ),
       );
-      
+
       _refreshProducts();
     } catch (error) {
       ScaffoldMessenger.of(context).showSnackBar(

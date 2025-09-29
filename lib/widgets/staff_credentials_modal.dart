@@ -94,7 +94,7 @@ class _StaffCredentialsModalState extends State<StaffCredentialsModal>
 
   Future<void> _copyToClipboard(String text, String type) async {
     await Clipboard.setData(ClipboardData(text: text));
-    
+
     setState(() {
       if (type == 'email') {
         _isEmailCopied = true;
@@ -104,7 +104,7 @@ class _StaffCredentialsModalState extends State<StaffCredentialsModal>
         _isAllCopied = true;
       }
     });
-    
+
     // Reset copied state after 2 seconds
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
@@ -128,12 +128,14 @@ class _StaffCredentialsModalState extends State<StaffCredentialsModal>
             children: [
               Icon(Icons.check_circle, color: Colors.white, size: 20),
               const SizedBox(width: 8),
-              Text('${type == 'all' ? 'Credentials' : type.capitalize()} copied to clipboard!'),
+              Text(
+                  '${type == 'all' ? 'Credentials' : type.capitalize()} copied to clipboard!'),
             ],
           ),
           backgroundColor: AppTheme.accent,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(16),
           duration: const Duration(seconds: 2),
         ),
@@ -254,7 +256,7 @@ Welcome to the team! 🚀
             ),
           ),
           const SizedBox(height: 20),
-          
+
           // Title
           Text(
             'Staff Account Created!',
@@ -322,7 +324,7 @@ Welcome to the team! 🚀
             ),
           ),
           const SizedBox(height: 20),
-          
+
           // Email Credential
           _buildCredentialItem(
             'Email Address',
@@ -333,7 +335,7 @@ Welcome to the team! 🚀
             _isEmailCopied,
           ),
           const SizedBox(height: 16),
-          
+
           // Password Credential
           _buildCredentialItem(
             'Temporary Password',
@@ -402,7 +404,7 @@ Welcome to the team! 🚀
             ],
           ),
           const SizedBox(height: 16),
-          
+
           // Credential Value
           Container(
             width: double.infinity,
@@ -435,7 +437,7 @@ Welcome to the team! 🚀
                     duration: const Duration(milliseconds: 200),
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: isCopied 
+                      color: isCopied
                           ? AppTheme.accent.withOpacity(0.1)
                           : color.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
@@ -514,7 +516,6 @@ Welcome to the team! 🚀
             ],
           ),
           const SizedBox(height: 20),
-          
           ...instructions.map((instruction) {
             return Container(
               margin: const EdgeInsets.only(bottom: 16),
@@ -551,7 +552,7 @@ Welcome to the team! 🚀
                     ),
                   ),
                   const SizedBox(width: 16),
-                  
+
                   // Icon
                   Container(
                     padding: const EdgeInsets.all(8),
@@ -566,7 +567,7 @@ Welcome to the team! 🚀
                     ),
                   ),
                   const SizedBox(width: 16),
-                  
+
                   // Content
                   Expanded(
                     child: Column(
@@ -655,7 +656,7 @@ Next Steps:
             ),
           ),
           const SizedBox(height: 12),
-          
+
           // Share Button
           Container(
             width: double.infinity,
@@ -691,7 +692,7 @@ Next Steps:
             ),
           ),
           const SizedBox(height: 12),
-          
+
           // Close Button
           SizedBox(
             width: double.infinity,

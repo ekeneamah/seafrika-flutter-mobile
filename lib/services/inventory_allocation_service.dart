@@ -22,67 +22,76 @@ class InventoryAllocationService {
         (transaction) async {
           final allocatedItems = <String, int>{};
           final failedItems = <String, String>{};
-          
+
           // Validate and prepare all operations first
           for (final item in items) {
             try {
               // Get current business inventory
               final businessInventoryDoc = await transaction.get(
-                CollectionReferences.businessInventory.doc(item.businessInventoryId)
-              );
-              
+                  CollectionReferences.businessInventory
+                      .doc(item.businessInventoryId));
+
               if (!businessInventoryDoc.exists) {
-                failedItems[item.businessInventoryId] = 'Business inventory item not found';
+                failedItems[item.businessInventoryId] =
+                    'Business inventory item not found';
                 continue;
               }
-              
-              final businessInv = BusinessInventory.fromFirestore(businessInventoryDoc);
-              
+
+              final businessInv =
+                  BusinessInventory.fromFirestore(businessInventoryDoc);
+
               // Validate sufficient quantity
               if (businessInv.availableQuantity < item.quantity) {
-                failedItems[item.businessInventoryId] = 
-                  'Insufficient quantity. Available: ${businessInv.availableQuantity}, Requested: ${item.quantity}';
+                failedItems[item.businessInventoryId] =
+                    'Insufficient quantity. Available: ${businessInv.availableQuantity}, Requested: ${item.quantity}';
                 continue;
               }
-              
+
               // Get current store distribution
               Map<String, dynamic> currentStoreDistribution = {};
-              
+
               // Handle existing store distribution data
               if (businessInv.storeDistribution != null) {
-                AppLogger.info('Existing store distribution: ${businessInv.storeDistribution}');
-                currentStoreDistribution = businessInv.storeDistribution!.map(
-                  (key, value) => MapEntry(key, value.toMap())
-                );
+                AppLogger.info(
+                    'Existing store distribution: ${businessInv.storeDistribution}');
+                currentStoreDistribution = businessInv.storeDistribution!
+                    .map((key, value) => MapEntry(key, value.toMap()));
               } else {
-                AppLogger.info('No existing store distribution, creating new one');
+                AppLogger.info(
+                    'No existing store distribution, creating new one');
               }
-              
+
               // Update or create store distribution entry
-              final currentQuantity = currentStoreDistribution[storeId] != null 
-                  ? (currentStoreDistribution[storeId]['allocatedQuantity'] as int? ?? 0)
+              final currentQuantity = currentStoreDistribution[storeId] != null
+                  ? (currentStoreDistribution[storeId]['allocatedQuantity']
+                          as int? ??
+                      0)
                   : 0;
-              
-              AppLogger.info('Current quantity for store $storeId: $currentQuantity, adding: ${item.quantity}');
-              
+
+              AppLogger.info(
+                  'Current quantity for store $storeId: $currentQuantity, adding: ${item.quantity}');
+
               currentStoreDistribution[storeId] = {
                 'storeId': storeId,
                 'storeName': storeName,
                 'allocatedQuantity': currentQuantity + item.quantity,
                 'lastAllocated': FieldValue.serverTimestamp(),
               };
-              
+
               // Check if item already exists in store inventory collection
-              final existingStoreQuery = await CollectionReferences.inventoryForStore(businessId, storeId)
-                  .where('productId', isEqualTo: businessInv.productId)
-                  .limit(1)
-                  .get();
-              
+              final existingStoreQuery =
+                  await CollectionReferences.inventoryForStore(
+                          businessId, storeId)
+                      .where('productId', isEqualTo: businessInv.productId)
+                      .limit(1)
+                      .get();
+
               if (existingStoreQuery.docs.isNotEmpty) {
                 // Update existing store inventory
                 final existingDoc = existingStoreQuery.docs.first;
-                final existingStoreInv = StoreInventory.fromFirestore(existingDoc);
-                
+                final existingStoreInv =
+                    StoreInventory.fromFirestore(existingDoc);
+
                 transaction.update(existingDoc.reference, {
                   'quantity': existingStoreInv.quantity + item.quantity,
                   'updatedAt': FieldValue.serverTimestamp(),
@@ -90,7 +99,8 @@ class InventoryAllocationService {
                 });
               } else {
                 // Create new store inventory record
-                final newStoreInventoryRef = CollectionReferences.inventory.doc();
+                final newStoreInventoryRef =
+                    CollectionReferences.inventory.doc();
                 transaction.set(newStoreInventoryRef, {
                   'id': newStoreInventoryRef.id,
                   'businessId': businessId,
@@ -109,32 +119,35 @@ class InventoryAllocationService {
                   'category': businessInv.category,
                   'displayImageUrl': businessInv.displayImageUrl,
                   'status': 'active',
-                  'isLowStock': (item.quantity <= (item.minimumQuantity ?? 1)), // Added computed field
-                  'totalValue': (item.quantity * businessInv.sellingPrice), // Added computed field
+                  'isLowStock': (item.quantity <=
+                      (item.minimumQuantity ?? 1)), // Added computed field
+                  'totalValue': (item.quantity *
+                      businessInv.sellingPrice), // Added computed field
                   'createdAt': FieldValue.serverTimestamp(),
                   'updatedAt': FieldValue.serverTimestamp(),
                   'lastUpdatedBy': businessId,
                 });
               }
-              
+
               // Update business inventory (reduce available quantity and update store distribution)
-              AppLogger.info('Updating business inventory with store distribution: $currentStoreDistribution');
-              
+              AppLogger.info(
+                  'Updating business inventory with store distribution: $currentStoreDistribution');
+
               transaction.update(businessInventoryDoc.reference, {
-                'availableQuantity': businessInv.availableQuantity - item.quantity,
+                'availableQuantity':
+                    businessInv.availableQuantity - item.quantity,
                 'storeDistribution': currentStoreDistribution,
                 'updatedAt': FieldValue.serverTimestamp(),
                 'lastUpdatedBy': businessId,
               });
-              
+
               allocatedItems[item.businessInventoryId] = item.quantity;
-              
             } catch (e) {
               failedItems[item.businessInventoryId] = 'Allocation error: $e';
               AppLogger.error('Inventory allocation error', e);
             }
           }
-          
+
           return InventoryAllocationResult(
             success: allocatedItems.isNotEmpty,
             allocatedItems: allocatedItems,
@@ -145,9 +158,8 @@ class InventoryAllocationService {
         },
         timeout: const Duration(seconds: 30),
       );
-      
+
       return result;
-      
     } catch (e) {
       AppLogger.error('Transaction failed during inventory allocation', e);
       return InventoryAllocationResult(
@@ -162,7 +174,7 @@ class InventoryAllocationService {
       );
     }
   }
-  
+
   /// Validate inventory availability before allocation
   Future<InventoryValidationResult> validateInventoryAllocation({
     required String businessId,
@@ -171,42 +183,43 @@ class InventoryAllocationService {
     try {
       final validItems = <InventoryAllocationItem>[];
       final invalidItems = <String, String>{};
-      
+
       for (final item in items) {
-        final doc = await CollectionReferences.businessInventory.doc(item.businessInventoryId).get();
-        
+        final doc = await CollectionReferences.businessInventory
+            .doc(item.businessInventoryId)
+            .get();
+
         if (!doc.exists) {
           invalidItems[item.businessInventoryId] = 'Item not found';
           continue;
         }
-        
+
         final businessInv = BusinessInventory.fromFirestore(doc);
-        
+
         if (businessInv.businessId != businessId) {
           invalidItems[item.businessInventoryId] = 'Access denied';
           continue;
         }
-        
+
         if (businessInv.availableQuantity < item.quantity) {
-          invalidItems[item.businessInventoryId] = 
-            'Insufficient quantity. Available: ${businessInv.availableQuantity}';
+          invalidItems[item.businessInventoryId] =
+              'Insufficient quantity. Available: ${businessInv.availableQuantity}';
           continue;
         }
-        
+
         if (item.quantity <= 0) {
           invalidItems[item.businessInventoryId] = 'Invalid quantity';
           continue;
         }
-        
+
         validItems.add(item);
       }
-      
+
       return InventoryValidationResult(
         isValid: invalidItems.isEmpty,
         validItems: validItems,
         invalidItems: invalidItems,
       );
-      
     } catch (e) {
       AppLogger.error('Inventory validation failed', e);
       return InventoryValidationResult(
@@ -219,7 +232,7 @@ class InventoryAllocationService {
       );
     }
   }
-  
+
   /// Get real-time inventory availability
   Stream<Map<String, int>> getInventoryAvailabilityStream({
     required String businessId,
@@ -232,7 +245,8 @@ class InventoryAllocationService {
       final availability = <String, int>{};
       for (final doc in snapshot.docs) {
         final data = doc.data();
-        availability[doc.id] = (data['availableQuantity'] as num?)?.toInt() ?? 0;
+        availability[doc.id] =
+            (data['availableQuantity'] as num?)?.toInt() ?? 0;
       }
       return availability;
     });
@@ -244,15 +258,16 @@ class InventoryAllocationItem {
   final String businessInventoryId;
   final int quantity;
   final int? minimumQuantity;
-  
+
   const InventoryAllocationItem({
     required this.businessInventoryId,
     required this.quantity,
     this.minimumQuantity,
   });
-  
+
   @override
-  String toString() => 'InventoryAllocationItem(id: $businessInventoryId, qty: $quantity)';
+  String toString() =>
+      'InventoryAllocationItem(id: $businessInventoryId, qty: $quantity)';
 }
 
 /// Result of inventory allocation operation
@@ -262,7 +277,7 @@ class InventoryAllocationResult {
   final Map<String, String> failedItems;
   final int totalRequested;
   final int totalAllocated;
-  
+
   const InventoryAllocationResult({
     required this.success,
     required this.allocatedItems,
@@ -270,10 +285,11 @@ class InventoryAllocationResult {
     required this.totalRequested,
     required this.totalAllocated,
   });
-  
+
   bool get hasFailures => failedItems.isNotEmpty;
-  bool get isPartialSuccess => totalAllocated > 0 && totalAllocated < totalRequested;
-  
+  bool get isPartialSuccess =>
+      totalAllocated > 0 && totalAllocated < totalRequested;
+
   String get summaryMessage {
     if (success && !hasFailures) {
       return 'Successfully allocated $totalAllocated items to store';
@@ -290,7 +306,7 @@ class InventoryValidationResult {
   final bool isValid;
   final List<InventoryAllocationItem> validItems;
   final Map<String, String> invalidItems;
-  
+
   const InventoryValidationResult({
     required this.isValid,
     required this.validItems,

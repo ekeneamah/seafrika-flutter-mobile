@@ -58,7 +58,8 @@ class Product {
       price: (json['price'] as num).toDouble(),
       images: List<String>.from(json['images'] as List),
       stock: json['stock'] as int,
-      minQuantity: json['minQuantity'] as int? ?? 1, // Default to 1 if not provided
+      minQuantity:
+          json['minQuantity'] as int? ?? 1, // Default to 1 if not provided
       rating: (json['rating'] as num).toDouble(),
       reviews: json['reviews'] as int,
       category: json['category'] as String,

@@ -37,25 +37,27 @@ class FacebookUser {
 class FacebookPage {
   final String id;
   final String name;
-  final String category;
+  final String? category; // Made optional to handle null values
   final String? picture;
   final String? about;
   final String? website;
-  final String accessToken;
+  final String? accessToken; // Made optional since it's not always provided
   final List<String> tasks;
   final int? fanCount;
+  final int? followersCount;
   final bool? isPublished;
 
   FacebookPage({
     required this.id,
     required this.name,
-    required this.category,
+    this.category,
     this.picture,
     this.about,
     this.website,
-    required this.accessToken,
+    this.accessToken,
     required this.tasks,
     this.fanCount,
+    this.followersCount,
     this.isPublished,
   });
 
@@ -63,13 +65,14 @@ class FacebookPage {
     return FacebookPage(
       id: json['id'] as String,
       name: json['name'] as String,
-      category: json['category'] as String,
+      category: json['category'] as String?, // Allow null category
       picture: json['picture']?['data']?['url'] as String?,
       about: json['about'] as String?,
       website: json['website'] as String?,
-      accessToken: json['access_token'] as String,
+      accessToken: json['access_token'] as String?, // Allow null access_token
       tasks: List<String>.from(json['tasks'] ?? []),
       fanCount: json['fan_count'] as int?,
+      followersCount: json['followers_count'] as int?,
       isPublished: json['is_published'] as bool?,
     );
   }
@@ -85,6 +88,7 @@ class FacebookPage {
       'access_token': accessToken,
       'tasks': tasks,
       'fan_count': fanCount,
+      'followers_count': followersCount,
       'is_published': isPublished,
     };
   }
@@ -122,7 +126,9 @@ class FacebookPost {
       permalink: json['permalink_url'] as String?,
       picture: json['picture'] as String?,
       fullPicture: json['full_picture'] as String?,
-      stats: json['stats'] != null ? FacebookPostStats.fromJson(json['stats']) : null,
+      stats: json['stats'] != null
+          ? FacebookPostStats.fromJson(json['stats'])
+          : null,
       comments: json['comments']?['data'] != null
           ? (json['comments']['data'] as List)
               .map((comment) => FacebookComment.fromJson(comment))
@@ -253,7 +259,8 @@ class FacebookMessage {
       'created_time': createdTime,
       'from': from.toJson(),
       'to': to?.toJson(),
-      'attachments': attachments?.map((attachment) => attachment.toJson()).toList(),
+      'attachments':
+          attachments?.map((attachment) => attachment.toJson()).toList(),
     };
   }
 }

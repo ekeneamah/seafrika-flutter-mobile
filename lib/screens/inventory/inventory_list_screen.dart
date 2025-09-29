@@ -29,55 +29,58 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen>
     with TickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  
+
   // Enhanced state management
   Set<String> _selectedInventoryIds = {};
   String? get _passedStoreId => widget.storeId;
-  
+
   // Animation controllers
   AnimationController? _fadeController;
   AnimationController? _slideController;
   Animation<double>? _fadeAnimation;
   Animation<Offset>? _slideAnimation;
-  
+
   // Data state
   List<BusinessInventory> _allInventoryItems = [];
   Map<String, int> _realTimeAvailability = {};
-  Map<String, int> _availabilityMap = {}; // Added for real-time availability tracking
+  Map<String, int> _availabilityMap =
+      {}; // Added for real-time availability tracking
   String? _error;
   bool _isLoading = true;
   bool _hasInitialized = false;
   bool _isLoadingMore = false;
   bool _hasMore = true;
-  
+
   // Business logic services - using dependency injection pattern
   late final BusinessInventoryService _businessInventoryService;
-  late final InventoryAllocationService _inventoryAllocationService; // Fixed name
-  
+  late final InventoryAllocationService
+      _inventoryAllocationService; // Fixed name
+
   // Subscriptions
   StreamSubscription<QuerySnapshot>? _inventorySubscription;
   StreamSubscription<Map<String, int>>? _availabilitySubscription;
-  Map<String, StreamSubscription> _availabilitySubscriptions = {}; // Added for individual item tracking
-  
+  Map<String, StreamSubscription> _availabilitySubscriptions =
+      {}; // Added for individual item tracking
+
   String? _currentBusinessId;
   DocumentSnapshot? _lastDocument;
 
   @override
   void initState() {
     super.initState();
-    
+
     // Initialize services with dependency injection
     _businessInventoryService = BusinessInventoryService();
     _inventoryAllocationService = InventoryAllocationService();
-    
+
     _scrollController.addListener(_onScroll);
     _initializeAnimations();
     _validateBusinessSelection();
-    
+
     // Set initial loading state
     _isLoading = true;
     _hasInitialized = false;
-    
+
     _initializeData();
   }
 
@@ -96,7 +99,7 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen>
         print('Initializing inventory data...');
         _inventorySubscription?.cancel();
         final businessInventoryService = BusinessInventoryService();
-        
+
         // Get business ID from business context provider
         final business = ref.read(businessContextProvider);
         if (business == null) {
@@ -104,19 +107,20 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen>
           return;
         }
         final businessId = business.id;
-        
+
         _inventorySubscription = businessInventoryService
             .streamBusinessInventory(
-              businessId: businessId,
-              searchQuery: _searchController.text,
-              limit: 20, // Limit to 20 items for cost efficiency
-            )
+          businessId: businessId,
+          searchQuery: _searchController.text,
+          limit: 20, // Limit to 20 items for cost efficiency
+        )
             .listen((snapshot) {
           if (!mounted) return;
           setState(() {
             debugPrint('Fetched ${snapshot.docs.length} inventory items');
             _allInventoryItems = snapshot.docs
-                .map((doc) => BusinessInventory.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>))
+                .map((doc) => BusinessInventory.fromFirestore(
+                    doc as DocumentSnapshot<Map<String, dynamic>>))
                 .toList();
             _lastDocument =
                 snapshot.docs.isNotEmpty ? snapshot.docs.last : null;
@@ -205,12 +209,13 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen>
       final lastDoc = _lastDocument;
       if (lastDoc != null) {
         final businessInventoryService = BusinessInventoryService();
-        final businessId = await BusinessPreferencesHelper.getSelectedBusinessId();
+        final businessId =
+            await BusinessPreferencesHelper.getSelectedBusinessId();
         if (businessId == null) {
           _handleError('No business selected');
           return;
         }
-        
+
         final newItems = await businessInventoryService
             .streamBusinessInventory(
               businessId: businessId,
@@ -223,7 +228,10 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen>
 
         setState(() {
           _allInventoryItems.addAll(
-            newItems.docs.map((doc) => BusinessInventory.fromFirestore(doc as DocumentSnapshot<Map<String, dynamic>>)).toList(),
+            newItems.docs
+                .map((doc) => BusinessInventory.fromFirestore(
+                    doc as DocumentSnapshot<Map<String, dynamic>>))
+                .toList(),
           );
           _lastDocument = newItems.docs.isNotEmpty ? newItems.docs.last : null;
           _hasMore = newItems.docs.length >= 10;
@@ -647,13 +655,13 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen>
 
   Widget _buildEmptyState() {
     // Check if we had a network error or timeout
-    final bool isNetworkError = _error != null && 
-        (_error!.toLowerCase().contains('network') || 
-         _error!.toLowerCase().contains('connection') ||
-         _error!.toLowerCase().contains('resolve') ||
-         _error!.toLowerCase().contains('host') ||
-         _error!.toLowerCase().contains('unavailable') ||
-         _error!.toLowerCase().contains('timeout'));
+    final bool isNetworkError = _error != null &&
+        (_error!.toLowerCase().contains('network') ||
+            _error!.toLowerCase().contains('connection') ||
+            _error!.toLowerCase().contains('resolve') ||
+            _error!.toLowerCase().contains('host') ||
+            _error!.toLowerCase().contains('unavailable') ||
+            _error!.toLowerCase().contains('timeout'));
 
     return Center(
       child: Padding(
@@ -763,8 +771,8 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen>
                     backgroundColor: AppTheme.accent,
                     foregroundColor: Colors.white,
                     elevation: 0,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
@@ -990,7 +998,7 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen>
   Future<void> _onAddToStore() async {
     try {
       AppLogger.info('Starting inventory allocation to store process');
-      
+
       // Get business context
       final business = ref.read(businessContextProvider);
       if (business == null) {
@@ -1023,13 +1031,16 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen>
         return;
       }
 
-      AppLogger.info('Processing allocation for ${selectedItems.length} items to ${stores.length} stores');
+      AppLogger.info(
+          'Processing allocation for ${selectedItems.length} items to ${stores.length} stores');
 
       // Build a map of inventory for quick lookup with availability validation
       final Map<String, BusinessInventory?> invMap = {};
       for (var inv in selectedItems) {
-        final businessInventory = await _businessInventoryService.getBusinessInventoryById(inv.id);
-        if (businessInventory != null && businessInventory.availableQuantity > 0) {
+        final businessInventory =
+            await _businessInventoryService.getBusinessInventoryById(inv.id);
+        if (businessInventory != null &&
+            businessInventory.availableQuantity > 0) {
           invMap[inv.id] = businessInventory;
         } else {
           AppLogger.warning('Inventory ${inv.id} has no available quantity');
@@ -1037,7 +1048,8 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen>
       }
 
       if (invMap.isEmpty) {
-        _showSnackBar('No items have available quantity for allocation', isError: true);
+        _showSnackBar('No items have available quantity for allocation',
+            isError: true);
         return;
       }
 
@@ -1045,15 +1057,13 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen>
       final Map<String, TextEditingController> qtyControllers = {
         for (var inv in selectedItems)
           if (invMap.containsKey(inv.id))
-            inv.id: TextEditingController(
-                text: '1') // Default to 1 for safety
+            inv.id: TextEditingController(text: '1') // Default to 1 for safety
       };
 
       // Track the previous valid value for each quantity field
       final Map<String, String> previousValidQty = {
-        for (var inv in selectedItems) 
-          if (invMap.containsKey(inv.id))
-            inv.id: qtyControllers[inv.id]!.text
+        for (var inv in selectedItems)
+          if (invMap.containsKey(inv.id)) inv.id: qtyControllers[inv.id]!.text
       };
 
       // Auto-select store if passed
@@ -1123,12 +1133,18 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen>
                                   },
                                 ),
                                 const SizedBox(height: 16),
-                                ...selectedItems.where((item) => invMap.containsKey(item.id)).map((item) {
+                                ...selectedItems
+                                    .where(
+                                        (item) => invMap.containsKey(item.id))
+                                    .map((item) {
                                   final inv = invMap[item.id]!;
-                                  final availability = _availabilityMap[item.id] ?? inv.availableQuantity;
-                                  
+                                  final availability =
+                                      _availabilityMap[item.id] ??
+                                          inv.availableQuantity;
+
                                   return Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         inv.productName,
@@ -1144,31 +1160,50 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen>
                                             child: Text(
                                               'Available: $availability (Real-time)',
                                               style: TextStyle(
-                                                color: availability > 0 ? AppTheme.earth : Colors.red,
+                                                color: availability > 0
+                                                    ? AppTheme.earth
+                                                    : Colors.red,
                                                 fontWeight: FontWeight.w500,
                                               ),
                                             ),
                                           ),
                                           Expanded(
                                             child: TextField(
-                                              controller: qtyControllers[item.id],
+                                              controller:
+                                                  qtyControllers[item.id],
                                               decoration: InputDecoration(
                                                 labelText: 'Quantity to Add',
-                                                border: const OutlineInputBorder(),
-                                                errorText: availability <= 0 ? 'No stock available' : null,
+                                                border:
+                                                    const OutlineInputBorder(),
+                                                errorText: availability <= 0
+                                                    ? 'No stock available'
+                                                    : null,
                                               ),
-                                              keyboardType: TextInputType.number,
+                                              keyboardType:
+                                                  TextInputType.number,
                                               enabled: availability > 0,
                                               onChanged: (value) {
                                                 if (value.isEmpty) {
                                                   return;
                                                 }
-                                                final qty = int.tryParse(value) ?? 0;
-                                                if (qty <= 0 || qty > availability) {
+                                                final qty =
+                                                    int.tryParse(value) ?? 0;
+                                                if (qty <= 0 ||
+                                                    qty > availability) {
                                                   // Revert to previous valid value
-                                                  qtyControllers[item.id]!.text = previousValidQty[item.id]!;
-                                                  qtyControllers[item.id]!.selection = TextSelection.fromPosition(
-                                                    TextPosition(offset: previousValidQty[item.id]!.length),
+                                                  qtyControllers[item.id]!
+                                                          .text =
+                                                      previousValidQty[
+                                                          item.id]!;
+                                                  qtyControllers[item.id]!
+                                                          .selection =
+                                                      TextSelection
+                                                          .fromPosition(
+                                                    TextPosition(
+                                                        offset:
+                                                            previousValidQty[
+                                                                    item.id]!
+                                                                .length),
                                                   );
                                                   // Show snackbar after the text field update
                                                   Future.microtask(() {
@@ -1178,7 +1213,8 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen>
                                                     );
                                                   });
                                                 } else {
-                                                  previousValidQty[item.id] = value;
+                                                  previousValidQty[item.id] =
+                                                      value;
                                                 }
                                               },
                                             ),
@@ -1199,7 +1235,8 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen>
                               TextButton(
                                 onPressed: () => Navigator.pop(context),
                                 style: TextButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 20, vertical: 12),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -1213,111 +1250,145 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen>
                                 ),
                               ),
                               ElevatedButton(
-                                onPressed: selectedStoreId == null ? null : () async {
-                                  try {
-                                    AppLogger.info('Processing store allocation transaction');
-                                    
-                                    // Validate all quantities against real-time availability
-                                    final allocations = <Map<String, dynamic>>[];
-                                    bool allValid = true;
-                                    
-                                    for (final item in selectedItems.where((item) => invMap.containsKey(item.id))) {
-                                      final qty = int.tryParse(qtyControllers[item.id]!.text) ?? 0;
-                                      final availability = _availabilityMap[item.id] ?? invMap[item.id]!.availableQuantity;
-                                      
-                                      if (qty <= 0 || qty > availability) {
-                                        allValid = false;
-                                        _showSnackBar(
-                                          'Invalid quantity for ${invMap[item.id]!.productName} (available: $availability)',
-                                          isError: true,
-                                        );
-                                        break;
-                                      }
-                                      
-                                      allocations.add({
-                                        'businessInventoryId': item.id,
-                                        'quantity': qty,
-                                        'productId': invMap[item.id]!.productId,
-                                        'productName': invMap[item.id]!.productName,
-                                        'category': invMap[item.id]!.category,
-                                        'unitPrice': invMap[item.id]!.sellingPrice,
-                                      });
-                                    }
-                                    
-                                    if (!allValid) {
-                                      AppLogger.warning('Allocation validation failed');
-                                      return;
-                                    }
-                                    
-                                    // Show loading indicator
-                                    showDialog(
-                                      context: context,
-                                      barrierDismissible: false,
-                                      builder: (context) => const Center(
-                                        child: CircularProgressIndicator(),
-                                      ),
-                                    );
-                                    
-                                    // Convert allocations to InventoryAllocationItem format
-                                    final allocationItems = allocations.map((allocation) => 
-                                      InventoryAllocationItem(
-                                        businessInventoryId: allocation['businessInventoryId'],
-                                        quantity: allocation['quantity'],
-                                        minimumQuantity: 1,
-                                      ),
-                                    ).toList();
-                                    
-                                    // Get store name from stores list
-                                    final selectedStore = stores.firstWhere((s) => s.id == selectedStoreId);
-                                    
-                                    // Use InventoryAllocationService for atomic transaction
-                                    final result = await _inventoryAllocationService.allocateInventoryToStore(
-                                      businessId: businessId,
-                                      businessName: business.name,
-                                      vendorId: business.ownerId,
-                                      storeId: selectedStoreId!,
-                                      storeName: selectedStore.name,
-                                      items: allocationItems,
-                                    );
-                                    
-                                    // Close loading indicator
-                                    Navigator.pop(context);
-                                    
-                                    if (result.success) {
-                                      Navigator.pop(context, {
-                                        'storeId': selectedStoreId,
-                                        'quantities': result.allocatedItems,
-                                      });
-                                      
-                                      AppLogger.info('Store allocation completed successfully');
-                                      _showSnackBar(result.summaryMessage, isError: false);
-                                      _resetSelection();
-                                      
-                                      // Navigate back to home with store tab selected
-                                      Navigator.pushReplacementNamed(
-                                        context, 
-                                        AppRoutes.home,
-                                        arguments: {'initialTab': 1}
-                                      );
-                                    } else {
-                                      AppLogger.error('Store allocation failed: ${result.summaryMessage}');
-                                      _showSnackBar(
-                                        result.summaryMessage,
-                                        isError: true,
-                                      );
-                                    }
-                                  } catch (e) {
-                                    // Close loading indicator if still showing
-                                    Navigator.pop(context);
-                                    AppLogger.error('Exception during store allocation: $e');
-                                    _showSnackBar('An error occurred: $e', isError: true);
-                                  }
-                                },
+                                onPressed: selectedStoreId == null
+                                    ? null
+                                    : () async {
+                                        try {
+                                          AppLogger.info(
+                                              'Processing store allocation transaction');
+
+                                          // Validate all quantities against real-time availability
+                                          final allocations =
+                                              <Map<String, dynamic>>[];
+                                          bool allValid = true;
+
+                                          for (final item in selectedItems
+                                              .where((item) => invMap
+                                                  .containsKey(item.id))) {
+                                            final qty = int.tryParse(
+                                                    qtyControllers[item.id]!
+                                                        .text) ??
+                                                0;
+                                            final availability =
+                                                _availabilityMap[item.id] ??
+                                                    invMap[item.id]!
+                                                        .availableQuantity;
+
+                                            if (qty <= 0 ||
+                                                qty > availability) {
+                                              allValid = false;
+                                              _showSnackBar(
+                                                'Invalid quantity for ${invMap[item.id]!.productName} (available: $availability)',
+                                                isError: true,
+                                              );
+                                              break;
+                                            }
+
+                                            allocations.add({
+                                              'businessInventoryId': item.id,
+                                              'quantity': qty,
+                                              'productId':
+                                                  invMap[item.id]!.productId,
+                                              'productName':
+                                                  invMap[item.id]!.productName,
+                                              'category':
+                                                  invMap[item.id]!.category,
+                                              'unitPrice':
+                                                  invMap[item.id]!.sellingPrice,
+                                            });
+                                          }
+
+                                          if (!allValid) {
+                                            AppLogger.warning(
+                                                'Allocation validation failed');
+                                            return;
+                                          }
+
+                                          // Show loading indicator
+                                          showDialog(
+                                            context: context,
+                                            barrierDismissible: false,
+                                            builder: (context) => const Center(
+                                              child:
+                                                  CircularProgressIndicator(),
+                                            ),
+                                          );
+
+                                          // Convert allocations to InventoryAllocationItem format
+                                          final allocationItems = allocations
+                                              .map(
+                                                (allocation) =>
+                                                    InventoryAllocationItem(
+                                                  businessInventoryId:
+                                                      allocation[
+                                                          'businessInventoryId'],
+                                                  quantity:
+                                                      allocation['quantity'],
+                                                  minimumQuantity: 1,
+                                                ),
+                                              )
+                                              .toList();
+
+                                          // Get store name from stores list
+                                          final selectedStore =
+                                              stores.firstWhere((s) =>
+                                                  s.id == selectedStoreId);
+
+                                          // Use InventoryAllocationService for atomic transaction
+                                          final result =
+                                              await _inventoryAllocationService
+                                                  .allocateInventoryToStore(
+                                            businessId: businessId,
+                                            businessName: business.name,
+                                            vendorId: business.ownerId,
+                                            storeId: selectedStoreId!,
+                                            storeName: selectedStore.name,
+                                            items: allocationItems,
+                                          );
+
+                                          // Close loading indicator
+                                          Navigator.pop(context);
+
+                                          if (result.success) {
+                                            Navigator.pop(context, {
+                                              'storeId': selectedStoreId,
+                                              'quantities':
+                                                  result.allocatedItems,
+                                            });
+
+                                            AppLogger.info(
+                                                'Store allocation completed successfully');
+                                            _showSnackBar(result.summaryMessage,
+                                                isError: false);
+                                            _resetSelection();
+
+                                            // Navigate back to home with store tab selected
+                                            Navigator.pushReplacementNamed(
+                                                context, AppRoutes.home,
+                                                arguments: {'initialTab': 1});
+                                          } else {
+                                            AppLogger.error(
+                                                'Store allocation failed: ${result.summaryMessage}');
+                                            _showSnackBar(
+                                              result.summaryMessage,
+                                              isError: true,
+                                            );
+                                          }
+                                        } catch (e) {
+                                          // Close loading indicator if still showing
+                                          Navigator.pop(context);
+                                          AppLogger.error(
+                                              'Exception during store allocation: $e');
+                                          _showSnackBar('An error occurred: $e',
+                                              isError: true);
+                                        }
+                                      },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppTheme.accent,
                                   foregroundColor: Colors.white,
                                   elevation: 0,
-                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 20, vertical: 12),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),

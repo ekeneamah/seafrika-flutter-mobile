@@ -190,7 +190,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Future<void> _markAsRead(AppNotification notification) async {
     try {
       String vendorId = context.read<AuthService>().currentUser?.vendorId ?? '';
-      await context.read<NotificationService>().markAsRead(notification.id,vendorId);
+      await context
+          .read<NotificationService>()
+          .markAsRead(notification.id, vendorId);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -205,7 +207,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       String vendorId = context.read<AuthService>().currentUser?.vendorId ?? '';
       await context
           .read<NotificationService>()
-          .deleteNotification(notification.id,vendorId);
+          .deleteNotification(notification.id, vendorId);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Notification deleted')),

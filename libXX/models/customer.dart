@@ -75,4 +75,4 @@ class Customer {
       updatedAt: DateTime.now(),
     );
   }
-} 
+}

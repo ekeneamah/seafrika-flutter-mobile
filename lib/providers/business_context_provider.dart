@@ -16,7 +16,8 @@ class BusinessContextNotifier extends StateNotifier<Business?> {
 
   /// Load the selected business from SharedPreferences
   Future<void> _loadSelectedBusiness() async {
-    final businessId = _prefs.getString(SharedPreferencesKeys.selectedBusinessId);
+    final businessId =
+        _prefs.getString(SharedPreferencesKeys.selectedBusinessId);
     if (businessId != null) {
       try {
         final business = await _businessService.getBusiness(businessId);
@@ -35,15 +36,23 @@ class BusinessContextNotifier extends StateNotifier<Business?> {
 
   /// Set the selected business and persist to SharedPreferences
   Future<void> setSelectedBusiness(Business business) async {
-    await _prefs.setString(SharedPreferencesKeys.selectedBusinessId, business.id);
-    await _prefs.setString(SharedPreferencesKeys.selectedBusinessName, business.name);
-    await _prefs.setString(SharedPreferencesKeys.selectedBusinessPhone, business.phone ?? '');
-    await _prefs.setString(SharedPreferencesKeys.selectedBusinessAddress, business.address);
-    await _prefs.setString(SharedPreferencesKeys.selectedBusinessOwnerId, business.ownerId);
-    await _prefs.setString(SharedPreferencesKeys.selectedBusinessCategory, business.industry ?? '');
-    await _prefs.setString(SharedPreferencesKeys.selectedBusinessDescription, business.description ?? '');
+    await _prefs.setString(
+        SharedPreferencesKeys.selectedBusinessId, business.id);
+    await _prefs.setString(
+        SharedPreferencesKeys.selectedBusinessName, business.name);
+    await _prefs.setString(
+        SharedPreferencesKeys.selectedBusinessPhone, business.phone ?? '');
+    await _prefs.setString(
+        SharedPreferencesKeys.selectedBusinessAddress, business.address);
+    await _prefs.setString(
+        SharedPreferencesKeys.selectedBusinessOwnerId, business.ownerId);
+    await _prefs.setString(SharedPreferencesKeys.selectedBusinessCategory,
+        business.industry ?? '');
+    await _prefs.setString(SharedPreferencesKeys.selectedBusinessDescription,
+        business.description ?? '');
     if (business.logoUrl != null) {
-      await _prefs.setString(SharedPreferencesKeys.selectedBusinessImageUrl, business.logoUrl!);
+      await _prefs.setString(
+          SharedPreferencesKeys.selectedBusinessImageUrl, business.logoUrl!);
     }
     state = business;
   }
@@ -87,7 +96,8 @@ class BusinessContextNotifier extends StateNotifier<Business?> {
 }
 
 /// Provider for the business context notifier
-final businessContextProvider = StateNotifierProvider<BusinessContextNotifier, Business?>((ref) {
+final businessContextProvider =
+    StateNotifierProvider<BusinessContextNotifier, Business?>((ref) {
   throw UnimplementedError('BusinessContextProvider must be overridden');
 });
 

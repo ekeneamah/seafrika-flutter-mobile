@@ -10,7 +10,8 @@ import 'package:vendor_app/models/task.dart';
 import 'package:vendor_app/services/product_service.dart';
 import 'package:vendor_app/providers/service_providers.dart';
 import 'package:vendor_app/providers/business_context_provider.dart';
-import 'package:vendor_app/providers/business_inventory_provider.dart' as biz_inventory;
+import 'package:vendor_app/providers/business_inventory_provider.dart'
+    as biz_inventory;
 import 'package:vendor_app/widgets/error_view.dart' as error;
 import 'package:vendor_app/widgets/loading_view.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -31,7 +32,8 @@ class ProductDetailScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<ProductDetailScreen> createState() => _ProductDetailScreenState();
+  ConsumerState<ProductDetailScreen> createState() =>
+      _ProductDetailScreenState();
 }
 
 // --- Modern Metric Card Widget ---
@@ -198,20 +200,20 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
       ]);
 
       setState(() {
-                setState(() {
-        _product = product;
-        _externalListings = results[0] as List<ExternalListing>;
-        _analytics = results[1] as ProductAnalytics;
-        _topReviews = results[2] as List<Map<String, dynamic>>;
-        _topComplaints = results[3] as List<Map<String, dynamic>>;
-        _tasks = results[4] as List<Map<String, dynamic>>;
-        _isLoading = false;
-      });
-      
-      // Check if product is in inventory asynchronously
-      _checkProductInventoryStatus();
-      
-      _fadeController.forward();
+        setState(() {
+          _product = product;
+          _externalListings = results[0] as List<ExternalListing>;
+          _analytics = results[1] as ProductAnalytics;
+          _topReviews = results[2] as List<Map<String, dynamic>>;
+          _topComplaints = results[3] as List<Map<String, dynamic>>;
+          _tasks = results[4] as List<Map<String, dynamic>>;
+          _isLoading = false;
+        });
+
+        // Check if product is in inventory asynchronously
+        _checkProductInventoryStatus();
+
+        _fadeController.forward();
         _isLoading = false;
       });
       _fadeController.forward();
@@ -272,16 +274,18 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
 
   Future<void> _addToInventory() async {
     final businessId = ref.read(selectedBusinessIdProvider);
-    
+
     if (businessId == null || businessId.isEmpty) {
-      _showModernSnackBar('No business selected. Please select a business first.', Icons.error_outline);
+      _showModernSnackBar(
+          'No business selected. Please select a business first.',
+          Icons.error_outline);
       return;
     }
 
     // Get the current product details to pass to inventory screen
     final productService = ref.read(productServiceProvider);
     final product = await productService.getProduct(widget.productId);
-    
+
     if (product == null) {
       _showModernSnackBar('Product not found', Icons.error_outline);
       return;
@@ -293,10 +297,11 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
         'product': product,
       },
     );
-    
+
     // Show success message if inventory was created
     if (result == true) {
-      _showModernSnackBar('Product added to inventory successfully!', Icons.check_circle_outline);
+      _showModernSnackBar('Product added to inventory successfully!',
+          Icons.check_circle_outline);
     }
   }
 
@@ -311,16 +316,19 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
       if (businessId == null || businessId.isEmpty) {
         return false;
       }
-      
+
       // Use the business inventory service to check if product exists in inventory
-      final businessInventoryService = ref.read(biz_inventory.businessInventoryServiceProvider);
-      final businessInventory = await businessInventoryService.getBusinessInventoryByProductId(
+      final businessInventoryService =
+          ref.read(biz_inventory.businessInventoryServiceProvider);
+      final businessInventory =
+          await businessInventoryService.getBusinessInventoryByProductId(
         businessId: businessId,
         productId: widget.productId,
       );
-      
+
       // Return true if inventory exists and has available quantity > 0
-      return businessInventory != null && businessInventory.availableQuantity > 0;
+      return businessInventory != null &&
+          businessInventory.availableQuantity > 0;
     } catch (e) {
       debugPrint('Error checking inventory: $e');
       return false;
@@ -344,22 +352,26 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
       }
 
       // Look up the business inventory for this product
-      final businessInventoryService = ref.read(biz_inventory.businessInventoryServiceProvider);
-      final businessInventory = await businessInventoryService.getBusinessInventoryByProductId(
+      final businessInventoryService =
+          ref.read(biz_inventory.businessInventoryServiceProvider);
+      final businessInventory =
+          await businessInventoryService.getBusinessInventoryByProductId(
         businessId: businessId,
         productId: widget.productId,
       );
-      
+
       if (businessInventory == null) {
-        _showModernSnackBar('Product not found in inventory', Icons.error_outline);
+        _showModernSnackBar(
+            'Product not found in inventory', Icons.error_outline);
         return;
       }
-      
+
       // Navigate to business inventory detail screen
       NavigationService.navigateToBusinessInventoryDetail(businessInventory.id);
     } catch (e) {
       debugPrint('Error navigating to inventory details: $e');
-      _showModernSnackBar('Failed to open inventory details', Icons.error_outline);
+      _showModernSnackBar(
+          'Failed to open inventory details', Icons.error_outline);
     }
   }
 
@@ -405,7 +417,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                   child: RefreshIndicator(
                     onRefresh: _loadData,
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -422,7 +435,6 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                     ),
                   ),
                 ),
-      
       bottomNavigationBar: _isLoading || _error != null
           ? null
           : Container(
@@ -449,14 +461,14 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                       NavigationService.navigateToEditProduct(widget.productId);
                     }),
                     _buildBottomAction(
-                        _isProductInInventoryState 
-                            ? Icons.inventory 
-                            : Icons.inventory_outlined, 
-                        _isProductInInventoryState 
-                            ? 'View Inventory' 
-                            : 'Add to Inventory', 
-                        _isProductInInventoryState 
-                            ? _navigateToInventoryDetails 
+                        _isProductInInventoryState
+                            ? Icons.inventory
+                            : Icons.inventory_outlined,
+                        _isProductInInventoryState
+                            ? 'View Inventory'
+                            : 'Add to Inventory',
+                        _isProductInInventoryState
+                            ? _navigateToInventoryDetails
                             : _addToInventory),
                     _buildBottomAction(
                         Icons.receipt_long_outlined, 'Invoice', _createInvoice),
@@ -658,9 +670,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen>
                     child: Text(
                       product.stock > 0 ? 'In Stock' : 'Out of Stock',
                       style: TextStyle(
-                        color: product.stock > 0
-                            ? AppTheme.primary
-                            : Colors.red,
+                        color:
+                            product.stock > 0 ? AppTheme.primary : Colors.red,
                         fontWeight: FontWeight.w600,
                         fontSize: 12,
                       ),

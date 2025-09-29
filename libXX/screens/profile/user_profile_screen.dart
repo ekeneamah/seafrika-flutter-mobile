@@ -68,8 +68,10 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
   Future<void> _loadPreferences() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _selectedBusinessName = prefs.getString(SharedPreferencesKeys.selectedBusinessName);
-      _selectedVendorId = prefs.getString(SharedPreferencesKeys.selectedBusinessOwnerId);
+      _selectedBusinessName =
+          prefs.getString(SharedPreferencesKeys.selectedBusinessName);
+      _selectedVendorId =
+          prefs.getString(SharedPreferencesKeys.selectedBusinessOwnerId);
       _selectedStoreId = prefs.getString(SharedPreferencesKeys.selectedStoreId);
     });
   }
@@ -100,13 +102,13 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
   double _getHorizontalPadding(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     if (screenWidth > 1200) return 32.0; // Desktop
-    if (screenWidth > 800) return 24.0;  // Tablet
+    if (screenWidth > 800) return 24.0; // Tablet
     return 16.0; // Mobile
   }
 
   double _getCardPadding(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    if (screenWidth > 800) return 24.0;  // Tablet/Desktop
+    if (screenWidth > 800) return 24.0; // Tablet/Desktop
     return 16.0; // Mobile
   }
 
@@ -137,9 +139,10 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       builder: (context, constraints) {
         final horizontalPadding = _getHorizontalPadding(context);
         final cardPadding = _getCardPadding(context);
-        
+
         return Container(
-          margin: margin ?? EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 8),
+          margin: margin ??
+              EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 8),
           decoration: BoxDecoration(
             gradient: gradientColors != null
                 ? LinearGradient(
@@ -148,7 +151,9 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                     end: Alignment.bottomRight,
                   )
                 : null,
-            color: gradientColors == null ? (backgroundColor ?? AppTheme.glass) : null,
+            color: gradientColors == null
+                ? (backgroundColor ?? AppTheme.glass)
+                : null,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color: AppTheme.earthLight.withOpacity(0.2),
@@ -187,7 +192,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
         final isSmallScreen = _isSmallScreen(context);
         final iconSize = _getIconSize(context);
         final fontSize = _getFontSize(context, 24);
-        
+
         return _buildModernCard(
           gradientColors: [
             AppTheme.primary.withOpacity(0.1),
@@ -202,7 +207,8 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                         const SizedBox(height: 16),
                         _buildUserInfoSection(user, fontSize, isSmallScreen),
                         const SizedBox(height: 16),
-                        _buildActionButtonsSection(user, iconSize, isSmallScreen),
+                        _buildActionButtonsSection(
+                            user, iconSize, isSmallScreen),
                       ],
                     )
                   : Row(
@@ -210,10 +216,12 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                         _buildProfileImageSection(user, iconSize),
                         const SizedBox(width: 20),
                         Expanded(
-                          child: _buildUserInfoSection(user, fontSize, isSmallScreen),
+                          child: _buildUserInfoSection(
+                              user, fontSize, isSmallScreen),
                         ),
                         const SizedBox(width: 16),
-                        _buildActionButtonsSection(user, iconSize, isSmallScreen),
+                        _buildActionButtonsSection(
+                            user, iconSize, isSmallScreen),
                       ],
                     ),
             ],
@@ -256,7 +264,8 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                     imageUrl: user!.profileImage!,
                     fit: BoxFit.cover,
                     placeholder: (context, url) => _buildAvatarFallback(user),
-                    errorWidget: (context, url, error) => _buildAvatarFallback(user),
+                    errorWidget: (context, url, error) =>
+                        _buildAvatarFallback(user),
                   ),
                 )
               : _buildAvatarFallback(user),
@@ -292,11 +301,14 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     );
   }
 
-  Widget _buildUserInfoSection(User? user, double fontSize, bool isSmallScreen) {
+  Widget _buildUserInfoSection(
+      User? user, double fontSize, bool isSmallScreen) {
     return LayoutBuilder(
       builder: (context, constraints) {
         return Column(
-          crossAxisAlignment: isSmallScreen ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+          crossAxisAlignment: isSmallScreen
+              ? CrossAxisAlignment.center
+              : CrossAxisAlignment.start,
           children: [
             ConstrainedBox(
               constraints: BoxConstraints(maxWidth: constraints.maxWidth),
@@ -334,10 +346,12 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
               child: Wrap(
                 spacing: 8,
                 runSpacing: 4,
-                alignment: isSmallScreen ? WrapAlignment.center : WrapAlignment.start,
+                alignment:
+                    isSmallScreen ? WrapAlignment.center : WrapAlignment.start,
                 children: (user?.roles ?? []).map((role) {
                   return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: _getRoleColor(role).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
@@ -365,7 +379,8 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     );
   }
 
-  Widget _buildActionButtonsSection(User? user, double iconSize, bool isSmallScreen) {
+  Widget _buildActionButtonsSection(
+      User? user, double iconSize, bool isSmallScreen) {
     return LayoutBuilder(
       builder: (context, constraints) {
         return Flex(
@@ -417,10 +432,11 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
 
   void _showReInviteModal(User? user) {
     if (user == null) return;
-    
+
     // Generate a temporary password for re-invite
-    final tempPassword = 'temp${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
-    
+    final tempPassword =
+        'temp${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
+
     showStaffCredentialsModal(
       context: context,
       staffEmail: user.email,
@@ -441,7 +457,8 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
               ),
               backgroundColor: AppTheme.accent,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               margin: const EdgeInsets.all(16),
               duration: const Duration(seconds: 2),
             ),
@@ -493,7 +510,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       builder: (context, constraints) {
         final iconSize = _getIconSize(context);
         final fontSize = _getFontSize(context, 18);
-        
+
         return _buildModernCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -527,11 +544,16 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                 ],
               ),
               const SizedBox(height: 20),
-              _buildInfoRow('Email', user?.email ?? 'Not provided', Icons.email_outlined),
-              _buildInfoRow('Phone', user?.phone ?? 'Not provided', Icons.phone_outlined),
-              _buildInfoRow('Country', user?.country ?? 'Not specified', Icons.location_on_outlined),
-              _buildInfoRow('Joined', _formatDate(user?.createdAt), Icons.calendar_today_outlined),
-              _buildInfoRow('Last Login', _formatDate(user?.lastLoginAt), Icons.access_time_outlined),
+              _buildInfoRow(
+                  'Email', user?.email ?? 'Not provided', Icons.email_outlined),
+              _buildInfoRow(
+                  'Phone', user?.phone ?? 'Not provided', Icons.phone_outlined),
+              _buildInfoRow('Country', user?.country ?? 'Not specified',
+                  Icons.location_on_outlined),
+              _buildInfoRow('Joined', _formatDate(user?.createdAt),
+                  Icons.calendar_today_outlined),
+              _buildInfoRow('Last Login', _formatDate(user?.lastLoginAt),
+                  Icons.access_time_outlined),
             ],
           ),
         );
@@ -544,7 +566,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       builder: (context, constraints) {
         final isSmallScreen = _isSmallScreen(context);
         final fontSize = _getFontSize(context, 14);
-        
+
         return Padding(
           padding: const EdgeInsets.only(bottom: 16),
           child: isSmallScreen
@@ -579,7 +601,8 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                     Padding(
                       padding: const EdgeInsets.only(left: 34),
                       child: ConstrainedBox(
-                        constraints: BoxConstraints(maxWidth: constraints.maxWidth - 34),
+                        constraints:
+                            BoxConstraints(maxWidth: constraints.maxWidth - 34),
                         child: Text(
                           value,
                           style: TextStyle(
@@ -702,7 +725,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       builder: (context, constraints) {
         final iconSize = _getIconSize(context);
         final fontSize = _getFontSize(context, 18);
-        
+
         return _buildModernCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -748,7 +771,8 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                     final action = actions[index];
                     return Container(
                       width: 140,
-                      margin: EdgeInsets.only(right: index < actions.length - 1 ? 16 : 0),
+                      margin: EdgeInsets.only(
+                          right: index < actions.length - 1 ? 16 : 0),
                       child: _buildActionCard(action),
                     );
                   },
@@ -765,7 +789,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
     return LayoutBuilder(
       builder: (context, constraints) {
         final fontSize = _getFontSize(context, 14);
-        
+
         return GestureDetector(
           onTap: () {
             Navigator.pushNamed(context, action['route']);
@@ -808,7 +832,8 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                       const Spacer(),
                       if (action['count'] > 0)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: action['color'],
                             borderRadius: BorderRadius.circular(8),
@@ -867,7 +892,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       builder: (context, constraints) {
         final iconSize = _getIconSize(context);
         final fontSize = _getFontSize(context, 18);
-        
+
         return _buildModernCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -900,7 +925,8 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                   ),
                   const Spacer(),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: AppTheme.earth.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
@@ -917,48 +943,48 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                 ],
               ),
               const SizedBox(height: 20),
-              
+
               // Date of Birth
               _buildInfoRow(
                 'Date of Birth',
-                user?.dateOfBirth != null 
-                    ? _formatDate(user!.dateOfBirth!) 
+                user?.dateOfBirth != null
+                    ? _formatDate(user!.dateOfBirth!)
                     : 'Not provided',
                 Icons.cake_outlined,
               ),
-              
+
               // Wedding Anniversary
               _buildInfoRow(
                 'Wedding Anniversary',
-                user?.weddingAnniversary != null 
-                    ? _formatDate(user!.weddingAnniversary!) 
+                user?.weddingAnniversary != null
+                    ? _formatDate(user!.weddingAnniversary!)
                     : 'Not provided',
                 Icons.favorite_outline,
               ),
-              
+
               // Address
               _buildInfoRow(
                 'Address',
-                user?.address?.isNotEmpty == true 
-                    ? user!.address! 
+                user?.address?.isNotEmpty == true
+                    ? user!.address!
                     : 'Not provided',
                 Icons.location_on_outlined,
               ),
-              
+
               // Hobbies
               _buildInfoRow(
                 'Hobbies & Interests',
-                user?.hobbies?.isNotEmpty == true 
-                    ? user!.hobbies! 
+                user?.hobbies?.isNotEmpty == true
+                    ? user!.hobbies!
                     : 'Not provided',
                 Icons.sports_esports_outlined,
               ),
-              
+
               // Notes
               _buildInfoRow(
                 'Additional Notes',
-                user?.notes?.isNotEmpty == true 
-                    ? user!.notes! 
+                user?.notes?.isNotEmpty == true
+                    ? user!.notes!
                     : 'No notes added',
                 Icons.note_outlined,
               ),
@@ -974,7 +1000,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       builder: (context, constraints) {
         final iconSize = _getIconSize(context);
         final fontSize = _getFontSize(context, 18);
-        
+
         return _buildModernCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1047,7 +1073,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       builder: (context, constraints) {
         final isSmallScreen = _isSmallScreen(context);
         final fontSize = _getFontSize(context, 14);
-        
+
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: isSmallScreen
@@ -1082,7 +1108,8 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                     Padding(
                       padding: const EdgeInsets.only(left: 34),
                       child: ConstrainedBox(
-                        constraints: BoxConstraints(maxWidth: constraints.maxWidth - 34),
+                        constraints:
+                            BoxConstraints(maxWidth: constraints.maxWidth - 34),
                         child: Text(
                           value,
                           style: TextStyle(
@@ -1152,7 +1179,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       builder: (context, constraints) {
         final iconSize = _getIconSize(context);
         final fontSize = _getFontSize(context, 18);
-        
+
         return _buildModernCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1205,7 +1232,8 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             ConstrainedBox(
-                              constraints: BoxConstraints(maxWidth: constraints.maxWidth * 0.6),
+                              constraints: BoxConstraints(
+                                  maxWidth: constraints.maxWidth * 0.6),
                               child: Text(
                                 entry.key,
                                 style: TextStyle(
@@ -1217,7 +1245,8 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                               ),
                             ),
                             ConstrainedBox(
-                              constraints: BoxConstraints(maxWidth: constraints.maxWidth * 0.6),
+                              constraints: BoxConstraints(
+                                  maxWidth: constraints.maxWidth * 0.6),
                               child: Text(
                                 'Role: ${entry.value.map(_formatRole).join(', ')}',
                                 style: TextStyle(
@@ -1232,7 +1261,8 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                       ),
                       Flexible(
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: _getRoleColor(entry.value.isNotEmpty
                                     ? entry.value.first
@@ -1271,7 +1301,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       builder: (context, constraints) {
         final iconSize = _getIconSize(context);
         final fontSize = _getFontSize(context, 18);
-        
+
         return _buildModernCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1349,7 +1379,8 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             ConstrainedBox(
-                              constraints: BoxConstraints(maxWidth: constraints.maxWidth * 0.6),
+                              constraints: BoxConstraints(
+                                  maxWidth: constraints.maxWidth * 0.6),
                               child: Text(
                                 activity['title'],
                                 style: TextStyle(
@@ -1361,7 +1392,8 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                               ),
                             ),
                             ConstrainedBox(
-                              constraints: BoxConstraints(maxWidth: constraints.maxWidth * 0.6),
+                              constraints: BoxConstraints(
+                                  maxWidth: constraints.maxWidth * 0.6),
                               child: Text(
                                 activity['description'],
                                 style: TextStyle(
@@ -1398,7 +1430,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
       builder: (context, constraints) {
         final iconSize = _getIconSize(context);
         final fontSize = _getFontSize(context, 18);
-        
+
         return _buildModernCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1476,7 +1508,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
         final iconSize = _getIconSize(context);
         final titleFontSize = _getFontSize(context, 16);
         final subtitleFontSize = _getFontSize(context, 13);
-        
+
         return GestureDetector(
           onTap: onTap,
           child: Container(
@@ -1506,7 +1538,8 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                   ),
                   child: Icon(
                     icon,
-                    color: isDestructive ? AppTheme.secondary : AppTheme.primary,
+                    color:
+                        isDestructive ? AppTheme.secondary : AppTheme.primary,
                     size: iconSize,
                   ),
                 ),
@@ -1516,7 +1549,8 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       ConstrainedBox(
-                        constraints: BoxConstraints(maxWidth: constraints.maxWidth * 0.7),
+                        constraints: BoxConstraints(
+                            maxWidth: constraints.maxWidth * 0.7),
                         child: Text(
                           title,
                           style: TextStyle(
@@ -1530,7 +1564,8 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
                         ),
                       ),
                       ConstrainedBox(
-                        constraints: BoxConstraints(maxWidth: constraints.maxWidth * 0.7),
+                        constraints: BoxConstraints(
+                            maxWidth: constraints.maxWidth * 0.7),
                         child: Text(
                           subtitle,
                           style: TextStyle(
@@ -1736,7 +1771,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
         ),
         leading: IconButton(
           icon: Icon(
-            Icons.arrow_back_ios, 
+            Icons.arrow_back_ios,
             color: AppTheme.textPrimary,
             size: _getIconSize(context),
           ),
@@ -1749,29 +1784,32 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen>
               final routeUser = ModalRoute.of(context)?.settings.arguments;
               final User? userArg = routeUser is User ? routeUser : null;
               final user = userArg ?? widget.user ?? authService.currentUser;
-              
+
               return Container(
                 margin: const EdgeInsets.only(right: 16),
                 decoration: BoxDecoration(
-                  color: user != null 
+                  color: user != null
                       ? AppTheme.primary.withOpacity(0.1)
                       : AppTheme.earth.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: IconButton(
                   icon: Icon(
-                    Icons.edit_outlined, 
+                    Icons.edit_outlined,
                     color: user != null ? AppTheme.primary : AppTheme.earth,
                     size: _getIconSize(context),
                   ),
-                  onPressed: user != null ? () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CreateEditUserScreen(user: user),
-                      ),
-                    );
-                  } : null,
+                  onPressed: user != null
+                      ? () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  CreateEditUserScreen(user: user),
+                            ),
+                          );
+                        }
+                      : null,
                   tooltip: user != null ? 'Edit User' : 'No user to edit',
                 ),
               );

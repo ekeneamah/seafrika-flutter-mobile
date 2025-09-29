@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../config/api_config.dart';
@@ -72,32 +73,66 @@ class FacebookService {
       Uri.parse(ApiConfig.getFacebookAuth()),
       headers: await _getHeaders(businessId, userId: userId, token: token),
     );
+    debugPrint(
+        '🔍 FacebookService.disconnectFacebook RAW Backend Response: ${response.body}');
     return _handleResponse(response);
   }
 
   // User Profile Methods
   Future<Map<String, dynamic>> getUserProfile({
+    String? integrationId,
     required String businessId,
     String? userId,
     String? token,
   }) async {
+    final Uri uri;
+    if (integrationId != null) {
+      // Use integration-specific endpoint
+      uri = Uri.parse(ApiConfig.getFacebookPageInfo(integrationId));
+    } else {
+      // Use generic endpoint for backwards compatibility
+      uri = Uri.parse(ApiConfig.getFacebookUserProfile());
+    }
+
     final response = await _client.get(
-      Uri.parse(ApiConfig.getFacebookUserProfile()),
+      uri,
       headers: await _getHeaders(businessId, userId: userId, token: token),
     );
+    debugPrint(
+        '🔍 FacebookService.getUserProfile RAW Backend Response: ${response.body}');
     return _handleResponse(response);
   }
 
   Future<List<dynamic>> getUserPages({
+    String? integrationId,
     required String businessId,
     String? userId,
     String? token,
   }) async {
+    final Uri uri;
+    if (integrationId != null) {
+      // Use integration-specific endpoint for page info
+      uri = Uri.parse(ApiConfig.getFacebookPageInfo(integrationId));
+    } else {
+      // Use generic endpoint for backwards compatibility
+      uri = Uri.parse(ApiConfig.getFacebookUserPages());
+    }
+
     final response = await _client.get(
-      Uri.parse(ApiConfig.getFacebookUserPages()),
+      uri,
       headers: await _getHeaders(businessId, userId: userId, token: token),
     );
-    return _handleResponse(response)['data'] ?? [];
+    debugPrint(
+        '🔍 FacebookService.getUserPages RAW Backend Response: ${response.body}');
+    final result = _handleResponse(response);
+
+    if (integrationId != null) {
+      // For integration-specific calls, return page info as a single-item list
+      return [result];
+    } else {
+      // For generic calls, return the data array
+      return result['data'] ?? [];
+    }
   }
 
   // Page Management Methods
@@ -144,6 +179,8 @@ class FacebookService {
       uri.replace(queryParameters: queryParams.isNotEmpty ? queryParams : null),
       headers: await _getHeaders(businessId, userId: userId, token: token),
     );
+    debugPrint(
+        '🔍 FacebookService.getPageInsights RAW Backend Response: ${response.body}');
     return _handleResponse(response);
   }
 
@@ -263,7 +300,36 @@ class FacebookService {
       uri.replace(queryParameters: queryParams.isNotEmpty ? queryParams : null),
       headers: await _getHeaders(businessId, userId: userId, token: token),
     );
+    debugPrint(
+        '🔍 FacebookService.getPagePosts RAW Backend Response: ${response.body}');
     return _handleResponse(response)['data'] ?? [];
+  }
+
+  // Integration-specific post management
+  Future<List<dynamic>> getIntegrationPosts({
+    required String integrationId,
+    required String businessId,
+    int? limit,
+    String? fields,
+    String? userId,
+    String? token,
+  }) async {
+    final uri = Uri.parse(ApiConfig.getFacebookPosts(integrationId));
+    final queryParams = <String, String>{};
+    if (limit != null) queryParams['limit'] = limit.toString();
+    if (fields != null) queryParams['fields'] = fields;
+
+    final response = await _client.get(
+      uri.replace(queryParameters: queryParams.isNotEmpty ? queryParams : null),
+      headers: await _getHeaders(businessId, userId: userId, token: token),
+    );
+    debugPrint(
+        '🔍 FacebookService.getIntegrationPosts RAW Backend Response: ${response.body}');
+
+    final result = _handleResponse(response);
+
+    // Handle both response formats: direct array [] or object with data property {"data": [...]}
+    return result is List ? result : (result['data'] ?? []);
   }
 
   Future<Map<String, dynamic>> deletePost({

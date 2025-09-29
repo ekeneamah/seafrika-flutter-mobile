@@ -6,33 +6,33 @@ class OptimizedStoreInventory {
   final String id;
   final String businessId;
   final String storeId;
-  
+
   // Product Reference (minimal reads)
   final String productId;
-  
+
   // Denormalized Product Data (avoid product collection reads)
   final String productName;
   final String? productImage;
   final String category;
   final String? productDescription; // Short version only
-  
+
   // Stock Information (single read gets all stock data)
   final StockLevels stock;
   final StockThresholds thresholds;
-  
+
   // Pricing (denormalized for quick access)
   final PricingInfo pricing;
-  
+
   // Location (single field for efficiency)
   final String location; // "Aisle-3/Shelf-B/Bin-12"
-  
+
   // Batch Info (optional, only when relevant)
   final BatchInfo? batch;
-  
+
   // Status & Metadata
   final InventoryStatus status;
   final DateTime lastUpdated;
-  
+
   // Computed Fields (to avoid calculations on read)
   final bool isLowStock;
   final double totalValue;
@@ -63,7 +63,7 @@ class OptimizedStoreInventory {
     DocumentSnapshot<Map<String, dynamic>> doc,
   ) {
     final data = doc.data()!;
-    
+
     return OptimizedStoreInventory(
       id: doc.id,
       businessId: data['businessId'] as String,
@@ -74,12 +74,13 @@ class OptimizedStoreInventory {
       category: data['category'] as String,
       productDescription: data['productDescription'] as String?,
       stock: StockLevels.fromMap(data['stock'] as Map<String, dynamic>),
-      thresholds: StockThresholds.fromMap(data['thresholds'] as Map<String, dynamic>),
+      thresholds:
+          StockThresholds.fromMap(data['thresholds'] as Map<String, dynamic>),
       pricing: PricingInfo.fromMap(data['pricing'] as Map<String, dynamic>),
       location: data['location'] as String,
-      batch: data['batch'] != null 
-        ? BatchInfo.fromMap(data['batch'] as Map<String, dynamic>) 
-        : null,
+      batch: data['batch'] != null
+          ? BatchInfo.fromMap(data['batch'] as Map<String, dynamic>)
+          : null,
       status: InventoryStatus.values.byName(data['status'] as String),
       lastUpdated: (data['lastUpdated'] as Timestamp).toDate(),
       isLowStock: data['isLowStock'] as bool,
@@ -222,9 +223,8 @@ class BatchInfo {
   factory BatchInfo.fromMap(Map<String, dynamic> map) {
     return BatchInfo(
       number: map['number'] as String,
-      expiry: map['expiry'] != null 
-        ? (map['expiry'] as Timestamp).toDate() 
-        : null,
+      expiry:
+          map['expiry'] != null ? (map['expiry'] as Timestamp).toDate() : null,
       received: (map['received'] as Timestamp).toDate(),
     );
   }

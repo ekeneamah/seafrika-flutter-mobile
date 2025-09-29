@@ -39,9 +39,12 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
 
   Order get order => widget.orderDetails['order'] as Order;
   List<OrderTask> get tasks => widget.orderDetails['tasks'] as List<OrderTask>;
-  DeliveryTracking? get delivery => widget.orderDetails['delivery'] as DeliveryTracking?;
-  OrderWorkflow? get workflow => widget.orderDetails['workflow'] as OrderWorkflow?;
-  List<dynamic> get activities => widget.orderDetails['activities'] as List<dynamic>;
+  DeliveryTracking? get delivery =>
+      widget.orderDetails['delivery'] as DeliveryTracking?;
+  OrderWorkflow? get workflow =>
+      widget.orderDetails['workflow'] as OrderWorkflow?;
+  List<dynamic> get activities =>
+      widget.orderDetails['activities'] as List<dynamic>;
 
   @override
   Widget build(BuildContext context) {
@@ -151,8 +154,8 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
                 Text(
                   'Order Status',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
                 _buildStatusChip(order.status),
               ],
@@ -209,8 +212,8 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
             Text(
               'Customer Information',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 16),
             ListTile(
@@ -247,8 +250,8 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
             Text(
               'Order Items (${order.items.length})',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 16),
             ...order.items.map((item) => _buildOrderItem(item)),
@@ -292,15 +295,15 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
                 Text(
                   item.productName,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w500,
-                  ),
+                        fontWeight: FontWeight.w500,
+                      ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Qty: ${item.quantity} × \$${item.price.toStringAsFixed(2)}',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[600],
-                  ),
+                        color: Colors.grey[600],
+                      ),
                 ),
               ],
             ),
@@ -308,8 +311,8 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
           Text(
             '\$${item.total.toStringAsFixed(2)}',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+                  fontWeight: FontWeight.bold,
+                ),
           ),
         ],
       ),
@@ -337,16 +340,16 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
           Text(
             label,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-              fontSize: isTotal ? 16 : 14,
-            ),
+                  fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
+                  fontSize: isTotal ? 16 : 14,
+                ),
           ),
           Text(
             '\$${amount.toStringAsFixed(2)}',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-              fontSize: isTotal ? 16 : 14,
-            ),
+                  fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
+                  fontSize: isTotal ? 16 : 14,
+                ),
           ),
         ],
       ),
@@ -363,8 +366,8 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
             Text(
               'Payment Information',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 16),
             ListTile(
@@ -396,8 +399,8 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
             Text(
               'Shipping Information',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 16),
             ListTile(
@@ -434,8 +437,8 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
             Text(
               'Notes',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 8),
             Text(order.notes!),
@@ -484,8 +487,8 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
                   child: Text(
                     task.title,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                 ),
                 _buildTaskStatusChip(task.status),
@@ -554,7 +557,8 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
     );
   }
 
-  Widget _buildTaskActionButton(String label, IconData icon, VoidCallback onTap) {
+  Widget _buildTaskActionButton(
+      String label, IconData icon, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(4),
@@ -615,8 +619,8 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
             Text(
               'Delivery Information',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 16),
             ListTile(
@@ -660,8 +664,8 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
             Text(
               'Delivery Updates',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 16),
             ...delivery!.updates.map((update) => _buildDeliveryUpdate(update)),
@@ -693,8 +697,8 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
                 Text(
                   update.message,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w500,
-                  ),
+                        fontWeight: FontWeight.w500,
+                      ),
                 ),
                 const SizedBox(height: 4),
                 Row(
@@ -702,18 +706,19 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
                     Text(
                       _formatDate(update.timestamp),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey[600],
-                      ),
+                            color: Colors.grey[600],
+                          ),
                     ),
                     if (update.location != null) ...[
                       const SizedBox(width: 8),
-                      Icon(Icons.location_on, size: 12, color: Colors.grey[600]),
+                      Icon(Icons.location_on,
+                          size: 12, color: Colors.grey[600]),
                       const SizedBox(width: 2),
                       Text(
                         update.location!,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                              color: Colors.grey[600],
+                            ),
                       ),
                     ],
                   ],
@@ -759,8 +764,8 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
                 Text(
                   activity['action'] ?? 'Unknown Action',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w500,
-                  ),
+                        fontWeight: FontWeight.w500,
+                      ),
                 ),
                 if (activity['description'] != null) ...[
                   const SizedBox(height: 4),
@@ -770,8 +775,8 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
                 Text(
                   'System • ${_formatDate((activity['timestamp'] as Timestamp).toDate())}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey[600],
-                  ),
+                        color: Colors.grey[600],
+                      ),
                 ),
               ],
             ),
@@ -1017,19 +1022,21 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
         title: const Text('Update Order Status'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          children: OrderStatus.values.map(
-            (status) => RadioListTile<OrderStatus>(
-              title: Text(status.toString().split('.').last.toUpperCase()),
-              value: status,
-              groupValue: order.status,
-              onChanged: (value) {
-                Navigator.pop(context);
-                if (value != null) {
-                  _updateOrderStatus(value);
-                }
-              },
-            ),
-          ).toList(),
+          children: OrderStatus.values
+              .map(
+                (status) => RadioListTile<OrderStatus>(
+                  title: Text(status.toString().split('.').last.toUpperCase()),
+                  value: status,
+                  groupValue: order.status,
+                  onChanged: (value) {
+                    Navigator.pop(context);
+                    if (value != null) {
+                      _updateOrderStatus(value);
+                    }
+                  },
+                ),
+              )
+              .toList(),
         ),
         actions: [
           TextButton(
@@ -1045,11 +1052,12 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
     try {
       final orderService = ref.read(orderManagementServiceProvider);
       await orderService.updateOrderStatus(order.id, newStatus);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Order status updated to ${newStatus.toString().split('.').last}'),
+            content: Text(
+                'Order status updated to ${newStatus.toString().split('.').last}'),
           ),
         );
         // Refresh the order details
@@ -1145,19 +1153,21 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
         title: Text('Update Task Status'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          children: OrderTaskStatus.values.map(
-            (status) => RadioListTile<OrderTaskStatus>(
-              title: Text(status.toString().split('.').last.toUpperCase()),
-              value: status,
-              groupValue: task.status,
-              onChanged: (value) {
-                Navigator.pop(context);
-                if (value != null) {
-                  _performTaskStatusUpdate(task.id, value);
-                }
-              },
-            ),
-          ).toList(),
+          children: OrderTaskStatus.values
+              .map(
+                (status) => RadioListTile<OrderTaskStatus>(
+                  title: Text(status.toString().split('.').last.toUpperCase()),
+                  value: status,
+                  groupValue: task.status,
+                  onChanged: (value) {
+                    Navigator.pop(context);
+                    if (value != null) {
+                      _performTaskStatusUpdate(task.id, value);
+                    }
+                  },
+                ),
+              )
+              .toList(),
         ),
         actions: [
           TextButton(
@@ -1169,15 +1179,17 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
     );
   }
 
-  Future<void> _performTaskStatusUpdate(String taskId, OrderTaskStatus status) async {
+  Future<void> _performTaskStatusUpdate(
+      String taskId, OrderTaskStatus status) async {
     try {
       final orderService = ref.read(orderManagementServiceProvider);
       await orderService.updateTaskStatus(taskId, status);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Task status updated to ${status.toString().split('.').last}'),
+            content: Text(
+                'Task status updated to ${status.toString().split('.').last}'),
           ),
         );
       }
@@ -1192,7 +1204,7 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
 
   void _addTaskComment(OrderTask task) {
     final commentController = TextEditingController();
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -1235,9 +1247,9 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
         createdAt: DateTime.now(),
         attachments: [],
       );
-      
+
       await orderService.addTaskComment(taskId, taskComment);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Comment added successfully')),
@@ -1301,7 +1313,7 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
     try {
       // Generate payment information text
       final paymentText = _generatePaymentText();
-      
+
       // Share the payment information
       await Share.share(
         paymentText,
@@ -1330,16 +1342,16 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
 
   String _generatePaymentText() {
     final buffer = StringBuffer();
-    
+
     // Header
     buffer.writeln('💳 PAYMENT INSTRUCTIONS');
     buffer.writeln('Order #${order.id.substring(0, 8)}');
     buffer.writeln('Customer: ${order.customerName}');
     buffer.writeln('Total Amount: \$${order.total.toStringAsFixed(2)}');
     buffer.writeln('');
-    
+
     // Payment status check
-    if (order.paymentStatus.toLowerCase().contains('paid') || 
+    if (order.paymentStatus.toLowerCase().contains('paid') ||
         order.paymentStatus.toLowerCase().contains('complete')) {
       buffer.writeln('✅ PAYMENT COMPLETED');
       buffer.writeln('This order has already been paid.');
@@ -1348,7 +1360,7 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
       buffer.writeln('💰 PAYMENT REQUIRED');
       buffer.writeln('Status: ${order.paymentStatus}');
       buffer.writeln('');
-      
+
       // Bank transfer instructions
       buffer.writeln('📱 PAYMENT OPTIONS:');
       buffer.writeln('');
@@ -1358,20 +1370,21 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
       buffer.writeln('   Bank: First National Bank');
       buffer.writeln('   Reference: ORDER${order.id.substring(0, 8)}');
       buffer.writeln('');
-      
+
       // Mobile money
       buffer.writeln('2. MOBILE MONEY');
       buffer.writeln('   M-Pesa: 0712345678');
       buffer.writeln('   Airtel Money: 0734567890');
       buffer.writeln('   Reference: ORDER${order.id.substring(0, 8)}');
       buffer.writeln('');
-      
+
       // Online payment link (placeholder)
       buffer.writeln('3. ONLINE PAYMENT');
       buffer.writeln('   Pay securely online:');
-      buffer.writeln('   https://pay.yourbusiness.com/order/${order.id.substring(0, 8)}');
+      buffer.writeln(
+          '   https://pay.yourbusiness.com/order/${order.id.substring(0, 8)}');
       buffer.writeln('');
-      
+
       // Instructions
       buffer.writeln('📋 PAYMENT INSTRUCTIONS:');
       buffer.writeln('• Use the order reference for all payments');
@@ -1379,16 +1392,16 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
       buffer.writeln('• Processing starts after payment verification');
       buffer.writeln('• Contact us for payment issues or queries');
     }
-    
+
     buffer.writeln('');
     buffer.writeln('📞 CONTACT US:');
     buffer.writeln('Phone: +1 (555) 123-4567');
     buffer.writeln('Email: payments@yourbusiness.com');
     buffer.writeln('Support: Available 9 AM - 6 PM');
-    
+
     buffer.writeln('');
     buffer.writeln('Thank you for your business! 🙏');
-    
+
     return buffer.toString();
   }
 
@@ -1411,10 +1424,11 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
 
       // Generate PDF document
       final pdf = await _generateOrderPdf();
-      
+
       // Create a temporary PDF file
       final directory = await getTemporaryDirectory();
-      final file = File('${directory.path}/order_${order.id.substring(0, 8)}.pdf');
+      final file =
+          File('${directory.path}/order_${order.id.substring(0, 8)}.pdf');
       await file.writeAsBytes(await pdf.save());
 
       // Close loading dialog
@@ -1472,31 +1486,30 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
             // Header
             _buildPdfHeader(boldFontData, fontData),
             pw.SizedBox(height: 20),
-            
+
             // Order Info
             _buildPdfOrderInfo(fontData, boldFontData),
             pw.SizedBox(height: 20),
-            
+
             // Customer Info
             _buildPdfCustomerInfo(fontData, boldFontData),
             pw.SizedBox(height: 20),
-            
+
             // Items Table
             _buildPdfItemsTable(fontData, boldFontData),
             pw.SizedBox(height: 20),
-            
+
             // Order Summary
             _buildPdfOrderSummary(fontData, boldFontData),
             pw.SizedBox(height: 20),
-            
+
             // Additional Info
-            if (order.notes?.isNotEmpty == true) 
+            if (order.notes?.isNotEmpty == true)
               _buildPdfAdditionalInfo(fontData, boldFontData),
-            
+
             // Tasks if any
-            if (tasks.isNotEmpty)
-              _buildPdfTasksSection(fontData, boldFontData),
-            
+            if (tasks.isNotEmpty) _buildPdfTasksSection(fontData, boldFontData),
+
             // Footer
             pw.Spacer(),
             _buildPdfFooter(fontData),
@@ -1572,11 +1585,17 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    _buildInfoRow('Status:', order.status.toString().split('.').last.toUpperCase(), regularFont, boldFont),
+                    _buildInfoRow(
+                        'Status:',
+                        order.status.toString().split('.').last.toUpperCase(),
+                        regularFont,
+                        boldFont),
                     if (order.paymentMethod.isNotEmpty)
-                      _buildInfoRow('Payment Method:', order.paymentMethod, regularFont, boldFont),
+                      _buildInfoRow('Payment Method:', order.paymentMethod,
+                          regularFont, boldFont),
                     if (order.paymentStatus.isNotEmpty)
-                      _buildInfoRow('Payment Status:', order.paymentStatus, regularFont, boldFont),
+                      _buildInfoRow('Payment Status:', order.paymentStatus,
+                          regularFont, boldFont),
                   ],
                 ),
               ),
@@ -1586,10 +1605,16 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
                     if (order.trackingNumber?.isNotEmpty == true)
-                      _buildInfoRow('Tracking Number:', order.trackingNumber!, regularFont, boldFont),
-                    _buildInfoRow('Created:', _formatDateTime(order.createdAt), regularFont, boldFont),
+                      _buildInfoRow('Tracking Number:', order.trackingNumber!,
+                          regularFont, boldFont),
+                    _buildInfoRow('Created:', _formatDateTime(order.createdAt),
+                        regularFont, boldFont),
                     if (order.updatedAt != null)
-                      _buildInfoRow('Updated:', _formatDateTime(order.updatedAt!), regularFont, boldFont),
+                      _buildInfoRow(
+                          'Updated:',
+                          _formatDateTime(order.updatedAt!),
+                          regularFont,
+                          boldFont),
                   ],
                 ),
               ),
@@ -1625,9 +1650,11 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    _buildInfoRow('Name:', order.customerName, regularFont, boldFont),
+                    _buildInfoRow(
+                        'Name:', order.customerName, regularFont, boldFont),
                     if (order.customerEmail.isNotEmpty)
-                      _buildInfoRow('Email:', order.customerEmail, regularFont, boldFont),
+                      _buildInfoRow(
+                          'Email:', order.customerEmail, regularFont, boldFont),
                   ],
                 ),
               ),
@@ -1637,9 +1664,11 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
                     if (order.customerPhone.isNotEmpty)
-                      _buildInfoRow('Phone:', order.customerPhone, regularFont, boldFont),
+                      _buildInfoRow(
+                          'Phone:', order.customerPhone, regularFont, boldFont),
                     if (order.shippingAddress.isNotEmpty)
-                      _buildInfoRow('Address:', order.shippingAddress, regularFont, boldFont),
+                      _buildInfoRow('Address:', order.shippingAddress,
+                          regularFont, boldFont),
                   ],
                 ),
               ),
@@ -1683,8 +1712,10 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
                 children: [
                   _buildTableCell(item.productName, regularFont),
                   _buildTableCell('${item.quantity}', regularFont),
-                  _buildTableCell('\$${item.price.toStringAsFixed(2)}', regularFont),
-                  _buildTableCell('\$${itemTotal.toStringAsFixed(2)}', regularFont),
+                  _buildTableCell(
+                      '\$${item.price.toStringAsFixed(2)}', regularFont),
+                  _buildTableCell(
+                      '\$${itemTotal.toStringAsFixed(2)}', regularFont),
                 ],
               );
             }),
@@ -1717,13 +1748,17 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
                   ),
                 ),
                 pw.SizedBox(height: 8),
-                _buildPdfSummaryRow('Subtotal:', '\$${order.subtotal.toStringAsFixed(2)}', regularFont),
+                _buildPdfSummaryRow('Subtotal:',
+                    '\$${order.subtotal.toStringAsFixed(2)}', regularFont),
                 if (order.tax > 0)
-                  _buildPdfSummaryRow('Tax:', '\$${order.tax.toStringAsFixed(2)}', regularFont),
+                  _buildPdfSummaryRow(
+                      'Tax:', '\$${order.tax.toStringAsFixed(2)}', regularFont),
                 if (order.shipping > 0)
-                  _buildPdfSummaryRow('Shipping:', '\$${order.shipping.toStringAsFixed(2)}', regularFont),
+                  _buildPdfSummaryRow('Shipping:',
+                      '\$${order.shipping.toStringAsFixed(2)}', regularFont),
                 pw.Divider(),
-                _buildPdfSummaryRow('TOTAL:', '\$${order.total.toStringAsFixed(2)}', boldFont),
+                _buildPdfSummaryRow(
+                    'TOTAL:', '\$${order.total.toStringAsFixed(2)}', boldFont),
               ],
             ),
           ),
@@ -1775,52 +1810,52 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
         ),
         pw.SizedBox(height: 8),
         ...tasks.map((task) => pw.Container(
-          margin: const pw.EdgeInsets.only(bottom: 8),
-          padding: const pw.EdgeInsets.all(12),
-          decoration: pw.BoxDecoration(
-            border: pw.Border.all(color: PdfColors.grey300),
-            borderRadius: pw.BorderRadius.circular(4),
-          ),
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              margin: const pw.EdgeInsets.only(bottom: 8),
+              padding: const pw.EdgeInsets.all(12),
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: PdfColors.grey300),
+                borderRadius: pw.BorderRadius.circular(4),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  pw.Text(
-                    task.title,
-                    style: pw.TextStyle(font: boldFont, fontSize: 12),
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text(
+                        task.title,
+                        style: pw.TextStyle(font: boldFont, fontSize: 12),
+                      ),
+                      pw.Text(
+                        task.status.toString().split('.').last.toUpperCase(),
+                        style: pw.TextStyle(font: regularFont, fontSize: 10),
+                      ),
+                    ],
                   ),
-                  pw.Text(
-                    task.status.toString().split('.').last.toUpperCase(),
-                    style: pw.TextStyle(font: regularFont, fontSize: 10),
-                  ),
+                  if (task.assignedTo?.isNotEmpty == true) ...[
+                    pw.SizedBox(height: 4),
+                    pw.Text(
+                      'Assigned to: ${task.assignedTo}',
+                      style: pw.TextStyle(font: regularFont, fontSize: 10),
+                    ),
+                  ],
+                  if (task.dueDate != null) ...[
+                    pw.SizedBox(height: 2),
+                    pw.Text(
+                      'Due: ${_formatDateTime(task.dueDate!)}',
+                      style: pw.TextStyle(font: regularFont, fontSize: 10),
+                    ),
+                  ],
+                  if (task.description.isNotEmpty) ...[
+                    pw.SizedBox(height: 4),
+                    pw.Text(
+                      task.description,
+                      style: pw.TextStyle(font: regularFont, fontSize: 10),
+                    ),
+                  ],
                 ],
               ),
-              if (task.assignedTo?.isNotEmpty == true) ...[
-                pw.SizedBox(height: 4),
-                pw.Text(
-                  'Assigned to: ${task.assignedTo}',
-                  style: pw.TextStyle(font: regularFont, fontSize: 10),
-                ),
-              ],
-              if (task.dueDate != null) ...[
-                pw.SizedBox(height: 2),
-                pw.Text(
-                  'Due: ${_formatDateTime(task.dueDate!)}',
-                  style: pw.TextStyle(font: regularFont, fontSize: 10),
-                ),
-              ],
-              if (task.description.isNotEmpty) ...[
-                pw.SizedBox(height: 4),
-                pw.Text(
-                  task.description,
-                  style: pw.TextStyle(font: regularFont, fontSize: 10),
-                ),
-              ],
-            ],
-          ),
-        )),
+            )),
       ],
     );
   }
@@ -1839,11 +1874,13 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
           children: [
             pw.Text(
               'Generated on ${_formatDateTime(DateTime.now())}',
-              style: pw.TextStyle(font: regularFont, fontSize: 10, color: PdfColors.grey600),
+              style: pw.TextStyle(
+                  font: regularFont, fontSize: 10, color: PdfColors.grey600),
             ),
             pw.Text(
               'Order #${order.id.substring(0, 8)}',
-              style: pw.TextStyle(font: regularFont, fontSize: 10, color: PdfColors.grey600),
+              style: pw.TextStyle(
+                  font: regularFont, fontSize: 10, color: PdfColors.grey600),
             ),
           ],
         ),
@@ -1851,7 +1888,8 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
     );
   }
 
-  pw.Widget _buildInfoRow(String label, String value, pw.Font regularFont, pw.Font boldFont) {
+  pw.Widget _buildInfoRow(
+      String label, String value, pw.Font regularFont, pw.Font boldFont) {
     return pw.Padding(
       padding: const pw.EdgeInsets.only(bottom: 4),
       child: pw.Row(
@@ -1875,7 +1913,8 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen>
     );
   }
 
-  pw.Widget _buildTableCell(String text, pw.Font font, {bool isHeader = false}) {
+  pw.Widget _buildTableCell(String text, pw.Font font,
+      {bool isHeader = false}) {
     return pw.Padding(
       padding: const pw.EdgeInsets.all(8),
       child: pw.Text(

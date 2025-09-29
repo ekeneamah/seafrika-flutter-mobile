@@ -106,7 +106,7 @@ class ResponsiveContactForm extends StatelessWidget {
   Widget _buildSectionHeader(BuildContext context) {
     final iconSize = _getIconSize(context);
     final color = accentColor ?? AppTheme.accent;
-    
+
     return Row(
       children: [
         Container(
@@ -139,14 +139,12 @@ class ResponsiveContactForm extends StatelessWidget {
 
   Widget _buildContactFields(BuildContext context) {
     final shouldStack = _shouldStackFields(context);
-    
+
     return Column(
       children: [
         // Phone and Email fields
-        shouldStack
-            ? _buildStackedFields(context)
-            : _buildRowFields(context),
-        
+        shouldStack ? _buildStackedFields(context) : _buildRowFields(context),
+
         // Address field (if enabled)
         if (showAddress) ...[
           const SizedBox(height: 20),
@@ -178,11 +176,12 @@ class ResponsiveContactForm extends StatelessWidget {
 
   Widget _buildPhoneField(BuildContext context) {
     final color = accentColor ?? AppTheme.accent;
-    
+
     return TextFormField(
       controller: phoneController,
       focusNode: phoneFocusNode,
-      textInputAction: showAddress ? TextInputAction.next : TextInputAction.done,
+      textInputAction:
+          showAddress ? TextInputAction.next : TextInputAction.done,
       keyboardType: TextInputType.phone,
       decoration: InputDecoration(
         labelText: isPhoneRequired ? 'Phone *' : 'Phone',
@@ -214,7 +213,9 @@ class ResponsiveContactForm extends StatelessWidget {
             if (isPhoneRequired && (v == null || v.isEmpty)) {
               return 'Enter phone number';
             }
-            if (v != null && v.isNotEmpty && !RegExp(r'^\+?[\d\s\-\(\)]+$').hasMatch(v)) {
+            if (v != null &&
+                v.isNotEmpty &&
+                !RegExp(r'^\+?[\d\s\-\(\)]+$').hasMatch(v)) {
               return 'Enter valid phone number';
             }
             return null;
@@ -225,11 +226,12 @@ class ResponsiveContactForm extends StatelessWidget {
 
   Widget _buildEmailField(BuildContext context) {
     final color = accentColor ?? AppTheme.accent;
-    
+
     return TextFormField(
       controller: emailController,
       focusNode: emailFocusNode,
-      textInputAction: showAddress ? TextInputAction.next : TextInputAction.done,
+      textInputAction:
+          showAddress ? TextInputAction.next : TextInputAction.done,
       keyboardType: TextInputType.emailAddress,
       textCapitalization: TextCapitalization.none,
       decoration: InputDecoration(
@@ -262,7 +264,9 @@ class ResponsiveContactForm extends StatelessWidget {
             if (isEmailRequired && (v == null || v.isEmpty)) {
               return 'Enter email address';
             }
-            if (v != null && v.isNotEmpty && !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(v)) {
+            if (v != null &&
+                v.isNotEmpty &&
+                !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(v)) {
               return 'Enter valid email address';
             }
             return null;
@@ -273,7 +277,7 @@ class ResponsiveContactForm extends StatelessWidget {
 
   Widget _buildAddressField(BuildContext context) {
     final color = accentColor ?? AppTheme.accent;
-    
+
     return TextFormField(
       controller: addressController,
       focusNode: addressFocusNode,

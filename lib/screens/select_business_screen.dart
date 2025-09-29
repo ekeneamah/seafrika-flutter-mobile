@@ -11,7 +11,8 @@ class SelectBusinessScreen extends ConsumerStatefulWidget {
   const SelectBusinessScreen({Key? key}) : super(key: key);
 
   @override
-  ConsumerState<SelectBusinessScreen> createState() => _SelectBusinessScreenState();
+  ConsumerState<SelectBusinessScreen> createState() =>
+      _SelectBusinessScreenState();
 }
 
 class _SelectBusinessScreenState extends ConsumerState<SelectBusinessScreen> {
@@ -39,7 +40,7 @@ class _SelectBusinessScreenState extends ConsumerState<SelectBusinessScreen> {
       final authService = ref.read(authServiceProvider);
       final businessService = ref.read(businessServiceProvider);
       final user = authService.currentUser;
-      
+
       if (user != null) {
         final businesses = await businessService.getBusinessesByOwner(user.id);
         setState(() => _businesses = businesses);
@@ -62,7 +63,7 @@ class _SelectBusinessScreenState extends ConsumerState<SelectBusinessScreen> {
     try {
       final businessContext = ref.read(businessContextProvider.notifier);
       await businessContext.setSelectedBusiness(business);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -87,7 +88,7 @@ class _SelectBusinessScreenState extends ConsumerState<SelectBusinessScreen> {
   @override
   Widget build(BuildContext context) {
     final selectedBusiness = ref.watch(businessContextProvider);
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Select Business'),
@@ -97,7 +98,8 @@ class _SelectBusinessScreenState extends ConsumerState<SelectBusinessScreen> {
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () async {
-              final result = await NavigationService.navigateTo(AppRoutes.businessManagement);
+              final result = await NavigationService.navigateTo(
+                  AppRoutes.businessManagement);
               if (result == true) {
                 await _loadBusinesses();
               }
@@ -127,20 +129,21 @@ class _SelectBusinessScreenState extends ConsumerState<SelectBusinessScreen> {
           Text(
             'No businesses found',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: Colors.grey[600],
-            ),
+                  color: Colors.grey[600],
+                ),
           ),
           const SizedBox(height: 8),
           Text(
             'Create your first business to get started',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey[500],
-            ),
+                  color: Colors.grey[500],
+                ),
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
             onPressed: () async {
-              final result = await NavigationService.navigateTo(AppRoutes.businessManagement);
+              final result = await NavigationService.navigateTo(
+                  AppRoutes.businessManagement);
               if (result == true) {
                 await _loadBusinesses();
               }
@@ -164,13 +167,13 @@ class _SelectBusinessScreenState extends ConsumerState<SelectBusinessScreen> {
       itemBuilder: (context, index) {
         final business = _businesses[index];
         final isSelected = selectedBusiness?.id == business.id;
-        
+
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
           elevation: isSelected ? 4 : 2,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: isSelected 
+            side: isSelected
                 ? BorderSide(color: AppTheme.primary, width: 2)
                 : BorderSide.none,
           ),
@@ -178,8 +181,8 @@ class _SelectBusinessScreenState extends ConsumerState<SelectBusinessScreen> {
             contentPadding: const EdgeInsets.all(16),
             leading: CircleAvatar(
               radius: 24,
-              backgroundColor: isSelected 
-                  ? AppTheme.primary 
+              backgroundColor: isSelected
+                  ? AppTheme.primary
                   : AppTheme.primary.withOpacity(0.1),
               child: Text(
                 business.name.isNotEmpty ? business.name[0].toUpperCase() : 'B',
@@ -213,7 +216,7 @@ class _SelectBusinessScreenState extends ConsumerState<SelectBusinessScreen> {
                 ],
               ],
             ),
-            trailing: isSelected 
+            trailing: isSelected
                 ? Icon(
                     Icons.check_circle,
                     color: AppTheme.primary,

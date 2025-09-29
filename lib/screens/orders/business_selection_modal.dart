@@ -9,10 +9,12 @@ class BusinessSelectionModal extends ConsumerStatefulWidget {
   const BusinessSelectionModal({super.key});
 
   @override
-  ConsumerState<BusinessSelectionModal> createState() => _BusinessSelectionModalState();
+  ConsumerState<BusinessSelectionModal> createState() =>
+      _BusinessSelectionModalState();
 }
 
-class _BusinessSelectionModalState extends ConsumerState<BusinessSelectionModal> {
+class _BusinessSelectionModalState
+    extends ConsumerState<BusinessSelectionModal> {
   List<Business> _businesses = [];
   bool _isLoading = true;
   String? _error;
@@ -32,10 +34,11 @@ class _BusinessSelectionModalState extends ConsumerState<BusinessSelectionModal>
     try {
       final authService = ref.read(authServiceProvider);
       final currentUser = authService.currentUser;
-      
+
       if (currentUser != null) {
         final businessService = ref.read(businessServiceProvider);
-        final businesses = await businessService.getBusinessesByOwner(currentUser.id);
+        final businesses =
+            await businessService.getBusinessesByOwner(currentUser.id);
         setState(() {
           _businesses = businesses;
           _isLoading = false;
@@ -57,14 +60,15 @@ class _BusinessSelectionModalState extends ConsumerState<BusinessSelectionModal>
   Future<void> _selectBusiness(Business business) async {
     try {
       // Set the selected business in the context provider
-      final businessContextNotifier = ref.read(businessContextProvider.notifier);
+      final businessContextNotifier =
+          ref.read(businessContextProvider.notifier);
       await businessContextNotifier.setSelectedBusiness(business);
-      
+
       if (!mounted) return;
-      
+
       // Close the modal and return success
       Navigator.of(context).pop(true);
-      
+
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -74,7 +78,7 @@ class _BusinessSelectionModalState extends ConsumerState<BusinessSelectionModal>
       );
     } catch (e) {
       if (!mounted) return;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error selecting business: $e'),
@@ -113,8 +117,8 @@ class _BusinessSelectionModalState extends ConsumerState<BusinessSelectionModal>
                   Text(
                     'Select Business',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
@@ -126,7 +130,7 @@ class _BusinessSelectionModalState extends ConsumerState<BusinessSelectionModal>
               ),
             ),
             const Divider(height: 1),
-            
+
             // Content
             Flexible(
               child: _buildContent(),
@@ -170,15 +174,15 @@ class _BusinessSelectionModalState extends ConsumerState<BusinessSelectionModal>
             Text(
               'No Businesses Found',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Colors.grey[600],
-              ),
+                    color: Colors.grey[600],
+                  ),
             ),
             const SizedBox(height: 8),
             Text(
               'You need to create a business first.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
-              ),
+                    color: Colors.grey[600],
+                  ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -249,7 +253,7 @@ class _BusinessSelectionModalState extends ConsumerState<BusinessSelectionModal>
                 ),
               ),
               const SizedBox(width: 16),
-              
+
               // Business info
               Expanded(
                 child: Column(
@@ -258,34 +262,37 @@ class _BusinessSelectionModalState extends ConsumerState<BusinessSelectionModal>
                     Text(
                       business.name,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: isSelected ? Theme.of(context).primaryColor : null,
-                      ),
+                            fontWeight: FontWeight.w600,
+                            color: isSelected
+                                ? Theme.of(context).primaryColor
+                                : null,
+                          ),
                     ),
                     if (business.address.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Text(
                         business.address,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                              color: Colors.grey[600],
+                            ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
-                    if (business.phone != null && business.phone!.isNotEmpty) ...[
+                    if (business.phone != null &&
+                        business.phone!.isNotEmpty) ...[
                       const SizedBox(height: 2),
                       Text(
                         business.phone!,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                              color: Colors.grey[600],
+                            ),
                       ),
                     ],
                   ],
                 ),
               ),
-              
+
               // Selection indicator
               if (isSelected)
                 Icon(

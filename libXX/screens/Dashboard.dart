@@ -22,7 +22,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   late AnimationController _slideController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
-  
+
   Store? _selectedStore;
   String _greeting = '';
   String _businessName = '';
@@ -90,14 +90,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         _selectedStore = stores.first;
       });
     }
-    
+
     // Load selected business details from SharedPreferences
     await _loadSelectedBusinessDetails();
   }
 
   Future<void> _loadSelectedBusinessDetails() async {
     try {
-      final businessDetails = await BusinessPreferencesHelper.getSelectedBusinessDetails();
+      final businessDetails =
+          await BusinessPreferencesHelper.getSelectedBusinessDetails();
       setState(() {
         _businessName = businessDetails['name'] ?? '';
         _businessPhone = businessDetails['phone'] ?? '';
@@ -146,10 +147,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              
+
               // Header
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 child: Row(
                   children: [
                     Text(
@@ -171,7 +173,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   ],
                 ),
               ),
-              
+
               // Search Widget
               Expanded(
                 child: SingleChildScrollView(
@@ -242,7 +244,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 end: Alignment.bottomRight,
               )
             : null,
-        color: gradientColors == null ? (backgroundColor ?? AppTheme.glass) : null,
+        color:
+            gradientColors == null ? (backgroundColor ?? AppTheme.glass) : null,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: AppTheme.earthLight.withOpacity(0.1),
@@ -293,7 +296,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   color: AppTheme.earth,
                 ),
               ),
-              
+
               // Search and Notification icons on the right
               Row(
                 children: [
@@ -315,7 +318,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                       tooltip: 'Search across modules',
                     ),
                   ),
-                  
+
                   // Notifications
                   Container(
                     decoration: BoxDecoration(
@@ -353,9 +356,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               ),
             ],
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Second Row: Name with clap hand emoji and Avatar
           Row(
             children: [
@@ -382,15 +385,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                         child: CachedNetworkImage(
                           imageUrl: user!.profileImage!,
                           fit: BoxFit.cover,
-                          placeholder: (context, url) => _buildAvatarFallback(user),
-                          errorWidget: (context, url, error) => _buildAvatarFallback(user),
+                          placeholder: (context, url) =>
+                              _buildAvatarFallback(user),
+                          errorWidget: (context, url, error) =>
+                              _buildAvatarFallback(user),
                         ),
                       )
                     : _buildAvatarFallback(user),
               ),
-              
+
               const SizedBox(width: 16),
-              
+
               // Name with clap hand emoji
               Expanded(
                 child: Text(
@@ -405,9 +410,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               ),
             ],
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Business Details Section
           if (_businessName.isNotEmpty) ...[
             Container(
@@ -528,7 +533,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       ),
       child: Center(
         child: Text(
-          user?.firstName?.isNotEmpty == true ? user!.firstName![0].toUpperCase() : 'V',
+          user?.firstName?.isNotEmpty == true
+              ? user!.firstName![0].toUpperCase()
+              : 'V',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -642,9 +649,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 ),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                   decoration: BoxDecoration(
-                    color: (isPositive ? AppTheme.accent : AppTheme.secondary).withOpacity(0.1),
+                    color: (isPositive ? AppTheme.accent : AppTheme.secondary)
+                        .withOpacity(0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -826,7 +835,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   Widget _buildTodaysBookings() {
     final bookings = _getMockBookings();
-    
+
     return _buildModernCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -923,7 +932,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: _getBookingTypeColor(booking.type).withOpacity(0.2),
+                          color: _getBookingTypeColor(booking.type)
+                              .withOpacity(0.2),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(
@@ -975,7 +985,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   Widget _buildStorePerformance() {
     if (_selectedStore == null) return const SizedBox.shrink();
-    
+
     return _buildModernCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1080,7 +1090,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     );
   }
 
-  Widget _buildPerformanceMetric(String title, String value, IconData icon, Color color) {
+  Widget _buildPerformanceMetric(
+      String title, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -1117,7 +1128,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   Widget _buildActivityFeed() {
     final activities = _getMockActivities();
-    
+
     return _buildModernCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1326,7 +1337,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   String _formatTime(DateTime time) {
     final now = DateTime.now();
     final difference = now.difference(time);
-    
+
     if (difference.inMinutes < 60) {
       return '${difference.inMinutes}m ago';
     } else if (difference.inHours < 24) {
@@ -1355,14 +1366,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   ),
                 ),
               ),
-              
+
               // Quick Stats
               SliverToBoxAdapter(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
                       child: Text(
                         'Quick Overview',
                         style: TextStyle(
@@ -1376,27 +1388,27 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   ],
                 ),
               ),
-              
+
               // Action Shortcuts
               SliverToBoxAdapter(
                 child: _buildActionShortcuts(),
               ),
-              
+
               // Today's Bookings
               SliverToBoxAdapter(
                 child: _buildTodaysBookings(),
               ),
-              
+
               // Store Performance
               SliverToBoxAdapter(
                 child: _buildStorePerformance(),
               ),
-              
+
               // Activity Feed
               SliverToBoxAdapter(
                 child: _buildActivityFeed(),
               ),
-              
+
               // Bottom padding for tab bar
               const SliverToBoxAdapter(
                 child: SizedBox(height: 100),

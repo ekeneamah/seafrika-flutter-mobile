@@ -18,20 +18,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     with TickerProviderStateMixin {
   final _businessOwnerFormKey = GlobalKey<FormState>();
   final _staffFormKey = GlobalKey<FormState>();
-  
+
   // Business Owner Controllers
   final _businessEmailController = TextEditingController();
   final _businessPasswordController = TextEditingController();
-  
+
   // Staff Controllers
   final _staffEmailController = TextEditingController();
   final _staffPasswordController = TextEditingController();
-  
+
   bool _isLoading = false;
   bool _obscureBusinessPassword = true;
   bool _obscureStaffPassword = true;
   LoginType _selectedLoginType = LoginType.businessOwner;
-  
+
   late final AnimationController _slideController;
   late final AnimationController _fadeController;
   late final AnimationController _formSlideController;
@@ -102,10 +102,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   }
 
   Future<void> _login() async {
-    final formKey = _selectedLoginType == LoginType.businessOwner 
-        ? _businessOwnerFormKey 
+    final formKey = _selectedLoginType == LoginType.businessOwner
+        ? _businessOwnerFormKey
         : _staffFormKey;
-    
+
     if (!formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
@@ -121,19 +121,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         );
       } else {
         success = await authService.loginStaff(
-          _staffEmailController.text.trim(),
-          _staffPasswordController.text
-        );
+            _staffEmailController.text.trim(), _staffPasswordController.text);
       }
 
       if (!mounted) return;
 
       if (success) {
-        final userType = _selectedLoginType == LoginType.businessOwner 
-            ? 'Business Owner' 
+        final userType = _selectedLoginType == LoginType.businessOwner
+            ? 'Business Owner'
             : 'Staff Member';
-        _showSnackBar('Welcome back, $userType! Login successful.', isError: false);
-        
+        _showSnackBar('Welcome back, $userType! Login successful.',
+            isError: false);
+
         // Navigate based on user type
         if (_selectedLoginType == LoginType.businessOwner) {
           Navigator.pushReplacementNamed(context, AppRoutes.home);
@@ -141,7 +140,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           Navigator.pushReplacementNamed(context, AppRoutes.staffNavigation);
         }
       } else {
-        _showSnackBar('Login failed. Please check your credentials.', isError: true);
+        _showSnackBar('Login failed. Please check your credentials.',
+            isError: true);
       }
     } catch (e) {
       if (!mounted) return;
@@ -175,9 +175,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     await authService.sendPasswordResetEmail(
                       _staffEmailController.text.trim(),
                     );
-                    _showSnackBar('Password reset email sent successfully.', isError: false);
+                    _showSnackBar('Password reset email sent successfully.',
+                        isError: false);
                   } catch (e) {
-                    _showSnackBar('Failed to send password reset email. Please try again.', isError: true);
+                    _showSnackBar(
+                        'Failed to send password reset email. Please try again.',
+                        isError: true);
                   }
                 },
                 child: const Text('Reset Password'),
@@ -222,10 +225,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     if (_selectedLoginType != type) {
       // Determine slide direction
       final isMovingRight = type == LoginType.staff;
-      
+
       // Reset controller to ensure clean state
       _formSlideController.reset();
-      
+
       // Start slide out animation
       _formSlideAnimation = Tween<Offset>(
         begin: Offset.zero,
@@ -234,13 +237,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         parent: _formSlideController,
         curve: Curves.easeInOut,
       ));
-      
+
       _formSlideController.forward().then((_) {
         // Update the login type
         setState(() {
           _selectedLoginType = type;
         });
-        
+
         // Set up slide in animation
         _formSlideAnimation = Tween<Offset>(
           begin: Offset(isMovingRight ? 1.0 : -1.0, 0),
@@ -249,7 +252,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           parent: _formSlideController,
           curve: Curves.easeInOut,
         ));
-        
+
         // Reset and start slide in
         _formSlideController.reset();
         _formSlideController.forward();
@@ -353,7 +356,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.easeInOut,
-                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
                 decoration: BoxDecoration(
                   gradient: _selectedLoginType == LoginType.businessOwner
                       ? LinearGradient(
@@ -380,7 +384,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                 child: Column(
                   children: [
                     AnimatedScale(
-                      scale: _selectedLoginType == LoginType.businessOwner ? 1.1 : 1.0,
+                      scale: _selectedLoginType == LoginType.businessOwner
+                          ? 1.1
+                          : 1.0,
                       duration: const Duration(milliseconds: 300),
                       child: Icon(
                         Icons.business_center_outlined,
@@ -414,7 +420,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.easeInOut,
-                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
                 decoration: BoxDecoration(
                   gradient: _selectedLoginType == LoginType.staff
                       ? LinearGradient(
@@ -518,7 +525,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                 if (value == null || value.isEmpty) {
                   return 'Please enter your business email';
                 }
-                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                    .hasMatch(value)) {
                   return 'Please enter a valid email address';
                 }
                 return null;
@@ -534,7 +542,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               prefixIcon: Icon(Icons.lock_outline, color: AppTheme.primary),
               suffixIcon: IconButton(
                 icon: Icon(
-                  _obscureBusinessPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                  _obscureBusinessPassword
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
                   color: AppTheme.earth,
                 ),
                 onPressed: () {
@@ -563,7 +573,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                   Navigator.pushNamed(context, AppRoutes.forgotPassword);
                 },
                 style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -679,7 +690,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                 if (value == null || value.isEmpty) {
                   return 'Please enter your staff email';
                 }
-                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                    .hasMatch(value)) {
                   return 'Please enter a valid email address';
                 }
                 return null;
@@ -695,7 +707,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               prefixIcon: Icon(Icons.lock_outline, color: AppTheme.secondary),
               suffixIcon: IconButton(
                 icon: Icon(
-                  _obscureStaffPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                  _obscureStaffPassword
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
                   color: AppTheme.earth,
                 ),
                 onPressed: () {

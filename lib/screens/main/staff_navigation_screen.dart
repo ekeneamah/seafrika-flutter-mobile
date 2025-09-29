@@ -10,7 +10,8 @@ class StaffNavigationScreen extends ConsumerStatefulWidget {
   const StaffNavigationScreen({super.key});
 
   @override
-  ConsumerState<StaffNavigationScreen> createState() => _StaffNavigationScreenState();
+  ConsumerState<StaffNavigationScreen> createState() =>
+      _StaffNavigationScreenState();
 }
 
 class _StaffNavigationScreenState extends ConsumerState<StaffNavigationScreen>
@@ -20,74 +21,74 @@ class _StaffNavigationScreenState extends ConsumerState<StaffNavigationScreen>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
   String _greeting = '';
-  
+
   static final List<_NavItem> _navItems = [
     _NavItem(
-      'Dashboard', 
-      Icons.dashboard_outlined, 
+      'Dashboard',
+      Icons.dashboard_outlined,
       AppRoutes.dashboard,
       AppTheme.primary,
       'Overview & Analytics',
     ),
     _NavItem(
-      'Inventory', 
-      Icons.inventory_2_outlined, 
+      'Inventory',
+      Icons.inventory_2_outlined,
       AppRoutes.inventoryDashboard,
       AppTheme.accent,
       'Stock Management',
     ),
     _NavItem(
-      'Orders', 
-      Icons.shopping_cart_outlined, 
+      'Orders',
+      Icons.shopping_cart_outlined,
       AppRoutes.orders,
       AppTheme.secondary,
       'Order Processing',
     ),
     _NavItem(
-      'Products', 
-      Icons.shopping_bag_outlined, 
+      'Products',
+      Icons.shopping_bag_outlined,
       AppRoutes.productList,
       AppTheme.earth,
       'Product Catalog',
     ),
     _NavItem(
-      'Customers', 
-      Icons.people_outline, 
+      'Customers',
+      Icons.people_outline,
       AppRoutes.customers,
       const Color(0xFF8B5CF6),
       'Customer Management',
     ),
     _NavItem(
-      'Suppliers', 
-      Icons.local_shipping_outlined, 
+      'Suppliers',
+      Icons.local_shipping_outlined,
       AppRoutes.suppliers,
       const Color(0xFF06B6D4),
       'Supplier Relations',
     ),
     _NavItem(
-      'Invoices', 
-      Icons.receipt_long_outlined, 
+      'Invoices',
+      Icons.receipt_long_outlined,
       AppRoutes.invoiceList,
       const Color(0xFFEF4444),
       'Billing & Invoices',
     ),
     _NavItem(
-      'Tasks', 
-      Icons.task_outlined, 
+      'Tasks',
+      Icons.task_outlined,
       AppRoutes.taskList,
       const Color(0xFFF59E0B),
       'Task Management',
     ),
     _NavItem(
-      'Reviews', 
-      Icons.reviews_outlined, 
+      'Reviews',
+      Icons.reviews_outlined,
       AppRoutes.reviewPlatforms,
       const Color(0xFF10B981),
       'Customer Feedback',
     ),
     _NavItem(
-      'Settings', 
-      Icons.settings_outlined, 
+      'Settings',
+      Icons.settings_outlined,
       AppRoutes.settings,
       const Color(0xFF6B7280),
       'App Configuration',
@@ -230,15 +231,17 @@ class _StaffNavigationScreenState extends ConsumerState<StaffNavigationScreen>
                         child: CachedNetworkImage(
                           imageUrl: user!.profileImage!,
                           fit: BoxFit.cover,
-                          placeholder: (context, url) => _buildAvatarFallback(user),
-                          errorWidget: (context, url, error) => _buildAvatarFallback(user),
+                          placeholder: (context, url) =>
+                              _buildAvatarFallback(user),
+                          errorWidget: (context, url, error) =>
+                              _buildAvatarFallback(user),
                         ),
                       )
                     : _buildAvatarFallback(user),
               ),
-              
+
               const SizedBox(width: 20),
-              
+
               // Greeting and Name
               Expanded(
                 child: Column(
@@ -264,7 +267,8 @@ class _StaffNavigationScreenState extends ConsumerState<StaffNavigationScreen>
                     ),
                     const SizedBox(height: 4),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 4),
                       decoration: BoxDecoration(
                         color: AppTheme.accent.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
@@ -299,7 +303,7 @@ class _StaffNavigationScreenState extends ConsumerState<StaffNavigationScreen>
                   ],
                 ),
               ),
-              
+
               // Notifications & Profile Actions
               Column(
                 children: [
@@ -356,9 +360,9 @@ class _StaffNavigationScreenState extends ConsumerState<StaffNavigationScreen>
               ),
             ],
           ),
-          
+
           const SizedBox(height: 20),
-          
+
           // Quick Access Info
           Container(
             padding: const EdgeInsets.all(16),
@@ -409,7 +413,8 @@ class _StaffNavigationScreenState extends ConsumerState<StaffNavigationScreen>
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: AppTheme.accent.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
@@ -444,8 +449,8 @@ class _StaffNavigationScreenState extends ConsumerState<StaffNavigationScreen>
       ),
       child: Center(
         child: Text(
-          user?.firstName?.isNotEmpty == true 
-              ? user!.firstName![0].toUpperCase() 
+          user?.firstName?.isNotEmpty == true
+              ? user!.firstName![0].toUpperCase()
               : 'S',
           style: TextStyle(
             fontSize: 24,
@@ -489,7 +494,6 @@ class _StaffNavigationScreenState extends ConsumerState<StaffNavigationScreen>
             ),
           ),
           const SizedBox(height: 20),
-          
           Text(
             'Business Management',
             style: TextStyle(
@@ -545,7 +549,8 @@ class _StaffNavigationScreenState extends ConsumerState<StaffNavigationScreen>
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: AppTheme.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
@@ -562,7 +567,6 @@ class _StaffNavigationScreenState extends ConsumerState<StaffNavigationScreen>
             ],
           ),
           const SizedBox(height: 24),
-          
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -643,9 +647,9 @@ class _StaffNavigationScreenState extends ConsumerState<StaffNavigationScreen>
                       color: item.color,
                     ),
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // Title
                   Text(
                     item.label,
@@ -657,9 +661,9 @@ class _StaffNavigationScreenState extends ConsumerState<StaffNavigationScreen>
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  
+
                   const SizedBox(height: 4),
-                  
+
                   // Subtitle
                   Text(
                     item.subtitle,
@@ -713,7 +717,6 @@ class _StaffNavigationScreenState extends ConsumerState<StaffNavigationScreen>
             ],
           ),
           const SizedBox(height: 20),
-          
           Row(
             children: [
               Expanded(
@@ -762,7 +765,8 @@ class _StaffNavigationScreenState extends ConsumerState<StaffNavigationScreen>
     );
   }
 
-  Widget _buildStatItem(String title, String value, IconData icon, Color color) {
+  Widget _buildStatItem(
+      String title, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -874,22 +878,22 @@ class _StaffNavigationScreenState extends ConsumerState<StaffNavigationScreen>
                   ),
                 ),
               ),
-              
+
               // Hero Section
               SliverToBoxAdapter(
                 child: _buildHeroSection(),
               ),
-              
+
               // Quick Stats
               SliverToBoxAdapter(
                 child: _buildQuickStats(),
               ),
-              
+
               // Navigation Grid
               SliverToBoxAdapter(
                 child: _buildNavigationGrid(),
               ),
-              
+
               // Bottom padding
               const SliverToBoxAdapter(
                 child: SizedBox(height: 32),
@@ -908,12 +912,12 @@ class _NavItem {
   final String route;
   final Color color;
   final String subtitle;
-  
+
   const _NavItem(
-    this.label, 
-    this.icon, 
-    this.route, 
-    this.color, 
+    this.label,
+    this.icon,
+    this.route,
+    this.color,
     this.subtitle,
   );
 }

@@ -3,7 +3,7 @@ import 'dart:developer' as developer;
 /// Centralized logging utility for the application
 class AppLogger {
   static const String _defaultTag = 'VendorApp';
-  
+
   /// Log an informational message
   static void info(String message, [Object? data]) {
     developer.log(
@@ -13,7 +13,7 @@ class AppLogger {
       error: data,
     );
   }
-  
+
   /// Log a warning message
   static void warning(String message, [Object? data]) {
     developer.log(
@@ -23,7 +23,7 @@ class AppLogger {
       error: data,
     );
   }
-  
+
   /// Log an error message
   static void error(String message, [Object? error, StackTrace? stackTrace]) {
     developer.log(
@@ -34,7 +34,7 @@ class AppLogger {
       stackTrace: stackTrace,
     );
   }
-  
+
   /// Log a debug message (only in debug mode)
   static void debug(String message, [Object? data]) {
     assert(() {
@@ -47,7 +47,7 @@ class AppLogger {
       return true;
     }());
   }
-  
+
   /// Log with custom tag and level
   static void custom({
     required String message,

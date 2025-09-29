@@ -37,7 +37,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
     try {
       final notification = await context
           .read<NotificationService>()
-          .fetchNotification(widget.notificationId,vendorId);
+          .fetchNotification(widget.notificationId, vendorId);
 
       if (!notification.isRead) {
         await context
@@ -304,7 +304,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
     try {
       await context
           .read<NotificationService>()
-          .deleteNotification(widget.notificationId,vendorId);
+          .deleteNotification(widget.notificationId, vendorId);
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(

@@ -8,7 +8,9 @@ final storeInventoryServiceProvider = Provider<StoreInventoryService>((ref) {
 
 /// Provider for store distribution data
 /// Returns the distribution of a business inventory item across stores
-final storeDistributionProvider = FutureProvider.family<List<Map<String, dynamic>>, StoreDistributionParams>((ref, params) async {
+final storeDistributionProvider =
+    FutureProvider.family<List<Map<String, dynamic>>, StoreDistributionParams>(
+        (ref, params) async {
   final storeInventoryService = ref.read(storeInventoryServiceProvider);
   return storeInventoryService.getStoreDistribution(
     businessId: params.businessId,

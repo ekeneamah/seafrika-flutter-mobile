@@ -11,7 +11,8 @@ import '../../providers/business_context_provider.dart';
 /// Supports both single-store (auto-select) and multi-store (user selection) scenarios
 class DirectStoreAddDialog extends ConsumerStatefulWidget {
   final AssetEntity media;
-  final String? preselectedStoreId; // Optional: if provided, will be preselected
+  final String?
+      preselectedStoreId; // Optional: if provided, will be preselected
   final String? preselectedStoreName;
 
   const DirectStoreAddDialog({
@@ -22,7 +23,8 @@ class DirectStoreAddDialog extends ConsumerStatefulWidget {
   }) : super(key: key);
 
   @override
-  ConsumerState<DirectStoreAddDialog> createState() => _DirectStoreAddDialogState();
+  ConsumerState<DirectStoreAddDialog> createState() =>
+      _DirectStoreAddDialogState();
 }
 
 class _DirectStoreAddDialogState extends ConsumerState<DirectStoreAddDialog> {
@@ -94,7 +96,6 @@ class _DirectStoreAddDialogState extends ConsumerState<DirectStoreAddDialog> {
         _selectedStore = _availableStores.first;
       }
       // If multiple stores and no preselection, user will need to select
-
     } catch (e) {
       debugPrint('Error loading stores: $e');
       if (mounted) {
@@ -137,7 +138,9 @@ class _DirectStoreAddDialogState extends ConsumerState<DirectStoreAddDialog> {
     return Dialog(
       child: Container(
         padding: const EdgeInsets.all(24),
-        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 700), // Increased height for store selection
+        constraints: const BoxConstraints(
+            maxWidth: 500,
+            maxHeight: 700), // Increased height for store selection
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -148,8 +151,8 @@ class _DirectStoreAddDialogState extends ConsumerState<DirectStoreAddDialog> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    _selectedStore != null 
-                        ? 'Add to ${_selectedStore!.name}' 
+                    _selectedStore != null
+                        ? 'Add to ${_selectedStore!.name}'
                         : 'Add to Store',
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
@@ -186,9 +189,8 @@ class _DirectStoreAddDialogState extends ConsumerState<DirectStoreAddDialog> {
                               value: store,
                               child: Row(
                                 children: [
-                                  Icon(Icons.store, 
-                                       size: 16, 
-                                       color: Colors.grey[600]),
+                                  Icon(Icons.store,
+                                      size: 16, color: Colors.grey[600]),
                                   const SizedBox(width: 8),
                                   Expanded(child: Text(store.name)),
                                 ],
@@ -209,9 +211,10 @@ class _DirectStoreAddDialogState extends ConsumerState<DirectStoreAddDialog> {
                         ),
                         const SizedBox(height: 16),
                       ],
-                      
+
                       // Store Info Display (if single store or selected)
-                      if (_selectedStore != null && _availableStores.length == 1) ...[
+                      if (_selectedStore != null &&
+                          _availableStores.length == 1) ...[
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
@@ -289,7 +292,8 @@ class _DirectStoreAddDialogState extends ConsumerState<DirectStoreAddDialog> {
                                 border: OutlineInputBorder(),
                                 prefixText: '\$ ',
                               ),
-                              keyboardType: TextInputType.numberWithOptions(decimal: true),
+                              keyboardType: TextInputType.numberWithOptions(
+                                  decimal: true),
                               validator: (value) {
                                 if (value == null || value.trim().isEmpty) {
                                   return 'Selling price is required';
@@ -310,7 +314,8 @@ class _DirectStoreAddDialogState extends ConsumerState<DirectStoreAddDialog> {
                                 border: OutlineInputBorder(),
                                 prefixText: '\$ ',
                               ),
-                              keyboardType: TextInputType.numberWithOptions(decimal: true),
+                              keyboardType: TextInputType.numberWithOptions(
+                                  decimal: true),
                               validator: (value) {
                                 if (value == null || value.trim().isEmpty) {
                                   return 'Cost price is required';
@@ -341,7 +346,8 @@ class _DirectStoreAddDialogState extends ConsumerState<DirectStoreAddDialog> {
                                 if (value == null || value.trim().isEmpty) {
                                   return 'Quantity is required';
                                 }
-                                if (int.tryParse(value) == null || int.parse(value) < 1) {
+                                if (int.tryParse(value) == null ||
+                                    int.parse(value) < 1) {
                                   return 'Invalid quantity';
                                 }
                                 return null;
@@ -374,15 +380,18 @@ class _DirectStoreAddDialogState extends ConsumerState<DirectStoreAddDialog> {
                           ActionChip(
                             label: const Text('Auto-name'),
                             onPressed: () {
-                              _productNameController.text = 'Product ${DateTime.now().millisecondsSinceEpoch}';
+                              _productNameController.text =
+                                  'Product ${DateTime.now().millisecondsSinceEpoch}';
                             },
                           ),
                           ActionChip(
                             label: const Text('Set 40% Margin'),
                             onPressed: () {
-                              final costPrice = double.tryParse(_costPriceController.text);
+                              final costPrice =
+                                  double.tryParse(_costPriceController.text);
                               if (costPrice != null) {
-                                _sellingPriceController.text = (costPrice * 1.4).toStringAsFixed(2);
+                                _sellingPriceController.text =
+                                    (costPrice * 1.4).toStringAsFixed(2);
                               }
                             },
                           ),
@@ -400,7 +409,8 @@ class _DirectStoreAddDialogState extends ConsumerState<DirectStoreAddDialog> {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                    onPressed:
+                        _isLoading ? null : () => Navigator.of(context).pop(),
                     child: const Text('Cancel'),
                   ),
                 ),
@@ -453,14 +463,14 @@ class _DirectStoreAddDialogState extends ConsumerState<DirectStoreAddDialog> {
 
       final request = DirectStoreAddRequest(
         productName: _productNameController.text.trim(),
-        productDescription: _descriptionController.text.trim().isEmpty 
-            ? null 
+        productDescription: _descriptionController.text.trim().isEmpty
+            ? null
             : _descriptionController.text.trim(),
         sellingPrice: double.parse(_sellingPriceController.text),
         costPrice: double.parse(_costPriceController.text),
         quantity: int.parse(_quantityController.text),
-        category: _categoryController.text.trim().isEmpty 
-            ? null 
+        category: _categoryController.text.trim().isEmpty
+            ? null
             : _categoryController.text.trim(),
       );
 
@@ -476,18 +486,20 @@ class _DirectStoreAddDialogState extends ConsumerState<DirectStoreAddDialog> {
 
       if (mounted) {
         Navigator.of(context).pop(result);
-        
+
         if (result.success) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Successfully added ${result.quantityAdded} items to ${_selectedStore!.name}'),
+              content: Text(
+                  'Successfully added ${result.quantityAdded} items to ${_selectedStore!.name}'),
               backgroundColor: Colors.green,
             ),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result.errorMessage ?? 'Failed to add item to store'),
+              content:
+                  Text(result.errorMessage ?? 'Failed to add item to store'),
               backgroundColor: Colors.red,
             ),
           );
@@ -538,11 +550,12 @@ class _DirectStoreAddDialogState extends ConsumerState<DirectStoreAddDialog> {
 
       if (mounted) {
         Navigator.of(context).pop(result);
-        
+
         if (result.success) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Quick added ${result.quantityAdded} items to ${_selectedStore!.name}'),
+              content: Text(
+                  'Quick added ${result.quantityAdded} items to ${_selectedStore!.name}'),
               backgroundColor: Colors.green,
             ),
           );

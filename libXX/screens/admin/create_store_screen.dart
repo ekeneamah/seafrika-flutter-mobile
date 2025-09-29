@@ -34,7 +34,7 @@ class _CreateStoreScreenState extends ConsumerState<CreateStoreScreen>
 
   bool _isLoading = false;
   bool _isFormValid = false;
-  
+
   // Real-time validation states
   bool _isStoreNameValid = false;
   bool _isStoreAddressValid = false;
@@ -92,7 +92,7 @@ class _CreateStoreScreenState extends ConsumerState<CreateStoreScreen>
   void _validateStoreNameRealTime() {
     final value = _storeNameController.text.trim();
     final isValid = value.isNotEmpty && value.length >= 2;
-    
+
     if (_isStoreNameValid != isValid) {
       setState(() => _isStoreNameValid = isValid);
       _checkFormValidity();
@@ -102,7 +102,7 @@ class _CreateStoreScreenState extends ConsumerState<CreateStoreScreen>
   void _validateStoreAddressRealTime() {
     final value = _storeAddressController.text.trim();
     final isValid = value.isNotEmpty && value.length >= 5;
-    
+
     if (_isStoreAddressValid != isValid) {
       setState(() => _isStoreAddressValid = isValid);
       _checkFormValidity();
@@ -111,8 +111,9 @@ class _CreateStoreScreenState extends ConsumerState<CreateStoreScreen>
 
   void _validateStorePhoneRealTime() {
     final value = _storePhoneController.text.trim();
-    final isValid = value.isEmpty || RegExp(r'^\+?[\d\s\-\(\)]+$').hasMatch(value);
-    
+    final isValid =
+        value.isEmpty || RegExp(r'^\+?[\d\s\-\(\)]+$').hasMatch(value);
+
     if (_isStorePhoneValid != isValid) {
       setState(() => _isStorePhoneValid = isValid);
       _checkFormValidity();
@@ -122,7 +123,7 @@ class _CreateStoreScreenState extends ConsumerState<CreateStoreScreen>
   void _validateStoreDescriptionRealTime() {
     final value = _storeDescriptionController.text.trim();
     final isValid = value.isNotEmpty && value.length >= 10;
-    
+
     if (_isStoreDescriptionValid != isValid) {
       setState(() => _isStoreDescriptionValid = isValid);
       _checkFormValidity();
@@ -130,11 +131,11 @@ class _CreateStoreScreenState extends ConsumerState<CreateStoreScreen>
   }
 
   void _checkFormValidity() {
-    final isValid = _isStoreNameValid && 
-                   _isStoreAddressValid && 
-                   _isStorePhoneValid &&
-                   _isStoreDescriptionValid;
-    
+    final isValid = _isStoreNameValid &&
+        _isStoreAddressValid &&
+        _isStorePhoneValid &&
+        _isStoreDescriptionValid;
+
     if (_isFormValid != isValid) {
       setState(() => _isFormValid = isValid);
       if (isValid) {
@@ -149,13 +150,13 @@ class _CreateStoreScreenState extends ConsumerState<CreateStoreScreen>
   double _getHorizontalPadding(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     if (screenWidth > 1200) return 32.0; // Desktop
-    if (screenWidth > 800) return 24.0;  // Tablet
+    if (screenWidth > 800) return 24.0; // Tablet
     return 16.0; // Mobile
   }
 
   double _getCardPadding(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    if (screenWidth > 800) return 24.0;  // Tablet/Desktop
+    if (screenWidth > 800) return 24.0; // Tablet/Desktop
     return 16.0; // Mobile
   }
 
@@ -183,7 +184,7 @@ class _CreateStoreScreenState extends ConsumerState<CreateStoreScreen>
     try {
       // Simulate API call
       await Future.delayed(const Duration(seconds: 2));
-      
+
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -197,17 +198,18 @@ class _CreateStoreScreenState extends ConsumerState<CreateStoreScreen>
           ),
           backgroundColor: AppTheme.accent,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(16),
           duration: const Duration(seconds: 3),
         ),
       );
-      
+
       // Navigate back or to store list
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -225,7 +227,8 @@ class _CreateStoreScreenState extends ConsumerState<CreateStoreScreen>
           ),
           backgroundColor: AppTheme.secondary,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(16),
           duration: const Duration(seconds: 4),
         ),
@@ -245,7 +248,7 @@ class _CreateStoreScreenState extends ConsumerState<CreateStoreScreen>
     return LayoutBuilder(
       builder: (context, constraints) {
         final cardPadding = _getCardPadding(context);
-        
+
         return Container(
           width: double.infinity,
           margin: margin ?? EdgeInsets.symmetric(horizontal: 0, vertical: 8),
@@ -282,7 +285,7 @@ class _CreateStoreScreenState extends ConsumerState<CreateStoreScreen>
     return LayoutBuilder(
       builder: (context, constraints) {
         final iconSize = _getIconSize(context);
-        
+
         return AnimatedSwitcher(
           duration: const Duration(milliseconds: 250),
           transitionBuilder: (Widget child, Animation<double> animation) {
@@ -406,7 +409,7 @@ class _CreateStoreScreenState extends ConsumerState<CreateStoreScreen>
       body: LayoutBuilder(
         builder: (context, constraints) {
           final horizontalPadding = _getHorizontalPadding(context);
-          
+
           return FadeTransition(
             opacity: _fadeAnimation,
             child: SlideTransition(
@@ -425,11 +428,12 @@ class _CreateStoreScreenState extends ConsumerState<CreateStoreScreen>
                         // Hero Section
                         _buildHeroSection(),
                         const SizedBox(height: 24),
-                        
+
                         // Store Information Card
-                        _buildStoreInformationCard(constraints, horizontalPadding),
+                        _buildStoreInformationCard(
+                            constraints, horizontalPadding),
                         const SizedBox(height: 32),
-                        
+
                         // Submit Button
                         _buildSubmitButton(),
                         const SizedBox(height: 16),
@@ -485,7 +489,7 @@ class _CreateStoreScreenState extends ConsumerState<CreateStoreScreen>
           ),
         ),
         const SizedBox(height: 8),
-        
+
         // Subtitle
         Text(
           'Create a new store location for your business',
@@ -500,7 +504,8 @@ class _CreateStoreScreenState extends ConsumerState<CreateStoreScreen>
     );
   }
 
-  Widget _buildStoreInformationCard(BoxConstraints constraints, double horizontalPadding) {
+  Widget _buildStoreInformationCard(
+      BoxConstraints constraints, double horizontalPadding) {
     final iconSize = _getIconSize(context);
     final fontSize = _getFontSize(context, 18);
 
@@ -550,7 +555,8 @@ class _CreateStoreScreenState extends ConsumerState<CreateStoreScreen>
             textCapitalization: TextCapitalization.words,
             textInputAction: TextInputAction.next,
             prefixIcon: Icon(Icons.store_outlined, color: AppTheme.primary),
-            onSubmitted: (_) => FocusScope.of(context).requestFocus(_storeAddressFocusNode),
+            onSubmitted: (_) =>
+                FocusScope.of(context).requestFocus(_storeAddressFocusNode),
             suffixIcon: _buildSuffixIcon(isValid: _isStoreNameValid),
             validator: (value) {
               if (value == null || value.isEmpty) {
@@ -572,8 +578,10 @@ class _CreateStoreScreenState extends ConsumerState<CreateStoreScreen>
             keyboardType: TextInputType.streetAddress,
             textCapitalization: TextCapitalization.words,
             textInputAction: TextInputAction.next,
-            prefixIcon: Icon(Icons.location_on_outlined, color: AppTheme.primary),
-            onSubmitted: (_) => FocusScope.of(context).requestFocus(_storePhoneFocusNode),
+            prefixIcon:
+                Icon(Icons.location_on_outlined, color: AppTheme.primary),
+            onSubmitted: (_) =>
+                FocusScope.of(context).requestFocus(_storePhoneFocusNode),
             suffixIcon: _buildSuffixIcon(isValid: _isStoreAddressValid),
             validator: (value) {
               if (value == null || value.isEmpty) {
@@ -595,7 +603,8 @@ class _CreateStoreScreenState extends ConsumerState<CreateStoreScreen>
             keyboardType: TextInputType.phone,
             textInputAction: TextInputAction.next,
             prefixIcon: Icon(Icons.phone_outlined, color: AppTheme.primary),
-            onSubmitted: (_) => FocusScope.of(context).requestFocus(_storeDescriptionFocusNode),
+            onSubmitted: (_) =>
+                FocusScope.of(context).requestFocus(_storeDescriptionFocusNode),
             suffixIcon: _buildSuffixIcon(isValid: _isStorePhoneValid),
             validator: (value) {
               if (value != null && value.isNotEmpty) {
@@ -617,7 +626,8 @@ class _CreateStoreScreenState extends ConsumerState<CreateStoreScreen>
             textCapitalization: TextCapitalization.sentences,
             textInputAction: TextInputAction.done,
             maxLines: 3,
-            prefixIcon: Icon(Icons.description_outlined, color: AppTheme.primary),
+            prefixIcon:
+                Icon(Icons.description_outlined, color: AppTheme.primary),
             onSubmitted: (_) => _submitForm(),
             suffixIcon: _buildSuffixIcon(isValid: _isStoreDescriptionValid),
             validator: (value) {
@@ -663,7 +673,8 @@ class _CreateStoreScreenState extends ConsumerState<CreateStoreScreen>
           child: ElevatedButton(
             onPressed: _isFormValid && !_isLoading ? _submitForm : null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: _isFormValid ? Colors.transparent : AppTheme.earthLight,
+              backgroundColor:
+                  _isFormValid ? Colors.transparent : AppTheme.earthLight,
               foregroundColor: _isFormValid ? Colors.white : AppTheme.earth,
               elevation: 0,
               padding: const EdgeInsets.symmetric(vertical: 16),
@@ -711,16 +722,16 @@ class _CreateStoreScreenState extends ConsumerState<CreateStoreScreen>
     _storeAddressController.dispose();
     _storePhoneController.dispose();
     _storeDescriptionController.dispose();
-    
+
     _storeNameFocusNode.dispose();
     _storeAddressFocusNode.dispose();
     _storePhoneFocusNode.dispose();
     _storeDescriptionFocusNode.dispose();
-    
+
     _fadeController.dispose();
     _slideController.dispose();
     _validationController.dispose();
-    
+
     super.dispose();
   }
 }

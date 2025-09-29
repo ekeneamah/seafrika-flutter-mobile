@@ -22,8 +22,8 @@ class CostPriceHistoryService {
     try {
       // Calculate price change and percentage
       final priceChange = newCostPrice - previousCostPrice;
-      final percentageChange = previousCostPrice != 0 
-          ? (priceChange / previousCostPrice) * 100 
+      final percentageChange = previousCostPrice != 0
+          ? (priceChange / previousCostPrice) * 100
           : 0.0;
 
       final historyRecord = CostPriceHistory(
@@ -48,8 +48,9 @@ class CostPriceHistoryService {
       );
 
       await CollectionReferences.costPriceHistory.add(historyRecord.toMap());
-      
-      print('📊 [CostPriceHistory] Recorded price change: ${historyRecord.formattedPriceChange} (${historyRecord.formattedPercentageChange})');
+
+      print(
+          '📊 [CostPriceHistory] Recorded price change: ${historyRecord.formattedPriceChange} (${historyRecord.formattedPercentageChange})');
     } catch (e) {
       print('❌ [CostPriceHistory] Error recording price change: $e');
       rethrow;
@@ -57,7 +58,8 @@ class CostPriceHistoryService {
   }
 
   /// Get cost price history for a specific inventory item
-  Stream<List<CostPriceHistory>> getCostPriceHistory(String businessInventoryId) {
+  Stream<List<CostPriceHistory>> getCostPriceHistory(
+      String businessInventoryId) {
     return CollectionReferences.costPriceHistory
         .where('businessInventoryId', isEqualTo: businessInventoryId)
         .where('status', isEqualTo: 'active')
@@ -69,7 +71,8 @@ class CostPriceHistoryService {
   }
 
   /// Get cost price history for all items in a business
-  Stream<List<CostPriceHistory>> getBusinessCostPriceHistory(String businessId) {
+  Stream<List<CostPriceHistory>> getBusinessCostPriceHistory(
+      String businessId) {
     return CollectionReferences.costPriceHistory
         .where('businessId', isEqualTo: businessId)
         .where('status', isEqualTo: 'active')
@@ -91,17 +94,16 @@ class CostPriceHistoryService {
     Query query = CollectionReferences.costPriceHistory
         .where('businessId', isEqualTo: businessId)
         .where('status', isEqualTo: 'active')
-        .where('changedAt', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
+        .where('changedAt',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
         .where('changedAt', isLessThanOrEqualTo: Timestamp.fromDate(endDate));
 
     if (productId != null) {
       query = query.where('productId', isEqualTo: productId);
     }
 
-    return query
-        .orderBy('changedAt', descending: true)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
+    return query.orderBy('changedAt', descending: true).snapshots().map(
+        (snapshot) => snapshot.docs
             .map((doc) => CostPriceHistory.fromFirestore(doc))
             .toList());
   }
@@ -113,7 +115,8 @@ class CostPriceHistoryService {
     DateTime? endDate,
   }) async {
     try {
-      final start = startDate ?? DateTime.now().subtract(const Duration(days: 30));
+      final start =
+          startDate ?? DateTime.now().subtract(const Duration(days: 30));
       final end = endDate ?? DateTime.now();
 
       final snapshot = await CollectionReferences.costPriceHistory
@@ -131,14 +134,17 @@ class CostPriceHistoryService {
       final totalChanges = histories.length;
       final increases = histories.where((h) => h.isPriceIncrease).length;
       final decreases = histories.where((h) => h.isPriceDecrease).length;
-      final significantChanges = histories.where((h) => h.isSignificantChange).length;
-      
-      final averagePriceChange = totalChanges > 0 
-          ? histories.map((h) => h.priceChange).reduce((a, b) => a + b) / totalChanges
+      final significantChanges =
+          histories.where((h) => h.isSignificantChange).length;
+
+      final averagePriceChange = totalChanges > 0
+          ? histories.map((h) => h.priceChange).reduce((a, b) => a + b) /
+              totalChanges
           : 0.0;
-      
-      final averagePercentageChange = totalChanges > 0 
-          ? histories.map((h) => h.percentageChange).reduce((a, b) => a + b) / totalChanges
+
+      final averagePercentageChange = totalChanges > 0
+          ? histories.map((h) => h.percentageChange).reduce((a, b) => a + b) /
+              totalChanges
           : 0.0;
 
       // Group by product for detailed analysis
@@ -158,12 +164,15 @@ class CostPriceHistoryService {
 
       // Calculate per-product analytics
       for (final productId in productAnalytics.keys) {
-        final changes = productAnalytics[productId]!['changes'] as List<CostPriceHistory>;
+        final changes =
+            productAnalytics[productId]!['changes'] as List<CostPriceHistory>;
         productAnalytics[productId]!['totalChanges'] = changes.length;
-        productAnalytics[productId]!['averageChange'] = changes.isNotEmpty 
-            ? changes.map((h) => h.priceChange).reduce((a, b) => a + b) / changes.length
+        productAnalytics[productId]!['averageChange'] = changes.isNotEmpty
+            ? changes.map((h) => h.priceChange).reduce((a, b) => a + b) /
+                changes.length
             : 0.0;
-        productAnalytics[productId]!['lastChange'] = changes.isNotEmpty ? changes.first : null;
+        productAnalytics[productId]!['lastChange'] =
+            changes.isNotEmpty ? changes.first : null;
       }
 
       return {
@@ -230,7 +239,7 @@ class CostPriceHistoryService {
           .where('status', isEqualTo: 'active')
           .limit(1)
           .get();
-      
+
       return snapshot.docs.isNotEmpty;
     } catch (e) {
       print('❌ [CostPriceHistory] Error checking history: $e');

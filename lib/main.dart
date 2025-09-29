@@ -93,9 +93,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-      _runSeeder();
+    _runSeeder();
     final user = ref.watch(authServiceProvider).currentUser;
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _handleNavigation(user);
     });
@@ -108,16 +108,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
   @override
   void initState() {
-  
     super.initState();
-    
   }
 
   Future<void> _runSeeder() async {
     // Run Firestore seeder on first load
     debugPrint('Running Firestore seeder...');
     final prefs = await SharedPreferences.getInstance();
-    final hasSeeded = prefs.getBool(SharedPreferencesKeys.hasSeededPermissions) ?? false;
+    final hasSeeded =
+        prefs.getBool(SharedPreferencesKeys.hasSeededPermissions) ?? false;
 
     if (!hasSeeded) {
       final firestore = FirebaseFirestore.instance;

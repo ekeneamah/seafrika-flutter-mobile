@@ -134,10 +134,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
   /// Real-time validation methods that update as user types
   void _validateFirstNameRealTime() {
     final value = _firstNameController.text.trim();
-    final isValid = value.isNotEmpty && 
-        value.length >= 2 && 
+    final isValid = value.isNotEmpty &&
+        value.length >= 2 &&
         RegExp(r'^[a-zA-Z\s]+$').hasMatch(value);
-    
+
     if (_isFirstNameValid != isValid) {
       setState(() {
         _isFirstNameValid = isValid;
@@ -147,10 +147,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
 
   void _validateLastNameRealTime() {
     final value = _lastNameController.text.trim();
-    final isValid = value.isNotEmpty && 
-        value.length >= 2 && 
+    final isValid = value.isNotEmpty &&
+        value.length >= 2 &&
         RegExp(r'^[a-zA-Z\s]+$').hasMatch(value);
-    
+
     if (_isLastNameValid != isValid) {
       setState(() {
         _isLastNameValid = isValid;
@@ -160,9 +160,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
 
   void _validateEmailRealTime() {
     final value = _emailController.text.trim();
-    final isValid = value.isNotEmpty && 
+    final isValid = value.isNotEmpty &&
         RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value);
-    
+
     if (_isEmailValid != isValid) {
       setState(() {
         _isEmailValid = isValid;
@@ -177,22 +177,21 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
         value.contains(RegExp(r'[A-Z]')) &&
         value.contains(RegExp(r'[0-9]')) &&
         value.contains(RegExp(r'[!@#\$%^&*(),.?":{}|<>]'));
-    
+
     if (_isPasswordValid != isValid) {
       setState(() {
         _isPasswordValid = isValid;
       });
     }
-    
+
     _checkPasswordStrength(value);
     _validateConfirmPasswordRealTime(); // Re-validate confirm password when password changes
   }
 
   void _validateConfirmPasswordRealTime() {
     final value = _confirmPasswordController.text;
-    final isValid = value.isNotEmpty && 
-        value == _passwordController.text;
-    
+    final isValid = value.isNotEmpty && value == _passwordController.text;
+
     if (_isConfirmPasswordValid != isValid) {
       setState(() {
         _isConfirmPasswordValid = isValid;
@@ -252,7 +251,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
     } catch (e) {
       if (!mounted) return;
       if (e.toString().contains('email already exists')) {
-        _showSnackBar('Signup error: Exception: Email already exists. Try logging in with your password.', isError: true);
+        _showSnackBar(
+            'Signup error: Exception: Email already exists. Try logging in with your password.',
+            isError: true);
       } else {
         _showSnackBar(e.toString(), isError: true);
       }
@@ -575,7 +576,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
                 return null;
               },
             ),
-            
+
             // Password strength indicator
             if (_passwordStrength.isNotEmpty)
               Padding(
@@ -591,15 +592,19 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
                     ),
                     const SizedBox(width: 8),
                     if (_passwordStrength == 'Strong')
-                      Icon(Icons.check_circle, color: _passwordStrengthColor, size: 18)
+                      Icon(Icons.check_circle,
+                          color: _passwordStrengthColor, size: 18)
                     else if (_passwordStrength == 'Medium')
-                      Icon(Icons.check_circle_outline, color: _passwordStrengthColor, size: 18)
-                    else if (_passwordStrength == 'Weak' || _passwordStrength == 'Too short')
-                      Icon(Icons.error_outline, color: _passwordStrengthColor, size: 18),
+                      Icon(Icons.check_circle_outline,
+                          color: _passwordStrengthColor, size: 18)
+                    else if (_passwordStrength == 'Weak' ||
+                        _passwordStrength == 'Too short')
+                      Icon(Icons.error_outline,
+                          color: _passwordStrengthColor, size: 18),
                   ],
                 ),
               ),
-            
+
             const SizedBox(height: 20),
 
             // Confirm Password Field
@@ -626,7 +631,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
                       color: AppTheme.earth,
                     ),
                     onPressed: () {
-                      setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
+                      setState(() =>
+                          _obscureConfirmPassword = !_obscureConfirmPassword);
                     },
                   ),
                 ),
@@ -868,7 +874,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen>
       } else if (password.length < 6) {
         _passwordStrength = 'Too short';
         _passwordStrengthColor = Colors.red;
-      } else if (!RegExp(r'(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#\$%^&*])').hasMatch(password)) {
+      } else if (!RegExp(r'(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#\$%^&*])')
+          .hasMatch(password)) {
         _passwordStrength = 'Weak';
         _passwordStrengthColor = Colors.orange;
       } else if (password.length >= 8) {

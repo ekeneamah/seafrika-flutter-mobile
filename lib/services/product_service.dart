@@ -23,7 +23,7 @@ class ProductService extends ChangeNotifier {
 
     try {
       Query query;
-      
+
       if (businessId != null) {
         // Use business products query without status filter (Product model doesn't have status)
         query = CollectionReferences.productsForBusiness(businessId);
@@ -33,9 +33,9 @@ class ProductService extends ChangeNotifier {
             .where('vendorId', isEqualTo: _firestore.currentUserId)
             .orderBy('createdAt', descending: true);
       }
-      
+
       final snapshot = await query.get();
-      
+
       _products = snapshot.docs
           .map((doc) => Product.fromJson(doc.data() as Map<String, dynamic>))
           .toList();
@@ -77,7 +77,8 @@ class ProductService extends ChangeNotifier {
     if (businessId != null) {
       if (searchQuery != null && searchQuery.isNotEmpty) {
         // Use centralized search reference
-        query = CollectionReferences.searchProductsByName(businessId, searchQuery);
+        query =
+            CollectionReferences.searchProductsByName(businessId, searchQuery);
       } else if (category != null && category != 'All') {
         // Use centralized category reference
         query = CollectionReferences.productsForCategory(businessId, category);
@@ -97,7 +98,8 @@ class ProductService extends ChangeNotifier {
   }
 
   /// Create a new product with business ID and add to business inventory
-  Future<String?> createProduct(Product product, {
+  Future<String?> createProduct(
+    Product product, {
     required String businessId,
     int initialQuantity = 0,
     double costPrice = 0.0,
@@ -120,7 +122,8 @@ class ProductService extends ChangeNotifier {
       productData.remove('id');
       productData['createdAt'] = FieldValue.serverTimestamp();
       productData['updatedAt'] = FieldValue.serverTimestamp();
-      productData['status'] = 'active'; // Add status field for compatibility with queries
+      productData['status'] =
+          'active'; // Add status field for compatibility with queries
 
       // Create product in products collection using centralized reference
       final docRef = CollectionReferences.products.doc();
@@ -234,7 +237,7 @@ class ProductService extends ChangeNotifier {
   }) async {
     try {
       Query query = CollectionReferences.productsForBusiness(businessId);
-      
+
       switch (stockLevel) {
         case 'inStock':
           query = query.where('stock', isGreaterThan: 10);
@@ -250,7 +253,7 @@ class ProductService extends ChangeNotifier {
       }
 
       query = query.orderBy('stock', descending: true).limit(limit);
-      
+
       final snapshot = await query.get();
       return snapshot.docs
           .map((doc) => Product.fromJson(doc.data() as Map<String, dynamic>))
@@ -270,11 +273,12 @@ class ProductService extends ChangeNotifier {
   }) async {
     try {
       final searchEnd = '$query\uf8ff';
-      Query firestoreQuery = CollectionReferences.productsForBusiness(businessId)
-          .where('name', isGreaterThanOrEqualTo: query)
-          .where('name', isLessThanOrEqualTo: searchEnd)
-          .orderBy('name')
-          .limit(limit);
+      Query firestoreQuery =
+          CollectionReferences.productsForBusiness(businessId)
+              .where('name', isGreaterThanOrEqualTo: query)
+              .where('name', isLessThanOrEqualTo: searchEnd)
+              .orderBy('name')
+              .limit(limit);
 
       if (lastDocument != null) {
         firestoreQuery = firestoreQuery.startAfterDocument(lastDocument);
@@ -302,9 +306,10 @@ class ProductService extends ChangeNotifier {
   }
 
   Stream<Product?> streamProduct(String id) {
-    return CollectionReferences.products.doc(id).snapshots().map((doc) => doc.exists
-        ? Product.fromJson(doc.data() as Map<String, dynamic>)
-        : null);
+    return CollectionReferences.products.doc(id).snapshots().map((doc) =>
+        doc.exists
+            ? Product.fromJson(doc.data() as Map<String, dynamic>)
+            : null);
   }
 
   Future<List<ExternalListing>> getExternalListings(String productId) async {

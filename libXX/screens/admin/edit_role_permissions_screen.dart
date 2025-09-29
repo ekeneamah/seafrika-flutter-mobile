@@ -9,7 +9,8 @@ import '../../providers/service_providers.dart';
 class EditRolePermissionsScreen extends ConsumerWidget {
   final Role role;
 
-  const EditRolePermissionsScreen({Key? key, required this.role}) : super(key: key);
+  const EditRolePermissionsScreen({Key? key, required this.role})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -43,7 +44,8 @@ class EditRolePermissionsScreen extends ConsumerWidget {
                   itemCount: permissions.length,
                   itemBuilder: (context, index) {
                     final permission = permissions[index];
-                    final isAssigned = role.permissions.contains(permission.name);
+                    final isAssigned =
+                        role.permissions.contains(permission.name);
 
                     return CheckboxListTile(
                       title: Text(permission.name),
@@ -81,7 +83,8 @@ class EditRolePermissionsScreen extends ConsumerWidget {
     });
   }
 
-  Future<void> _removePermissionFromRole(Role role, Permission permission) async {
+  Future<void> _removePermissionFromRole(
+      Role role, Permission permission) async {
     final firestore = FirebaseFirestore.instance;
     await firestore.collection('roles').doc(role.id).update({
       'permissions': FieldValue.arrayRemove([permission.name]),
@@ -92,7 +95,8 @@ class EditRolePermissionsScreen extends ConsumerWidget {
     final firestore = FirebaseFirestore.instance;
     try {
       await firestore.collection('roles').doc(role.id).update({
-        'permissions': role.permissions, // Update with the current permissions list
+        'permissions':
+            role.permissions, // Update with the current permissions list
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Permissions updated successfully')),

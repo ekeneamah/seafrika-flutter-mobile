@@ -3,24 +3,30 @@ import 'package:vendor_app/models/cost_price_history.dart';
 import 'package:vendor_app/services/cost_price_history_service.dart';
 
 // Service provider
-final costPriceHistoryServiceProvider = Provider<CostPriceHistoryService>((ref) {
+final costPriceHistoryServiceProvider =
+    Provider<CostPriceHistoryService>((ref) {
   return CostPriceHistoryService();
 });
 
 // Cost price history for a specific inventory item
-final costPriceHistoryProvider = StreamProvider.family<List<CostPriceHistory>, String>((ref, businessInventoryId) {
+final costPriceHistoryProvider =
+    StreamProvider.family<List<CostPriceHistory>, String>(
+        (ref, businessInventoryId) {
   final service = ref.watch(costPriceHistoryServiceProvider);
   return service.getCostPriceHistory(businessInventoryId);
 });
 
 // Cost price history for entire business
-final businessCostPriceHistoryProvider = StreamProvider.family<List<CostPriceHistory>, String>((ref, businessId) {
+final businessCostPriceHistoryProvider =
+    StreamProvider.family<List<CostPriceHistory>, String>((ref, businessId) {
   final service = ref.watch(costPriceHistoryServiceProvider);
   return service.getBusinessCostPriceHistory(businessId);
 });
 
 // Cost price analytics
-final costPriceAnalyticsProvider = FutureProvider.family<Map<String, dynamic>, Map<String, dynamic>>((ref, params) {
+final costPriceAnalyticsProvider =
+    FutureProvider.family<Map<String, dynamic>, Map<String, dynamic>>(
+        (ref, params) {
   final service = ref.watch(costPriceHistoryServiceProvider);
   return service.getCostPriceAnalytics(
     businessId: params['businessId'] as String,
@@ -51,7 +57,7 @@ class CostPriceHistoryNotifier extends StateNotifier<AsyncValue<void>> {
     Map<String, dynamic>? additionalData,
   }) async {
     state = const AsyncValue.loading();
-    
+
     try {
       await _service.recordCostPriceChange(
         businessInventoryId: businessInventoryId,
@@ -68,7 +74,7 @@ class CostPriceHistoryNotifier extends StateNotifier<AsyncValue<void>> {
         quantityPurchased: quantityPurchased,
         additionalData: additionalData,
       );
-      
+
       state = const AsyncValue.data(null);
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);
@@ -78,7 +84,7 @@ class CostPriceHistoryNotifier extends StateNotifier<AsyncValue<void>> {
 
   Future<void> deleteCostPriceHistory(String historyId) async {
     state = const AsyncValue.loading();
-    
+
     try {
       await _service.deleteCostPriceHistory(historyId);
       state = const AsyncValue.data(null);
@@ -89,7 +95,8 @@ class CostPriceHistoryNotifier extends StateNotifier<AsyncValue<void>> {
   }
 }
 
-final costPriceHistoryNotifierProvider = StateNotifierProvider<CostPriceHistoryNotifier, AsyncValue<void>>((ref) {
+final costPriceHistoryNotifierProvider =
+    StateNotifierProvider<CostPriceHistoryNotifier, AsyncValue<void>>((ref) {
   final service = ref.watch(costPriceHistoryServiceProvider);
   return CostPriceHistoryNotifier(service);
 });

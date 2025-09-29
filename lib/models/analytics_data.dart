@@ -38,4 +38,4 @@ class TopProduct {
     required this.sales,
     required this.revenue,
   });
-} 
+}

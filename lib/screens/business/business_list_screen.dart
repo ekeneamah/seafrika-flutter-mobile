@@ -31,9 +31,10 @@ class _BusinessListScreenState extends ConsumerState<BusinessListScreen> {
     try {
       final authService = ref.read(authServiceProvider);
       final currentUser = authService.currentUser;
-      
+
       if (currentUser != null) {
-        final businesses = await _businessService.getBusinessesByOwner(currentUser.id);
+        final businesses =
+            await _businessService.getBusinessesByOwner(currentUser.id);
         setState(() {
           _businesses = businesses;
         });
@@ -246,7 +247,8 @@ class _BusinessListScreenState extends ConsumerState<BusinessListScreen> {
                       onSelected: (value) {
                         switch (value) {
                           case 'edit':
-                            _navigateToBusinessManagement(businessId: business.id);
+                            _navigateToBusinessManagement(
+                                businessId: business.id);
                             break;
                           case 'delete':
                             _deleteBusiness(business);
@@ -270,7 +272,8 @@ class _BusinessListScreenState extends ConsumerState<BusinessListScreen> {
                             children: [
                               Icon(Icons.delete_outline, color: Colors.red),
                               SizedBox(width: 8),
-                              Text('Delete', style: TextStyle(color: Colors.red)),
+                              Text('Delete',
+                                  style: TextStyle(color: Colors.red)),
                             ],
                           ),
                         ),
@@ -279,11 +282,12 @@ class _BusinessListScreenState extends ConsumerState<BusinessListScreen> {
                 ],
               ),
               const SizedBox(height: 12),
-              
+
               // Address
               Row(
                 children: [
-                  Icon(Icons.location_on_outlined, size: 16, color: AppTheme.earth),
+                  Icon(Icons.location_on_outlined,
+                      size: 16, color: AppTheme.earth),
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
@@ -348,14 +352,17 @@ class _BusinessListScreenState extends ConsumerState<BusinessListScreen> {
               ],
 
               const SizedBox(height: 12),
-              
+
               // Status and role badges
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: isOwner ? AppTheme.accent.withOpacity(0.1) : AppTheme.primary.withOpacity(0.1),
+                      color: isOwner
+                          ? AppTheme.accent.withOpacity(0.1)
+                          : AppTheme.primary.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -377,7 +384,7 @@ class _BusinessListScreenState extends ConsumerState<BusinessListScreen> {
                   ),
                 ],
               ),
-              
+
               // Tap to select hint
               const SizedBox(height: 12),
               Center(
@@ -433,20 +440,20 @@ class _BusinessListScreenState extends ConsumerState<BusinessListScreen> {
     try {
       final authService = ref.read(authServiceProvider);
       final currentUser = authService.currentUser;
-      
+
       if (currentUser == null) {
         _showSnackBar('User not authenticated', isError: true);
         return;
       }
 
       final isOwner = currentUser.id == business.ownerId;
-      
+
       // Save selected business to SharedPreferences using helper
       await BusinessPreferencesHelper.saveSelectedBusiness(business);
-      
+
       // Show success message
       _showSnackBar('Selected business: ${business.name}', isError: false);
-      
+
       // Navigate based on user type
       if (isOwner) {
         // Business owner goes to main screen

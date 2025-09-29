@@ -66,7 +66,8 @@ class _AnalyticsTabState extends State<AnalyticsTab> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(_error!, style: Theme.of(context).textTheme.bodyLarge),
+                      Text(_error!,
+                          style: Theme.of(context).textTheme.bodyLarge),
                       const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: _loadAnalyticsData,
@@ -109,7 +110,8 @@ class _AnalyticsTabState extends State<AnalyticsTab> {
       children: [
         _buildMetricCard(
           'Total Sales',
-          NumberFormat.currency(symbol: '\$').format(_analyticsData!.totalSales),
+          NumberFormat.currency(symbol: '\$')
+              .format(_analyticsData!.totalSales),
           Icons.attach_money,
           Colors.green,
         ),
@@ -232,10 +234,12 @@ class _AnalyticsTabState extends State<AnalyticsTab> {
                       sideTitles: SideTitles(
                         showTitles: true,
                         getTitlesWidget: (value, meta) {
-                          if (value.toInt() >= _analyticsData!.dailySales.length) {
+                          if (value.toInt() >=
+                              _analyticsData!.dailySales.length) {
                             return const SizedBox.shrink();
                           }
-                          final date = _analyticsData!.dailySales[value.toInt()].date;
+                          final date =
+                              _analyticsData!.dailySales[value.toInt()].date;
                           return Padding(
                             padding: const EdgeInsets.only(top: 8),
                             child: Text(
@@ -362,4 +366,4 @@ class _AnalyticsTabState extends State<AnalyticsTab> {
       ),
     );
   }
-} 
+}

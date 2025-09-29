@@ -40,16 +40,16 @@ class MediaActionMenu extends ConsumerWidget {
           Text(
             'Direct Sell',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Colors.green,
-              fontWeight: FontWeight.bold,
-            ),
+                  color: Colors.green,
+                  fontWeight: FontWeight.bold,
+                ),
           ),
           const SizedBox(height: 8),
           Text(
             'Sell this item immediately and create an order',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey[600],
-            ),
+                  color: Colors.grey[600],
+                ),
           ),
           const SizedBox(height: 12),
 
@@ -69,16 +69,16 @@ class MediaActionMenu extends ConsumerWidget {
           Text(
             'Add to Store Inventory',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Colors.blue,
-              fontWeight: FontWeight.bold,
-            ),
+                  color: Colors.blue,
+                  fontWeight: FontWeight.bold,
+                ),
           ),
           const SizedBox(height: 8),
           Text(
             'Add this item to store inventory for future sales',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey[600],
-            ),
+                  color: Colors.grey[600],
+                ),
           ),
           const SizedBox(height: 12),
 
@@ -98,8 +98,8 @@ class MediaActionMenu extends ConsumerWidget {
           Text(
             'Quick Actions',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+                  fontWeight: FontWeight.bold,
+                ),
           ),
           const SizedBox(height: 12),
 
@@ -107,8 +107,8 @@ class MediaActionMenu extends ConsumerWidget {
             children: [
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: availableStores.isEmpty 
-                      ? null 
+                  onPressed: availableStores.isEmpty
+                      ? null
                       : () => _quickSellAnyStore(context, ref),
                   icon: const Icon(Icons.flash_on),
                   label: const Text('Quick Sell'),
@@ -121,8 +121,8 @@ class MediaActionMenu extends ConsumerWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: availableStores.isEmpty 
-                      ? null 
+                  onPressed: availableStores.isEmpty
+                      ? null
                       : () => _quickAddAnyStore(context, ref),
                   icon: const Icon(Icons.add_circle),
                   label: const Text('Quick Add'),
@@ -161,10 +161,7 @@ class MediaActionMenu extends ConsumerWidget {
   }
 
   Future<void> _quickSellViaStore(
-    BuildContext context, 
-    WidgetRef ref, 
-    StoreInfo store
-  ) async {
+      BuildContext context, WidgetRef ref, StoreInfo store) async {
     try {
       final directSellService = ref.read(directSellServiceProvider);
       final businessId = ref.read(selectedBusinessIdProvider);
@@ -210,11 +207,12 @@ class MediaActionMenu extends ConsumerWidget {
       if (context.mounted) {
         Navigator.of(context).pop(); // Close loading dialog
         Navigator.of(context).pop(); // Close action menu
-        
+
         if (result.success) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Successfully sold via ${store.name} for \$${result.totalAmount}'),
+              content: Text(
+                  'Successfully sold via ${store.name} for \$${result.totalAmount}'),
               backgroundColor: Colors.green,
             ),
           );
@@ -242,18 +240,18 @@ class MediaActionMenu extends ConsumerWidget {
 
   Future<void> _addToStore(BuildContext context, StoreInfo store) async {
     Navigator.of(context).pop(); // Close action menu
-    
+
     await showDirectStoreAddDialog(
       context,
       media: media,
     );
-    
+
     // Result handling is done in the dialog
   }
 
   Future<void> _quickSellAnyStore(BuildContext context, WidgetRef ref) async {
     if (availableStores.isEmpty) return;
-    
+
     // Use first available store for quick sell
     await _quickSellViaStore(context, ref, availableStores.first);
   }
@@ -307,7 +305,7 @@ class MediaActionMenu extends ConsumerWidget {
       if (context.mounted) {
         Navigator.of(context).pop(); // Close loading dialog
         Navigator.of(context).pop(); // Close action menu
-        
+
         if (result.success) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -318,7 +316,8 @@ class MediaActionMenu extends ConsumerWidget {
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result.errorMessage ?? 'Failed to add to inventory'),
+              content:
+                  Text(result.errorMessage ?? 'Failed to add to inventory'),
               backgroundColor: Colors.red,
             ),
           );

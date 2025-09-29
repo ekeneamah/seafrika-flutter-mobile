@@ -28,7 +28,8 @@ class FirestoreSeeder {
       Permission(
         id: 'manage_permissions',
         name: 'Manage Permissions',
-        description: 'Allows creating, editing, activating, deactivating, and deleting permissions.',
+        description:
+            'Allows creating, editing, activating, deactivating, and deleting permissions.',
         category: PermissionCategory.admin,
         isActive: true,
         createdAt: DateTime.now(),

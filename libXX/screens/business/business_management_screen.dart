@@ -14,19 +14,22 @@ class BusinessManagementScreen extends ConsumerStatefulWidget {
   const BusinessManagementScreen({super.key, this.businessId});
 
   @override
-  ConsumerState<BusinessManagementScreen> createState() => _BusinessManagementScreenState();
+  ConsumerState<BusinessManagementScreen> createState() =>
+      _BusinessManagementScreenState();
 }
 
-class _BusinessManagementScreenState extends ConsumerState<BusinessManagementScreen> {
+class _BusinessManagementScreenState
+    extends ConsumerState<BusinessManagementScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _addressController = TextEditingController();
-  final _industryController = TextEditingController(); // Added industry controller
+  final _industryController =
+      TextEditingController(); // Added industry controller
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
   final _websiteController = TextEditingController();
   final _descriptionController = TextEditingController();
-  
+
   // Focus nodes for proper keyboard navigation
   final _nameFocusNode = FocusNode();
   final _industryFocusNode = FocusNode();
@@ -35,7 +38,7 @@ class _BusinessManagementScreenState extends ConsumerState<BusinessManagementScr
   final _emailFocusNode = FocusNode();
   final _websiteFocusNode = FocusNode();
   final _descriptionFocusNode = FocusNode();
-  
+
   bool _isLoading = false;
   bool _isLoadingBusiness = false;
   String? _selectedCountry;
@@ -137,7 +140,7 @@ class _BusinessManagementScreenState extends ConsumerState<BusinessManagementScr
     _emailController.dispose();
     _websiteController.dispose();
     _descriptionController.dispose();
-    
+
     // Dispose focus nodes
     _nameFocusNode.dispose();
     _industryFocusNode.dispose();
@@ -146,10 +149,10 @@ class _BusinessManagementScreenState extends ConsumerState<BusinessManagementScr
     _emailFocusNode.dispose();
     _websiteFocusNode.dispose();
     _descriptionFocusNode.dispose();
-    
+
     // Cancel timer if it exists
     _nameCheckTimer?.cancel();
-    
+
     super.dispose();
   }
 
@@ -162,9 +165,11 @@ class _BusinessManagementScreenState extends ConsumerState<BusinessManagementScr
         setState(() {
           _nameController.text = business.name;
           _addressController.text = business.address;
-          _industryController.text = business.industry ?? ''; // Keep for custom input
-          _selectedIndustry = business.industry != null && _industries.contains(business.industry) 
-              ? business.industry 
+          _industryController.text =
+              business.industry ?? ''; // Keep for custom input
+          _selectedIndustry = business.industry != null &&
+                  _industries.contains(business.industry)
+              ? business.industry
               : (business.industry?.isNotEmpty == true ? 'Other' : null);
           _phoneController.text = business.phone ?? '';
           _emailController.text = business.email ?? '';
@@ -183,7 +188,7 @@ class _BusinessManagementScreenState extends ConsumerState<BusinessManagementScr
 
   Future<void> _saveBusiness() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     if (_selectedCountry == null || _selectedState == null) {
       _showSnackBar('Please select country and state', isError: true);
       return;
@@ -204,11 +209,13 @@ class _BusinessManagementScreenState extends ConsumerState<BusinessManagementScr
         // Create new business
         String? industryValue;
         if (_selectedIndustry == 'Other') {
-          industryValue = _industryController.text.trim().isEmpty ? null : _industryController.text.trim();
+          industryValue = _industryController.text.trim().isEmpty
+              ? null
+              : _industryController.text.trim();
         } else {
           industryValue = _selectedIndustry;
         }
-        
+
         final business = Business(
           id: '',
           name: _nameController.text.trim(),
@@ -216,24 +223,34 @@ class _BusinessManagementScreenState extends ConsumerState<BusinessManagementScr
           country: _selectedCountry!,
           state: _selectedState!,
           industry: industryValue,
-          phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-          email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
-          website: _websiteController.text.trim().isEmpty ? null : _websiteController.text.trim(),
-          description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
+          phone: _phoneController.text.trim().isEmpty
+              ? null
+              : _phoneController.text.trim(),
+          email: _emailController.text.trim().isEmpty
+              ? null
+              : _emailController.text.trim(),
+          website: _websiteController.text.trim().isEmpty
+              ? null
+              : _websiteController.text.trim(),
+          description: _descriptionController.text.trim().isEmpty
+              ? null
+              : _descriptionController.text.trim(),
           ownerId: currentUser.id,
           isActive: true, // Explicitly set isActive to true for Firestore rules
           createdAt: DateTime.now(),
         );
 
         // Check if business name is available before creating
-        final isAvailable = await businessService.isBusinessNameAvailable(business.name, business.country);
+        final isAvailable = await businessService.isBusinessNameAvailable(
+            business.name, business.country);
         if (!isAvailable) {
-          throw Exception('A business with this name already exists in ${business.country}. Please choose a different name.');
+          throw Exception(
+              'A business with this name already exists in ${business.country}. Please choose a different name.');
         }
 
         await businessService.createBusiness(business);
         _showSnackBar('Business created successfully!', isError: false);
-        
+
         // Navigate to business list screen after successful creation
         if (mounted) {
           Navigator.pushReplacementNamed(context, AppRoutes.businessList);
@@ -242,26 +259,36 @@ class _BusinessManagementScreenState extends ConsumerState<BusinessManagementScr
         // Update existing business
         String? industryValue;
         if (_selectedIndustry == 'Other') {
-          industryValue = _industryController.text.trim().isEmpty ? null : _industryController.text.trim();
+          industryValue = _industryController.text.trim().isEmpty
+              ? null
+              : _industryController.text.trim();
         } else {
           industryValue = _selectedIndustry;
         }
-        
+
         final updates = {
           'name': _nameController.text.trim(),
           'address': _addressController.text.trim(),
           'country': _selectedCountry!,
           'state': _selectedState!,
           'industry': industryValue,
-          'phone': _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-          'email': _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
-          'website': _websiteController.text.trim().isEmpty ? null : _websiteController.text.trim(),
-          'description': _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
+          'phone': _phoneController.text.trim().isEmpty
+              ? null
+              : _phoneController.text.trim(),
+          'email': _emailController.text.trim().isEmpty
+              ? null
+              : _emailController.text.trim(),
+          'website': _websiteController.text.trim().isEmpty
+              ? null
+              : _websiteController.text.trim(),
+          'description': _descriptionController.text.trim().isEmpty
+              ? null
+              : _descriptionController.text.trim(),
         };
 
         await businessService.updateBusiness(widget.businessId!, updates);
         _showSnackBar('Business updated successfully!', isError: false);
-        
+
         // For updates, just pop back to previous screen
         if (mounted) {
           Navigator.pop(context, true); // Return true to indicate success
@@ -299,14 +326,15 @@ class _BusinessManagementScreenState extends ConsumerState<BusinessManagementScr
 
     try {
       final businessService = BusinessService();
-      final isAvailable = await businessService.isBusinessNameAvailable(name.trim(), _selectedCountry!);
-      
+      final isAvailable = await businessService.isBusinessNameAvailable(
+          name.trim(), _selectedCountry!);
+
       if (mounted) {
         setState(() {
           _isCheckingName = false;
           _isNameAvailable = isAvailable;
-          _nameAvailabilityMessage = isAvailable 
-              ? 'Business name is available!' 
+          _nameAvailabilityMessage = isAvailable
+              ? 'Business name is available!'
               : 'Business name is already taken in ${_selectedCountry}';
         });
       }
@@ -422,7 +450,7 @@ class _BusinessManagementScreenState extends ConsumerState<BusinessManagementScr
               labelText: 'Business Name *',
               hintText: 'Enter your business name',
               prefixIcon: Icon(Icons.business_outlined, color: AppTheme.accent),
-              suffixIcon: _isCheckingName 
+              suffixIcon: _isCheckingName
                   ? const SizedBox(
                       width: 16,
                       height: 16,
@@ -465,7 +493,7 @@ class _BusinessManagementScreenState extends ConsumerState<BusinessManagementScr
             onChanged: (value) {
               // Cancel the previous timer if still running
               _nameCheckTimer?.cancel();
-              
+
               // Start a new timer for 500ms (adjust as needed)
               _nameCheckTimer = Timer(const Duration(milliseconds: 500), () {
                 _checkBusinessNameAvailability(value);
@@ -503,7 +531,8 @@ class _BusinessManagementScreenState extends ConsumerState<BusinessManagementScr
                 });
               }
             },
-            validator: (value) => value == null ? 'Please select an industry' : null,
+            validator: (value) =>
+                value == null ? 'Please select an industry' : null,
           ),
           const SizedBox(height: 20),
 
@@ -522,7 +551,8 @@ class _BusinessManagementScreenState extends ConsumerState<BusinessManagementScr
                 prefixIcon: Icon(Icons.edit_outlined, color: AppTheme.accent),
               ),
               validator: (value) {
-                if (_selectedIndustry == 'Other' && (value == null || value.trim().isEmpty)) {
+                if (_selectedIndustry == 'Other' &&
+                    (value == null || value.trim().isEmpty)) {
                   return 'Please enter your industry';
                 }
                 return null;
@@ -547,7 +577,8 @@ class _BusinessManagementScreenState extends ConsumerState<BusinessManagementScr
             decoration: InputDecoration(
               labelText: 'Business Address *',
               hintText: 'Enter your business address',
-              prefixIcon: Icon(Icons.location_on_outlined, color: AppTheme.accent),
+              prefixIcon:
+                  Icon(Icons.location_on_outlined, color: AppTheme.accent),
             ),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
@@ -579,13 +610,14 @@ class _BusinessManagementScreenState extends ConsumerState<BusinessManagementScr
                 _selectedCountry = value;
                 _selectedState = null; // Reset state when country changes
               });
-              
+
               // Re-check name availability when country changes
               if (_nameController.text.isNotEmpty) {
                 _checkBusinessNameAvailability(_nameController.text);
               }
             },
-            validator: (value) => value == null ? 'Please select a country' : null,
+            validator: (value) =>
+                value == null ? 'Please select a country' : null,
           ),
           const SizedBox(height: 20),
 
@@ -610,7 +642,8 @@ class _BusinessManagementScreenState extends ConsumerState<BusinessManagementScr
                 _selectedState = value;
               });
             },
-            validator: (value) => value == null ? 'Please select a state' : null,
+            validator: (value) =>
+                value == null ? 'Please select a state' : null,
           ),
           const SizedBox(height: 20),
 
@@ -622,7 +655,8 @@ class _BusinessManagementScreenState extends ConsumerState<BusinessManagementScr
             keyboardType: TextInputType.phone,
             inputFormatters: [
               FilteringTextInputFormatter.digitsOnly,
-              LengthLimitingTextInputFormatter(15), // Maximum phone number length
+              LengthLimitingTextInputFormatter(
+                  15), // Maximum phone number length
             ],
             onFieldSubmitted: (_) => _emailFocusNode.requestFocus(),
             decoration: InputDecoration(
@@ -656,7 +690,8 @@ class _BusinessManagementScreenState extends ConsumerState<BusinessManagementScr
             ),
             validator: (value) {
               if (value != null && value.isNotEmpty) {
-                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                    .hasMatch(value)) {
                   return 'Please enter a valid email address';
                 }
               }
@@ -705,7 +740,8 @@ class _BusinessManagementScreenState extends ConsumerState<BusinessManagementScr
             decoration: InputDecoration(
               labelText: 'Description',
               hintText: 'Describe your business',
-              prefixIcon: Icon(Icons.description_outlined, color: AppTheme.accent),
+              prefixIcon:
+                  Icon(Icons.description_outlined, color: AppTheme.accent),
             ),
           ),
           // Business name availability message
@@ -766,7 +802,9 @@ class _BusinessManagementScreenState extends ConsumerState<BusinessManagementScr
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    widget.businessId == null ? 'Create Business' : 'Update Business',
+                    widget.businessId == null
+                        ? 'Create Business'
+                        : 'Update Business',
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 16,

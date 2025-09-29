@@ -79,7 +79,6 @@ class DirectSellService {
         businessInventoryId: businessInventoryId,
         totalAmount: order.total,
       );
-
     } catch (error) {
       return DirectSellResult(
         success: false,
@@ -137,11 +136,13 @@ class DirectSellService {
     try {
       // Upload media to Firebase Storage with productId for organization
       // Use optimized compression settings for product images
-      final fileName = '${media.type.name}_${DateTime.now().millisecondsSinceEpoch}.${_getFileExtension(media.type)}';
+      final fileName =
+          '${media.type.name}_${DateTime.now().millisecondsSinceEpoch}.${_getFileExtension(media.type)}';
       // Get compression settings for product image
       final compressionSettings = _getCompressionSettings('product_image');
-      
-      final downloadUrl = await _mediaService.uploadMediaFromBytesWithCompression(
+
+      final downloadUrl =
+          await _mediaService.uploadMediaFromBytesWithCompression(
         bytes: mediaBytes,
         fileName: fileName,
         type: media.type == AssetType.video ? 'video' : 'image',
@@ -170,8 +171,9 @@ class DirectSellService {
       return updatedProduct;
     } catch (uploadError) {
       // If upload fails, we should still return the product but log the error
-      print('Warning: Failed to upload media for product $productId: $uploadError');
-      
+      print(
+          'Warning: Failed to upload media for product $productId: $uploadError');
+
       // Return product without images - it's still functional
       return tempProduct.copyWith(id: productId);
     }
@@ -229,7 +231,8 @@ class DirectSellService {
     required String businessId,
     required DirectSellRequest request,
   }) async {
-    final businessInventoryId = await _businessInventoryService.createBusinessInventory(
+    final businessInventoryId =
+        await _businessInventoryService.createBusinessInventory(
       businessId: businessId,
       productId: productId,
       productName: request.productName,
@@ -312,7 +315,8 @@ class DirectSellService {
       shippingAddress: request.shippingAddress ?? 'In-store pickup',
       paymentMethod: request.paymentMethod ?? 'cash',
       paymentStatus: 'paid', // Direct sell is typically paid immediately
-      status: order_model.OrderStatus.delivered, // Direct sell is delivered immediately
+      status: order_model
+          .OrderStatus.delivered, // Direct sell is delivered immediately
       notes: 'Direct sell from media - Auto-generated order',
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
@@ -325,7 +329,8 @@ class DirectSellService {
   }
 
   /// Helper to create order in Firestore
-  Future<String> _createOrderInFirestore(order_model.Order order, String vendorId) async {
+  Future<String> _createOrderInFirestore(
+      order_model.Order order, String vendorId) async {
     final docRef = await _firestore.collection('orders').add(order.toMap());
     return docRef.id;
   }
@@ -445,7 +450,6 @@ class DirectSellService {
         quantityAdded: request.quantity,
         totalValue: request.sellingPrice * request.quantity,
       );
-
     } catch (e) {
       return DirectStoreAddResult(
         success: false,

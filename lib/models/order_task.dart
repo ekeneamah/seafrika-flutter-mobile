@@ -20,12 +20,7 @@ enum OrderTaskStatus {
   overdue
 }
 
-enum OrderTaskPriority {
-  low,
-  medium,
-  high,
-  urgent
-}
+enum OrderTaskPriority { low, medium, high, urgent }
 
 class OrderTask {
   final String id;
@@ -106,7 +101,8 @@ class OrderTask {
       actualDuration: map['actualDuration'] as int?,
       attachments: List<String>.from(map['attachments'] ?? []),
       comments: (map['comments'] as List? ?? [])
-          .map((comment) => OrderTaskComment.fromMap(comment as Map<String, dynamic>))
+          .map((comment) =>
+              OrderTaskComment.fromMap(comment as Map<String, dynamic>))
           .toList(),
       metadata: map['metadata'] as Map<String, dynamic>?,
       createdAt: (map['createdAt'] as Timestamp).toDate(),
@@ -131,7 +127,8 @@ class OrderTask {
       'assignedBy': assignedBy,
       'dueDate': dueDate != null ? Timestamp.fromDate(dueDate!) : null,
       'startedAt': startedAt != null ? Timestamp.fromDate(startedAt!) : null,
-      'completedAt': completedAt != null ? Timestamp.fromDate(completedAt!) : null,
+      'completedAt':
+          completedAt != null ? Timestamp.fromDate(completedAt!) : null,
       'estimatedDuration': estimatedDuration,
       'actualDuration': actualDuration,
       'attachments': attachments,
@@ -290,7 +287,8 @@ class OrderWorkflow {
       'currentStepIndex': currentStepIndex,
       'status': status.toString().split('.').last,
       'createdAt': Timestamp.fromDate(createdAt),
-      'completedAt': completedAt != null ? Timestamp.fromDate(completedAt!) : null,
+      'completedAt':
+          completedAt != null ? Timestamp.fromDate(completedAt!) : null,
     };
   }
 
@@ -363,16 +361,12 @@ class WorkflowStep {
       'taskType': taskType.toString().split('.').last,
       'isRequired': isRequired,
       'isCompleted': isCompleted,
-      'completedAt': completedAt != null ? Timestamp.fromDate(completedAt!) : null,
+      'completedAt':
+          completedAt != null ? Timestamp.fromDate(completedAt!) : null,
       'assignedTo': assignedTo,
       'metadata': metadata,
     };
   }
 }
 
-enum WorkflowStatus {
-  active,
-  completed,
-  cancelled,
-  paused
-}
+enum WorkflowStatus { active, completed, cancelled, paused }

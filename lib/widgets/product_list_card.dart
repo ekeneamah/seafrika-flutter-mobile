@@ -61,7 +61,7 @@ class ProductListCard extends StatelessWidget {
                           ),
                   ),
                   const SizedBox(width: 16),
-                  
+
                   // Product Details
                   Expanded(
                     child: Column(
@@ -131,7 +131,7 @@ class ProductListCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  
+
                   // Actions Menu (only show if callbacks are provided)
                   if (onEdit != null || onDelete != null)
                     PopupMenuButton(
@@ -152,7 +152,8 @@ class ProductListCard extends StatelessWidget {
                             value: 'delete',
                             child: Row(
                               children: [
-                                Icon(Icons.delete, size: 16, color: Colors.red[700]),
+                                Icon(Icons.delete,
+                                    size: 16, color: Colors.red[700]),
                                 const SizedBox(width: 8),
                                 Text(
                                   'Delete',

@@ -29,7 +29,7 @@ class ExternalListing {
       storeIcon: map['storeIcon'] as String,
       productUrl: map['productUrl'] as String,
       createdAt: (map['createdAt'] as Timestamp).toDate(),
-      lastUpdated: map['lastUpdated'] != null 
+      lastUpdated: map['lastUpdated'] != null
           ? (map['lastUpdated'] as Timestamp).toDate()
           : null,
       storeSpecificData: map['storeSpecificData'] as Map<String, dynamic>,
@@ -96,4 +96,4 @@ class ProductAnalytics {
       'salesByDay': salesByDay,
     };
   }
-} 
+}

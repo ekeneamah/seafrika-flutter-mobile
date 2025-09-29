@@ -29,7 +29,8 @@ class EditUserRolesScreen extends ConsumerWidget {
               return ExpansionTile(
                 title: Text('Store: $storeId'),
                 children: roles.map((role) {
-                  final isAssigned = user.storeRoles[storeId]?.contains(role) ?? false;
+                  final isAssigned =
+                      user.storeRoles[storeId]?.contains(role) ?? false;
 
                   return CheckboxListTile(
                     title: Text(role.name),
@@ -60,7 +61,8 @@ class EditUserRolesScreen extends ConsumerWidget {
     });
   }
 
-  Future<void> _removeRoleFromStore(User user, String storeId, Role role) async {
+  Future<void> _removeRoleFromStore(
+      User user, String storeId, Role role) async {
     final userRef = FirebaseFirestore.instance.collection('users').doc(user.id);
     await userRef.update({
       'storeRoles.$storeId': FieldValue.arrayRemove([role.name]),

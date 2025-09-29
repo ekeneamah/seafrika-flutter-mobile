@@ -211,7 +211,8 @@ class _SupplierRequestsScreenState extends State<SupplierRequestsScreen> {
   }
 
   void _showCreateRequestDialog(BuildContext context) {
-    final supplierService = Provider.of<SupplierService>(context, listen: false);
+    final supplierService =
+        Provider.of<SupplierService>(context, listen: false);
     final supplierController = TextEditingController();
     final quantityController = TextEditingController();
     final notesController = TextEditingController();
@@ -262,7 +263,9 @@ class _SupplierRequestsScreenState extends State<SupplierRequestsScreen> {
                   supplierId: supplierController.text,
                   inventoryId: widget.inventoryId,
                   quantity: int.parse(quantityController.text),
-                  notes: notesController.text.isEmpty ? null : notesController.text,
+                  notes: notesController.text.isEmpty
+                      ? null
+                      : notesController.text,
                 );
                 if (mounted) {
                   Navigator.pop(context);
@@ -291,7 +294,8 @@ class _SupplierRequestsScreenState extends State<SupplierRequestsScreen> {
   }
 
   void _handleRequestAction(SupplierRequest request, String action) async {
-    final supplierService = Provider.of<SupplierService>(context, listen: false);
+    final supplierService =
+        Provider.of<SupplierService>(context, listen: false);
 
     try {
       switch (action) {
@@ -339,4 +343,4 @@ class _SupplierRequestsScreenState extends State<SupplierRequestsScreen> {
       }
     }
   }
-} 
+}

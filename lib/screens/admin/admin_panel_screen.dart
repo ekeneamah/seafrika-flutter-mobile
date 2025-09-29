@@ -247,21 +247,22 @@ class _AdminPanelScreenState extends State<AdminPanelScreen>
                       const SizedBox(height: 12),
                       Text(
                         title,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: AppTheme.textPrimary,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                        ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: AppTheme.textPrimary,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 16,
+                                ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 4),
                       Text(
                         subtitle,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.textSecondary.withOpacity(0.7),
-                          fontWeight: FontWeight.w500,
-                          fontSize: 12,
-                        ),
+                              color: AppTheme.textSecondary.withOpacity(0.7),
+                              fontWeight: FontWeight.w500,
+                              fontSize: 12,
+                            ),
                         textAlign: TextAlign.center,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,

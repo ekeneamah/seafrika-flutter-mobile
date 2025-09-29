@@ -7,7 +7,7 @@ class ApiConfig {
 
   // Base API paths
   static const String authNotificationsPath = '/auth_notifications';
-  static const String integrationsBasePath = '$apiVersion/integrations';
+  static const String integrationsBasePath = '/api/integrations';
 
   // Meta Integration endpoints
   static const String metaConfigBasePath = '/api/config/meta';
@@ -23,6 +23,9 @@ class ApiConfig {
   static const String instagramBasePath = '$integrationsBasePath/instagram';
   static const String instagramConfigBasePath =
       '$facebookConfigBasePath/instagram';
+
+  // Messenger Integration endpoints
+  static const String messengerBasePath = '$integrationsBasePath/messenger';
 
   // TikTok Integration endpoints
   static const String tiktokBasePath = '$integrationsBasePath/tiktok';
@@ -96,6 +99,22 @@ class ApiConfig {
       getFullUrl('$instagramConfigBasePath/business-profile');
   static String getInstagramIntegrationLogs() =>
       getFullUrl('$instagramConfigBasePath/integration-logs');
+
+  // Facebook config URLs
+  static String getFacebookConfigPageInfo() =>
+      getFullUrl('$facebookConfigBasePath/page-info');
+  static String getFacebookConfigAuthUrlWithRedirect(
+          String redirectUri, String state) =>
+      getFullUrl(
+          '$instagramConfigBasePath/auth-url?redirect_uri=${Uri.encodeComponent(redirectUri)}&state=${Uri.encodeComponent(state)}');
+  static String getFacebookOAuthRedirect() =>
+      getFullUrl('$facebookConfigBasePath/oauth/redirect');
+
+  // Messenger specific URLs
+  static String getMessengerAnalytics(String integrationId) =>
+      getFullUrl('$messengerBasePath/$integrationId/analytics');
+  static String getMessengerConversations(String integrationId) =>
+      getFullUrl('$messengerBasePath/$integrationId/conversations');
 
   // TikTok specific URLs
   static String getTikTokAuthUrl() => getFullUrl(tiktokAuthPath);

@@ -50,4 +50,4 @@ class AnalyticsCard extends StatelessWidget {
       ),
     );
   }
-} 
+}

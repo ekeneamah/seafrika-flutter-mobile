@@ -570,11 +570,14 @@ class AppRoutes {
       case businessList:
         return MaterialPageRoute(builder: (_) => const BusinessListScreen());
       case createBusiness:
-        return MaterialPageRoute(builder: (_) => const BusinessManagementScreen());
+        return MaterialPageRoute(
+            builder: (_) => const BusinessManagementScreen());
       case businessManagement:
-        return MaterialPageRoute(builder: (_) => const BusinessManagementScreen());
+        return MaterialPageRoute(
+            builder: (_) => const BusinessManagementScreen());
       case businessOnboarding:
-        return MaterialPageRoute(builder: (_) => const BusinessOnboardingScreen());
+        return MaterialPageRoute(
+            builder: (_) => const BusinessOnboardingScreen());
       case editBusiness:
         final businessId = settings.arguments as String?;
         return MaterialPageRoute(

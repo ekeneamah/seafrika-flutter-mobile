@@ -89,7 +89,7 @@ class _BusinessIdModalState extends State<BusinessIdModal>
   Future<void> _copyToClipboard() async {
     await Clipboard.setData(ClipboardData(text: widget.businessId));
     setState(() => _isCopied = true);
-    
+
     // Reset copied state after 2 seconds
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
@@ -110,7 +110,8 @@ class _BusinessIdModalState extends State<BusinessIdModal>
           ),
           backgroundColor: AppTheme.accent,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(16),
           duration: const Duration(seconds: 2),
         ),
@@ -231,7 +232,7 @@ Welcome to the team! 🎉
             ),
           ),
           const SizedBox(height: 20),
-          
+
           // Title
           Text(
             'Business ID Created!',
@@ -299,7 +300,7 @@ Welcome to the team! 🎉
             ),
           ),
           const SizedBox(height: 20),
-          
+
           // Business ID Display
           Container(
             width: double.infinity,
@@ -347,7 +348,7 @@ Welcome to the team! 🎉
                   ],
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Business ID Code
                 Container(
                   width: double.infinity,
@@ -381,14 +382,15 @@ Welcome to the team! 🎉
                           duration: const Duration(milliseconds: 200),
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: _isCopied 
+                            color: _isCopied
                                 ? AppTheme.accent.withOpacity(0.1)
                                 : AppTheme.primary.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(
                             _isCopied ? Icons.check : Icons.copy,
-                            color: _isCopied ? AppTheme.accent : AppTheme.primary,
+                            color:
+                                _isCopied ? AppTheme.accent : AppTheme.primary,
                             size: 18,
                           ),
                         ),
@@ -463,7 +465,6 @@ Welcome to the team! 🎉
             ],
           ),
           const SizedBox(height: 20),
-          
           ...instructions.map((instruction) {
             return Container(
               margin: const EdgeInsets.only(bottom: 16),
@@ -500,7 +501,7 @@ Welcome to the team! 🎉
                     ),
                   ),
                   const SizedBox(width: 16),
-                  
+
                   // Icon
                   Container(
                     padding: const EdgeInsets.all(8),
@@ -515,7 +516,7 @@ Welcome to the team! 🎉
                     ),
                   ),
                   const SizedBox(width: 16),
-                  
+
                   // Content
                   Expanded(
                     child: Column(
@@ -590,7 +591,7 @@ Welcome to the team! 🎉
             ),
           ),
           const SizedBox(height: 12),
-          
+
           // Close Button
           SizedBox(
             width: double.infinity,

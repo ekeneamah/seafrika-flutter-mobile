@@ -55,7 +55,8 @@ class SupplierRequest {
       ),
       notes: map['notes'],
       requestedAt: DateTime.parse(map['requestedAt']),
-      updatedAt: map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : null,
+      updatedAt:
+          map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : null,
     );
   }
 
@@ -82,4 +83,4 @@ class SupplierRequest {
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
-} 
+}

@@ -186,7 +186,8 @@ final storeRolesProvider =
 });
 
 final userServiceProvider = Provider<UserService>((ref) {
-  final businessId = ref.watch(authServiceProvider).currentUser?.businessId ?? '';
+  final businessId =
+      ref.watch(authServiceProvider).currentUser?.businessId ?? '';
   return UserService(
     firestore: ref.watch(firebaseFirestoreProvider),
     vendorId: ref.watch(vendorIdSyncProvider),
@@ -206,5 +207,3 @@ final teamServiceProvider = Provider<TeamService>((ref) {
 final businessServiceProvider = Provider<BusinessService>((ref) {
   return BusinessService();
 });
-
-

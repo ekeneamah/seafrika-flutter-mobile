@@ -94,23 +94,24 @@ class _FilterChipData {
 
 // Riverpod providers
 final searchQueryProvider = StateProvider<String>((ref) => '');
-final selectedCriteriaProvider = StateProvider<SearchCriteria>((ref) => 
-    SearchCriteria.products);
+final selectedCriteriaProvider =
+    StateProvider<SearchCriteria>((ref) => SearchCriteria.products);
 final activeFiltersProvider = StateProvider<Set<String>>((ref) => {});
 
 // Search suggestions provider with debouncing
-final searchSuggestionsProvider = FutureProvider.family<List<SearchSuggestion>, 
-    String>((ref, query) async {
+final searchSuggestionsProvider =
+    FutureProvider.family<List<SearchSuggestion>, String>((ref, query) async {
   if (query.isEmpty) return [];
-  
+
   final criteria = ref.watch(selectedCriteriaProvider);
   // TODO: Replace with actual API call
   return _fetchSearchSuggestions(query, criteria);
 });
 
 // Filter chips provider
-final filterChipsProvider = FutureProvider.family<List<FilterChipData>, 
-    SearchCriteria>((ref, criteria) async {
+final filterChipsProvider =
+    FutureProvider.family<List<FilterChipData>, SearchCriteria>(
+        (ref, criteria) async {
   // TODO: Replace with actual API call
   return _fetchFilterChips(criteria);
 });
@@ -137,7 +138,7 @@ class _VendorSearchWidgetState extends ConsumerState<VendorSearchWidget>
   late AnimationController _slideController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
-  
+
   bool _showSuggestions = false;
   String _debouncedQuery = '';
 
@@ -184,7 +185,8 @@ class _VendorSearchWidgetState extends ConsumerState<VendorSearchWidget>
   Future<void> _loadLastSelectedCriteria() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final savedCriteria = prefs.getString(SharedPreferencesKeys.lastSearchCriteria);
+      final savedCriteria =
+          prefs.getString(SharedPreferencesKeys.lastSearchCriteria);
       if (savedCriteria != null) {
         final criteria = SearchCriteria.values.firstWhere(
           (e) => e.name == savedCriteria,
@@ -201,7 +203,8 @@ class _VendorSearchWidgetState extends ConsumerState<VendorSearchWidget>
   Future<void> _saveSelectedCriteria(SearchCriteria criteria) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(SharedPreferencesKeys.lastSearchCriteria, criteria.name);
+      await prefs.setString(
+          SharedPreferencesKeys.lastSearchCriteria, criteria.name);
     } catch (e) {
       debugPrint('Error saving search criteria: $e');
     }
@@ -211,7 +214,7 @@ class _VendorSearchWidgetState extends ConsumerState<VendorSearchWidget>
   void _onSearchChanged() {
     final query = _searchController.text;
     ref.read(searchQueryProvider.notifier).state = query;
-    
+
     // Debounce search suggestions
     Future.delayed(const Duration(milliseconds: 300), () {
       if (_searchController.text == query && query.isNotEmpty) {
@@ -234,9 +237,9 @@ class _VendorSearchWidgetState extends ConsumerState<VendorSearchWidget>
 
     final criteria = ref.read(selectedCriteriaProvider);
     setState(() => _showSuggestions = false);
-    
+
     widget.onSearchSubmitted?.call(query, criteria);
-    
+
     // TODO: Navigate to results page
     // Navigator.pushNamed(context, '/results', arguments: {
     //   'query': query,
@@ -248,9 +251,9 @@ class _VendorSearchWidgetState extends ConsumerState<VendorSearchWidget>
   void _onSuggestionSelected(SearchSuggestion suggestion) {
     _searchController.text = suggestion.title;
     setState(() => _showSuggestions = false);
-    
+
     widget.onSuggestionSelected?.call(suggestion);
-    
+
     // TODO: Navigate to specific item or results
     // Navigator.pushNamed(context, '/item/${suggestion.id}');
   }
@@ -317,7 +320,7 @@ class _VendorSearchWidgetState extends ConsumerState<VendorSearchWidget>
   /// Build search criteria selector header
   Widget _buildSearchHeader() {
     final selectedCriteria = ref.watch(selectedCriteriaProvider);
-    
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
       child: Row(
@@ -333,7 +336,7 @@ class _VendorSearchWidgetState extends ConsumerState<VendorSearchWidget>
               child: DropdownButton<SearchCriteria>(
                 key: const Key('search_criteria_dropdown'),
                 value: selectedCriteria,
-                icon: const Icon(Icons.keyboard_arrow_down, 
+                icon: const Icon(Icons.keyboard_arrow_down,
                     color: Color(0xFF6366F1)),
                 style: const TextStyle(
                   fontSize: 16,
@@ -345,8 +348,8 @@ class _VendorSearchWidgetState extends ConsumerState<VendorSearchWidget>
                     value: criteria,
                     child: Row(
                       children: [
-                        Icon(criteria.icon, size: 20, 
-                            color: const Color(0xFF6B7280)),
+                        Icon(criteria.icon,
+                            size: 20, color: const Color(0xFF6B7280)),
                         const SizedBox(width: 8),
                         Text(criteria.label),
                       ],
@@ -355,7 +358,8 @@ class _VendorSearchWidgetState extends ConsumerState<VendorSearchWidget>
                 }).toList(),
                 onChanged: (criteria) {
                   if (criteria != null) {
-                    ref.read(selectedCriteriaProvider.notifier).state = criteria;
+                    ref.read(selectedCriteriaProvider.notifier).state =
+                        criteria;
                     _saveSelectedCriteria(criteria);
                   }
                 },
@@ -381,7 +385,8 @@ class _VendorSearchWidgetState extends ConsumerState<VendorSearchWidget>
           key: const Key('search_text_field'),
           controller: _searchController,
           decoration: InputDecoration(
-            hintText: 'Search ${ref.watch(selectedCriteriaProvider).label.toLowerCase()}...',
+            hintText:
+                'Search ${ref.watch(selectedCriteriaProvider).label.toLowerCase()}...',
             hintStyle: const TextStyle(color: Color(0xFF9CA3AF)),
             prefixIcon: Semantics(
               label: 'Search',
@@ -426,7 +431,7 @@ class _VendorSearchWidgetState extends ConsumerState<VendorSearchWidget>
     return filterChipsAsync.when(
       data: (chips) {
         if (chips.isEmpty) return const SizedBox.shrink();
-        
+
         return Container(
           height: 50,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -438,7 +443,7 @@ class _VendorSearchWidgetState extends ConsumerState<VendorSearchWidget>
             itemBuilder: (context, index) {
               final chip = chips[index];
               final isActive = activeFilters.contains(chip.id);
-              
+
               return Semantics(
                 label: 'Filter by ${chip.label}',
                 child: FilterChip(
@@ -461,7 +466,7 @@ class _VendorSearchWidgetState extends ConsumerState<VendorSearchWidget>
                     } else {
                       updatedFilters.remove(chip.id);
                     }
-                    ref.read(activeFiltersProvider.notifier).state = 
+                    ref.read(activeFiltersProvider.notifier).state =
                         updatedFilters;
                   },
                 ),
@@ -477,7 +482,8 @@ class _VendorSearchWidgetState extends ConsumerState<VendorSearchWidget>
 
   /// Build search suggestions list
   Widget _buildSuggestionsList() {
-    final suggestionsAsync = ref.watch(searchSuggestionsProvider(_debouncedQuery));
+    final suggestionsAsync =
+        ref.watch(searchSuggestionsProvider(_debouncedQuery));
 
     return suggestionsAsync.when(
       data: (suggestions) {
@@ -501,7 +507,7 @@ class _VendorSearchWidgetState extends ConsumerState<VendorSearchWidget>
             separatorBuilder: (_, __) => const Divider(height: 1),
             itemBuilder: (context, index) {
               final suggestion = suggestions[index];
-              
+
               return Semantics(
                 label: 'Select ${suggestion.title}',
                 child: ListTile(
@@ -552,7 +558,7 @@ Future<List<SearchSuggestion>> _fetchSearchSuggestions(
 ) async {
   // Simulate API delay
   await Future.delayed(const Duration(milliseconds: 500));
-  
+
   // Mock suggestions based on criteria
   switch (criteria) {
     case SearchCriteria.products:
@@ -601,7 +607,7 @@ Future<List<SearchSuggestion>> _fetchSearchSuggestions(
 Future<List<FilterChipData>> _fetchFilterChips(SearchCriteria criteria) async {
   // Simulate API delay
   await Future.delayed(const Duration(milliseconds: 300));
-  
+
   // Mock filter chips based on criteria
   switch (criteria) {
     case SearchCriteria.products:

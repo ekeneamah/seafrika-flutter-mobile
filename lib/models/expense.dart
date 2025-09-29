@@ -130,4 +130,4 @@ class Expense {
       metadata: metadata ?? this.metadata,
     );
   }
-} 
+}

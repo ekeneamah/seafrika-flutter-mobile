@@ -129,4 +129,4 @@ class Article {
       metadata: metadata ?? this.metadata,
     );
   }
-} 
+}

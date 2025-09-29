@@ -51,7 +51,7 @@ class StoreInventoryService {
     String category = 'Uncategorized',
   }) async {
     final now = DateTime.now();
-    
+
     // Check if product already exists in this store
     final existingStoreInventory = await getStoreInventoryByProductId(
       businessId: businessId,
@@ -65,12 +65,12 @@ class StoreInventoryService {
         final existingDoc = _firestore
             .collection(CollectionNames.inventory)
             .doc(existingStoreInventory.id);
-        
+
         final newQuantity = existingStoreInventory.quantity + quantity;
         final isLowStock = newQuantity <= minimumQuantity;
         final totalValue = newQuantity * unitPrice;
         final status = newQuantity > 0 ? 'active' : 'outOfStock';
-        
+
         transaction.update(existingDoc, {
           'quantity': newQuantity,
           'minimumQuantity': minimumQuantity, // Update minimum quantity
@@ -112,7 +112,7 @@ class StoreInventoryService {
       } else {
         // Create new store inventory record
         final docRef = CollectionReferences.inventory.doc();
-        
+
         // Pre-compute values to avoid client-side calculations
         final isLowStock = quantity <= minimumQuantity;
         final totalValue = quantity * unitPrice;
@@ -123,7 +123,8 @@ class StoreInventoryService {
           'businessName': businessName,
           'vendorId': vendorId,
           'storeId': storeId,
-          'businessInventoryId': businessInventoryId, // Link to business inventory
+          'businessInventoryId':
+              businessInventoryId, // Link to business inventory
           'productId': productId,
           'productName': productName,
           'quantity': quantity,
@@ -171,31 +172,33 @@ class StoreInventoryService {
       }
 
       // Update business inventory available quantity and store distribution
-      final businessInventoryRef = CollectionReferences.businessInventory
-          .doc(businessInventoryId);
-      
+      final businessInventoryRef =
+          CollectionReferences.businessInventory.doc(businessInventoryId);
+
       // Get current business inventory to update store distribution
       final businessInventoryDoc = await transaction.get(businessInventoryRef);
       if (!businessInventoryDoc.exists) {
         throw Exception('Business inventory not found');
       }
-      
+
       final businessData = businessInventoryDoc.data()!;
-      final currentStoreDistribution = businessData['storeDistribution'] as Map<String, dynamic>? ?? {};
-      
+      final currentStoreDistribution =
+          businessData['storeDistribution'] as Map<String, dynamic>? ?? {};
+
       // Calculate the quantity for store distribution
-      final storeQuantity = existingStoreInventory != null 
-          ? existingStoreInventory.quantity + quantity 
+      final storeQuantity = existingStoreInventory != null
+          ? existingStoreInventory.quantity + quantity
           : quantity;
-      
+
       // Update store distribution with new allocation
       currentStoreDistribution[storeId] = {
         'storeId': storeId,
-        'storeName': businessName, // Use businessName as placeholder for store name
+        'storeName':
+            businessName, // Use businessName as placeholder for store name
         'allocatedQuantity': storeQuantity,
         'lastAllocated': FieldValue.serverTimestamp(),
       };
-      
+
       transaction.update(businessInventoryRef, {
         'availableQuantity': FieldValue.increment(-quantity),
         'storeDistribution': currentStoreDistribution,
@@ -217,7 +220,8 @@ class StoreInventoryService {
 
     if (searchQuery != null && searchQuery.isNotEmpty) {
       // Use centralized search reference with business and store context
-      query = CollectionReferences.searchInventoryByName(businessId, storeId, searchQuery)
+      query = CollectionReferences.searchInventoryByName(
+              businessId, storeId, searchQuery)
           .limit(25); // Reduce limit for search queries
     } else {
       // Use centralized active inventory reference for business and store
@@ -350,7 +354,7 @@ class StoreInventoryService {
     final quantity = data['quantity'] as int?;
     final minimumQuantity = data['minimumQuantity'] as int?;
     final unitPrice = data['unitPrice'] as double?;
-    
+
     Map<String, dynamic> updateData = {
       ...data,
       'updatedAt': Timestamp.fromDate(DateTime.now()),
@@ -361,7 +365,7 @@ class StoreInventoryService {
       updateData['isLowStock'] = quantity <= minimumQuantity;
       updateData['status'] = quantity > 0 ? 'active' : 'outOfStock';
     }
-    
+
     if (quantity != null && unitPrice != null) {
       updateData['totalValue'] = quantity * unitPrice;
     }
@@ -423,7 +427,7 @@ class StoreInventoryService {
     required String storeId,
     String? searchQuery,
   }) async {
-  Query<Map<String, dynamic>> query = _firestore
+    Query<Map<String, dynamic>> query = _firestore
         .collection(CollectionNames.inventory)
         .where('businessId', isEqualTo: businessId)
         .where('storeId', isEqualTo: storeId)
@@ -436,7 +440,7 @@ class StoreInventoryService {
           .where('productName', isLessThanOrEqualTo: searchQuery + '\uf8ff');
     }
 
-  return await query.get().timeout(const Duration(seconds: 20));
+    return await query.get().timeout(const Duration(seconds: 20));
   }
 
   Future<StoreInventory?> getStoreInventoryByProductId({
@@ -538,31 +542,35 @@ class StoreInventoryService {
       }
 
       // Combine inventory data with store information
-      return inventorySnapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>?;
-        if (data == null) return <String, dynamic>{};
-        
-        final storeId = data['storeId'] as String? ?? '';
-        final storeInfo = storeMap[storeId];
-        
-        return {
-          'storeId': storeId,
-          'storeName': storeInfo?['name'] ?? 'Unknown Store',
-          'storeAddress': storeInfo?['address'] ?? '',
-          'storeContactPerson': storeInfo?['contactPerson'] ?? '',
-          'storeContactPhone': storeInfo?['contactPhone'] ?? '',
-          'storeDescription': storeInfo?['description'] ?? '',
-          'storeImageUrl': storeInfo?['imageUrl'],
-          'quantity': data['quantity'] ?? 0,
-          'availableQuantity': data['quantity'] ?? 0, // Current available quantity
-          'minimumQuantity': data['minimumQuantity'] ?? 0,
-          'status': data['status'] ?? 'active',
-          'isLowStock': data['isLowStock'] ?? false,
-          'lastUpdated': data['updatedAt'] as Timestamp?,
-          'location': data['location'] ?? '',
-          'unitPrice': data['unitPrice'] ?? 0.0,
-        };
-      }).where((item) => item.isNotEmpty && item['storeId'] != '').toList();
+      return inventorySnapshot.docs
+          .map((doc) {
+            final data = doc.data() as Map<String, dynamic>?;
+            if (data == null) return <String, dynamic>{};
+
+            final storeId = data['storeId'] as String? ?? '';
+            final storeInfo = storeMap[storeId];
+
+            return {
+              'storeId': storeId,
+              'storeName': storeInfo?['name'] ?? 'Unknown Store',
+              'storeAddress': storeInfo?['address'] ?? '',
+              'storeContactPerson': storeInfo?['contactPerson'] ?? '',
+              'storeContactPhone': storeInfo?['contactPhone'] ?? '',
+              'storeDescription': storeInfo?['description'] ?? '',
+              'storeImageUrl': storeInfo?['imageUrl'],
+              'quantity': data['quantity'] ?? 0,
+              'availableQuantity':
+                  data['quantity'] ?? 0, // Current available quantity
+              'minimumQuantity': data['minimumQuantity'] ?? 0,
+              'status': data['status'] ?? 'active',
+              'isLowStock': data['isLowStock'] ?? false,
+              'lastUpdated': data['updatedAt'] as Timestamp?,
+              'location': data['location'] ?? '',
+              'unitPrice': data['unitPrice'] ?? 0.0,
+            };
+          })
+          .where((item) => item.isNotEmpty && item['storeId'] != '')
+          .toList();
     } catch (e) {
       print('Error getting store distribution: $e');
       return [];

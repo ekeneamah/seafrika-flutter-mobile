@@ -88,4 +88,4 @@ class Media {
       productId,
     );
   }
-} 
+}

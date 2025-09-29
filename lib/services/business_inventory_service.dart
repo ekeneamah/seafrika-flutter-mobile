@@ -14,19 +14,23 @@ class BusinessInventoryService {
     DocumentSnapshot? lastDocument,
     int limit = 50,
   }) {
-    print('📦 [BusinessInventoryService] Streaming inventory for business: $businessId');
-    print('📦 [BusinessInventoryService] Search query: $searchQuery, Category: $category, Limit: $limit');
-    
+    print(
+        '📦 [BusinessInventoryService] Streaming inventory for business: $businessId');
+    print(
+        '📦 [BusinessInventoryService] Search query: $searchQuery, Category: $category, Limit: $limit');
+
     Query query;
 
     if (searchQuery != null && searchQuery.isNotEmpty) {
       // Use centralized search reference
       print('📦 [BusinessInventoryService] Using search query');
-      query = CollectionReferences.searchBusinessInventoryByName(businessId, searchQuery);
+      query = CollectionReferences.searchBusinessInventoryByName(
+          businessId, searchQuery);
     } else if (category != null && category != 'All') {
       // Use centralized category reference
       print('📦 [BusinessInventoryService] Using category filter: $category');
-      query = CollectionReferences.businessInventoryByCategory(businessId, category);
+      query = CollectionReferences.businessInventoryByCategory(
+          businessId, category);
     } else {
       // Use centralized business inventory reference
       print('📦 [BusinessInventoryService] Using active business inventory');
@@ -73,12 +77,13 @@ class BusinessInventoryService {
       final existingData = existingDoc.data();
       final currentTotal = existingData['totalQuantity'] as int;
       final currentAvailable = existingData['availableQuantity'] as int;
-      final currentCostPrice = (existingData['costPrice'] as num?)?.toDouble() ?? 0.0;
-      
+      final currentCostPrice =
+          (existingData['costPrice'] as num?)?.toDouble() ?? 0.0;
+
       // Add new quantity to existing quantities
       final newTotalQuantity = currentTotal + totalQuantity;
       final newAvailableQuantity = currentAvailable + totalQuantity;
-      
+
       // Record cost price history if cost price has changed
       if (costPrice != currentCostPrice) {
         final costPriceHistoryService = CostPriceHistoryService();
@@ -101,7 +106,7 @@ class BusinessInventoryService {
           },
         );
       }
-      
+
       await existingDoc.reference.update({
         'totalQuantity': newTotalQuantity,
         'availableQuantity': newAvailableQuantity,
@@ -194,20 +199,21 @@ class BusinessInventoryService {
     required String businessInventoryId,
     required int quantityChange, // Negative when allocating to store
   }) async {
-    final docRef = CollectionReferences.businessInventory.doc(businessInventoryId);
-    
+    final docRef =
+        CollectionReferences.businessInventory.doc(businessInventoryId);
+
     await _firestore.runTransaction((transaction) async {
       final doc = await transaction.get(docRef);
       if (!doc.exists) throw Exception('Business inventory not found');
-      
+
       final data = doc.data() as Map<String, dynamic>;
       final currentAvailable = data['availableQuantity'] as int;
       final newAvailable = currentAvailable + quantityChange;
-      
+
       if (newAvailable < 0) {
         throw Exception('Insufficient inventory available');
       }
-      
+
       transaction.update(docRef, {
         'availableQuantity': newAvailable,
         'updatedAt': FieldValue.serverTimestamp(),
@@ -225,21 +231,22 @@ class BusinessInventoryService {
     final currentDoc = await CollectionReferences.businessInventory
         .doc(businessInventoryId)
         .get();
-    
+
     if (!currentDoc.exists) {
       throw Exception('Business inventory item not found');
     }
-    
+
     final currentData = currentDoc.data()!;
-    final currentCostPrice = (currentData['costPrice'] as num?)?.toDouble() ?? 0.0;
+    final currentCostPrice =
+        (currentData['costPrice'] as num?)?.toDouble() ?? 0.0;
     final newCostPrice = (updateData['costPrice'] as num?)?.toDouble();
-    
+
     // Record cost price history if cost price has changed
     if (newCostPrice != null && newCostPrice != currentCostPrice) {
       final businessId = currentData['businessId'] as String;
       final productId = currentData['productId'] as String;
       final productName = currentData['productName'] as String;
-      
+
       final costPriceHistoryService = CostPriceHistoryService();
       await costPriceHistoryService.recordCostPriceChange(
         businessInventoryId: businessInventoryId,
@@ -256,7 +263,7 @@ class BusinessInventoryService {
         },
       );
     }
-    
+
     // Update the business inventory
     await currentDoc.reference.update({
       ...updateData,
@@ -269,10 +276,11 @@ class BusinessInventoryService {
     required String businessId,
     int threshold = 10,
   }) async {
-    final snapshot = await CollectionReferences.lowStockBusinessInventory(businessId)
-        .orderBy('availableQuantity')
-        .limit(20)
-        .get();
+    final snapshot =
+        await CollectionReferences.lowStockBusinessInventory(businessId)
+            .orderBy('availableQuantity')
+            .limit(20)
+            .get();
 
     return snapshot.docs
         .map((doc) => BusinessInventory.fromFirestore(doc))
@@ -294,23 +302,26 @@ class BusinessInventoryService {
     Map<String, dynamic>? purchaseDetails,
   }) async {
     try {
-      final docRef = CollectionReferences.businessInventory.doc(businessInventoryId);
-      
+      final docRef =
+          CollectionReferences.businessInventory.doc(businessInventoryId);
+
       return await _firestore.runTransaction((transaction) async {
         final doc = await transaction.get(docRef);
-        
+
         if (!doc.exists) {
           throw Exception('Business inventory not found');
         }
-        
+
         final currentData = doc.data() as Map<String, dynamic>;
-        final currentTotalQuantity = (currentData['totalQuantity'] as int? ?? 0);
-        final currentAvailableQuantity = (currentData['availableQuantity'] as int? ?? 0);
-        
+        final currentTotalQuantity =
+            (currentData['totalQuantity'] as int? ?? 0);
+        final currentAvailableQuantity =
+            (currentData['availableQuantity'] as int? ?? 0);
+
         // Calculate new quantities
         final newTotalQuantity = currentTotalQuantity + quantityToAdd;
         final newAvailableQuantity = currentAvailableQuantity + quantityToAdd;
-        
+
         // Prepare update data
         final updateData = <String, dynamic>{
           'totalQuantity': newTotalQuantity,
@@ -319,32 +330,32 @@ class BusinessInventoryService {
           'totalValue': newTotalQuantity * costPrice,
           'updatedAt': FieldValue.serverTimestamp(),
         };
-        
+
         // Update selling price if provided
         if (sellingPrice != null) {
           updateData['sellingPrice'] = sellingPrice;
         }
-        
+
         // Update supplier information if provided
         if (supplierId != null) {
           updateData['supplierId'] = supplierId;
         }
-        
+
         if (purchaseOrderId != null) {
           updateData['purchaseOrderId'] = purchaseOrderId;
         }
-        
+
         if (invoiceId != null) {
           updateData['invoiceId'] = invoiceId;
         }
-        
+
         if (purchaseDetails != null) {
           updateData['purchaseDetails'] = purchaseDetails;
         }
-        
+
         // Update the inventory
         transaction.update(docRef, updateData);
-        
+
         return true;
       });
     } catch (e) {
@@ -353,20 +364,24 @@ class BusinessInventoryService {
     } finally {
       // Record cost price history if cost price has changed or quantity added
       try {
-        final doc = await CollectionReferences.businessInventory.doc(businessInventoryId).get();
+        final doc = await CollectionReferences.businessInventory
+            .doc(businessInventoryId)
+            .get();
         if (doc.exists) {
           final data = doc.data() as Map<String, dynamic>;
           final productId = data['productId'] as String;
           final productName = data['productName'] as String;
-          final currentCostPrice = (data['costPrice'] as num?)?.toDouble() ?? 0.0;
-          
+          final currentCostPrice =
+              (data['costPrice'] as num?)?.toDouble() ?? 0.0;
+
           final costPriceHistoryService = CostPriceHistoryService();
           await costPriceHistoryService.recordCostPriceChange(
             businessInventoryId: businessInventoryId,
             businessId: businessId,
             productId: productId,
             productName: productName,
-            previousCostPrice: currentCostPrice != costPrice ? currentCostPrice : costPrice,
+            previousCostPrice:
+                currentCostPrice != costPrice ? currentCostPrice : costPrice,
             newCostPrice: costPrice,
             changeReason: notes ?? 'Inventory restock - quantity added',
             changedBy: 'system', // TODO: Use actual user ID when available

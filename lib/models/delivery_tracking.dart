@@ -11,13 +11,7 @@ enum DeliveryStatus {
   cancelled
 }
 
-enum DeliveryType {
-  standard,
-  express,
-  overnight,
-  scheduled,
-  pickup
-}
+enum DeliveryType { standard, express, overnight, scheduled, pickup }
 
 class DeliveryTracking {
   final String id;
@@ -93,7 +87,8 @@ class DeliveryTracking {
       recipientName: map['recipientName'] as String?,
       recipientPhone: map['recipientPhone'] as String?,
       updates: (map['updates'] as List)
-          .map((update) => DeliveryUpdate.fromMap(update as Map<String, dynamic>))
+          .map((update) =>
+              DeliveryUpdate.fromMap(update as Map<String, dynamic>))
           .toList(),
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       updatedAt: map['updatedAt'] != null
@@ -114,7 +109,8 @@ class DeliveryTracking {
       'status': status.toString().split('.').last,
       'type': type.toString().split('.').last,
       'estimatedDelivery': Timestamp.fromDate(estimatedDelivery),
-      'actualDelivery': actualDelivery != null ? Timestamp.fromDate(actualDelivery!) : null,
+      'actualDelivery':
+          actualDelivery != null ? Timestamp.fromDate(actualDelivery!) : null,
       'pickupAddress': pickupAddress,
       'deliveryAddress': deliveryAddress,
       'latitude': latitude,

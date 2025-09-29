@@ -65,7 +65,7 @@ class CustomerService {
     int limit = 10,
   }) async {
     final normalizedQuery = query.toLowerCase().trim();
-    
+
     if (normalizedQuery.isEmpty) {
       return [];
     }
@@ -106,7 +106,8 @@ class CustomerService {
       for (final doc in snapshot.docs) {
         if (!seenIds.contains(doc.id)) {
           seenIds.add(doc.id);
-          customers.add(Customer.fromMap(doc.id, doc.data() as Map<String, dynamic>));
+          customers.add(
+              Customer.fromMap(doc.id, doc.data() as Map<String, dynamic>));
         }
       }
     }
@@ -115,10 +116,10 @@ class CustomerService {
     customers.sort((a, b) {
       final aNameMatch = a.name.toLowerCase().startsWith(normalizedQuery);
       final bNameMatch = b.name.toLowerCase().startsWith(normalizedQuery);
-      
+
       if (aNameMatch && !bNameMatch) return -1;
       if (!aNameMatch && bNameMatch) return 1;
-      
+
       return a.name.compareTo(b.name);
     });
 

@@ -16,8 +16,10 @@ class AuthService extends StateNotifier<app_user.User?> {
   final FirestoreService _firestore;
   final AnalyticsService _analytics;
   bool _isInitialized = false;
-  static const String _attemptsKeyPrefix = SharedPreferencesKeys.loginAttemptsPrefix;
-  static const String _lastAttemptKeyPrefix = SharedPreferencesKeys.lastAttemptPrefix;
+  static const String _attemptsKeyPrefix =
+      SharedPreferencesKeys.loginAttemptsPrefix;
+  static const String _lastAttemptKeyPrefix =
+      SharedPreferencesKeys.lastAttemptPrefix;
 
   AuthService({
     firebase_auth.FirebaseAuth? auth,
@@ -81,8 +83,7 @@ class AuthService extends StateNotifier<app_user.User?> {
     }
   }
 
-  Future<bool> loginStaff(
-      String email, String password) async {
+  Future<bool> loginStaff(String email, String password) async {
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now();
     final attemptsKey = '$_attemptsKeyPrefix$email';
@@ -105,7 +106,7 @@ class AuthService extends StateNotifier<app_user.User?> {
     try {
       // Attempt login
       final userCredential = await _auth.signInWithEmailAndPassword(
-        email: email, 
+        email: email,
         password: password,
       );
 
@@ -120,7 +121,8 @@ class AuthService extends StateNotifier<app_user.User?> {
       }
 
       // Deserialize Firestore document into app_user.User model
-      final user = app_user.User.fromMap(userDoc.data()! as Map<String, dynamic>);
+      final user =
+          app_user.User.fromMap(userDoc.data()! as Map<String, dynamic>);
 
       // Update state with the logged-in user
       state = user;
@@ -168,7 +170,6 @@ class AuthService extends StateNotifier<app_user.User?> {
         password: password,
       );
 
-
       if (userCredential.user != null) {
         final uid = userCredential.user!.uid;
 
@@ -176,12 +177,12 @@ class AuthService extends StateNotifier<app_user.User?> {
           'users',
           uid,
         );
-        
+
         final userData = userDoc.data();
         if (userData == null) {
           throw Exception('User data not found in database');
         }
-        
+
         state = app_user.User.fromMap(userData as Map<String, dynamic>);
 
         await _firestore.updateDocument(
@@ -205,10 +206,7 @@ class AuthService extends StateNotifier<app_user.User?> {
   }
 
   Future<bool> signup(
-      String email,
-      String password,
-      String firstName,
-      String lastName) async {
+      String email, String password, String firstName, String lastName) async {
     try {
       // Attempt to create a new user
       try {
@@ -238,12 +236,14 @@ class AuthService extends StateNotifier<app_user.User?> {
           // Log analytics event
           await _analytics.logSignUp(method: 'email');
 
-          return await login(email, password ); // Automatically log in after signup
+          return await login(
+              email, password); // Automatically log in after signup
         }
       } catch (e) {
         if (e is firebase_auth.FirebaseAuthException &&
             e.code == 'email-already-in-use') {
-          throw Exception('Email already exists. Try logging in with your password.');
+          throw Exception(
+              'Email already exists. Try logging in with your password.');
         }
         rethrow; // Rethrow other exceptions
       }
@@ -411,7 +411,9 @@ class AuthService extends StateNotifier<app_user.User?> {
 
     // 4. Save user to Firestore
     final userWithId = user.copyWith(id: userCredential.user!.uid);
-    await _firestore.vendorsCollection.doc(userWithId.id).set(userWithId.toMap());
+    await _firestore.vendorsCollection
+        .doc(userWithId.id)
+        .set(userWithId.toMap());
 
     // 5. Return the password for next steps (if generated)
     return generatedPassword;

@@ -11,14 +11,15 @@ import 'package:fl_chart/fl_chart.dart';
 
 class CostPriceHistoryScreen extends ConsumerStatefulWidget {
   final String? businessInventoryId;
-  
+
   const CostPriceHistoryScreen({
     super.key,
     this.businessInventoryId,
   });
 
   @override
-  ConsumerState<CostPriceHistoryScreen> createState() => _CostPriceHistoryScreenState();
+  ConsumerState<CostPriceHistoryScreen> createState() =>
+      _CostPriceHistoryScreenState();
 }
 
 class _CostPriceHistoryScreenState extends ConsumerState<CostPriceHistoryScreen>
@@ -30,7 +31,8 @@ class _CostPriceHistoryScreenState extends ConsumerState<CostPriceHistoryScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: widget.businessInventoryId != null ? 2 : 3, vsync: this);
+    _tabController = TabController(
+        length: widget.businessInventoryId != null ? 2 : 3, vsync: this);
     _endDate = DateTime.now();
     _startDate = DateTime.now().subtract(const Duration(days: 30));
   }
@@ -48,8 +50,8 @@ class _CostPriceHistoryScreenState extends ConsumerState<CostPriceHistoryScreen>
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
-        title: Text(widget.businessInventoryId != null 
-            ? 'Item Cost History' 
+        title: Text(widget.businessInventoryId != null
+            ? 'Item Cost History'
             : 'Cost Price Analytics'),
         backgroundColor: AppTheme.glass,
         foregroundColor: AppTheme.textPrimary,
@@ -76,21 +78,21 @@ class _CostPriceHistoryScreenState extends ConsumerState<CostPriceHistoryScreen>
           ),
         ],
       ),
-      body: businessContext == null 
-        ? const Center(
-            child: Text('No business context available'),
-          )
-        : TabBarView(
-            controller: _tabController,
-            children: [
-              _buildHistoryTab(businessContext.id),
-              if (widget.businessInventoryId == null) ...[
-                _buildAnalyticsTab(businessContext.id),
-                _buildChartTab(businessContext.id),
-              ] else
-                _buildItemChartTab(widget.businessInventoryId!),
-            ],
-          ),
+      body: businessContext == null
+          ? const Center(
+              child: Text('No business context available'),
+            )
+          : TabBarView(
+              controller: _tabController,
+              children: [
+                _buildHistoryTab(businessContext.id),
+                if (widget.businessInventoryId == null) ...[
+                  _buildAnalyticsTab(businessContext.id),
+                  _buildChartTab(businessContext.id),
+                ] else
+                  _buildItemChartTab(widget.businessInventoryId!),
+              ],
+            ),
     );
   }
 
@@ -100,33 +102,33 @@ class _CostPriceHistoryScreenState extends ConsumerState<CostPriceHistoryScreen>
         : businessCostPriceHistoryProvider(businessId);
 
     return ref.watch(historyProvider).when(
-      data: (histories) {
-        if (histories.isEmpty) {
-          return _buildEmptyState();
-        }
+          data: (histories) {
+            if (histories.isEmpty) {
+              return _buildEmptyState();
+            }
 
-        return RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(historyProvider);
+            return RefreshIndicator(
+              onRefresh: () async {
+                ref.invalidate(historyProvider);
+              },
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: histories.length,
+                itemBuilder: (context, index) {
+                  final history = histories[index];
+                  return _buildHistoryCard(history);
+                },
+              ),
+            );
           },
-          child: ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: histories.length,
-            itemBuilder: (context, index) {
-              final history = histories[index];
-              return _buildHistoryCard(history);
-            },
+          loading: () => const loading_view.LoadingView(
+            message: 'Loading cost price history...',
+          ),
+          error: (error, stackTrace) => error_view.ErrorView(
+            message: 'Error loading history: $error',
+            onRetry: () => ref.invalidate(historyProvider),
           ),
         );
-      },
-      loading: () => const loading_view.LoadingView(
-        message: 'Loading cost price history...',
-      ),
-      error: (error, stackTrace) => error_view.ErrorView(
-        message: 'Error loading history: $error',
-        onRetry: () => ref.invalidate(historyProvider),
-      ),
-    );
   }
 
   Widget _buildAnalyticsTab(String businessId) {
@@ -137,102 +139,103 @@ class _CostPriceHistoryScreenState extends ConsumerState<CostPriceHistoryScreen>
     });
 
     return ref.watch(analyticsProvider).when(
-      data: (analytics) {
-        if (analytics.isEmpty) {
-          return _buildEmptyState();
-        }
+          data: (analytics) {
+            if (analytics.isEmpty) {
+              return _buildEmptyState();
+            }
 
-        final summary = analytics['summary'] as Map<String, dynamic>;
-        final period = analytics['period'] as Map<String, dynamic>;
-        final productAnalytics = analytics['productAnalytics'] as Map<String, dynamic>;
+            final summary = analytics['summary'] as Map<String, dynamic>;
+            final period = analytics['period'] as Map<String, dynamic>;
+            final productAnalytics =
+                analytics['productAnalytics'] as Map<String, dynamic>;
 
-        return RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(analyticsProvider);
+            return RefreshIndicator(
+              onRefresh: () async {
+                ref.invalidate(analyticsProvider);
+              },
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildPeriodCard(period),
+                    const SizedBox(height: 16),
+                    _buildSummaryCard(summary),
+                    const SizedBox(height: 16),
+                    _buildTopProductChangesCard(productAnalytics),
+                  ],
+                ),
+              ),
+            );
           },
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildPeriodCard(period),
-                const SizedBox(height: 16),
-                _buildSummaryCard(summary),
-                const SizedBox(height: 16),
-                _buildTopProductChangesCard(productAnalytics),
-              ],
-            ),
+          loading: () => const loading_view.LoadingView(
+            message: 'Loading analytics...',
+          ),
+          error: (error, stackTrace) => error_view.ErrorView(
+            message: 'Error loading analytics: $error',
+            onRetry: () => ref.invalidate(analyticsProvider),
           ),
         );
-      },
-      loading: () => const loading_view.LoadingView(
-        message: 'Loading analytics...',
-      ),
-      error: (error, stackTrace) => error_view.ErrorView(
-        message: 'Error loading analytics: $error',
-        onRetry: () => ref.invalidate(analyticsProvider),
-      ),
-    );
   }
 
   Widget _buildChartTab(String businessId) {
     final historyProvider = businessCostPriceHistoryProvider(businessId);
 
     return ref.watch(historyProvider).when(
-      data: (histories) {
-        if (histories.isEmpty) {
-          return _buildEmptyState();
-        }
+          data: (histories) {
+            if (histories.isEmpty) {
+              return _buildEmptyState();
+            }
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              _buildPriceChangeChart(histories),
-              const SizedBox(height: 24),
-              _buildCategoryBreakdownChart(histories),
-            ],
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  _buildPriceChangeChart(histories),
+                  const SizedBox(height: 24),
+                  _buildCategoryBreakdownChart(histories),
+                ],
+              ),
+            );
+          },
+          loading: () => const loading_view.LoadingView(
+            message: 'Loading chart data...',
+          ),
+          error: (error, stackTrace) => error_view.ErrorView(
+            message: 'Error loading chart data: $error',
+            onRetry: () => ref.invalidate(historyProvider),
           ),
         );
-      },
-      loading: () => const loading_view.LoadingView(
-        message: 'Loading chart data...',
-      ),
-      error: (error, stackTrace) => error_view.ErrorView(
-        message: 'Error loading chart data: $error',
-        onRetry: () => ref.invalidate(historyProvider),
-      ),
-    );
   }
 
   Widget _buildItemChartTab(String businessInventoryId) {
     final historyProvider = costPriceHistoryProvider(businessInventoryId);
 
     return ref.watch(historyProvider).when(
-      data: (histories) {
-        if (histories.isEmpty) {
-          return _buildEmptyState();
-        }
+          data: (histories) {
+            if (histories.isEmpty) {
+              return _buildEmptyState();
+            }
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              _buildItemPriceChart(histories),
-              const SizedBox(height: 24),
-              _buildItemStatsCard(histories),
-            ],
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  _buildItemPriceChart(histories),
+                  const SizedBox(height: 24),
+                  _buildItemStatsCard(histories),
+                ],
+              ),
+            );
+          },
+          loading: () => const loading_view.LoadingView(
+            message: 'Loading item history...',
+          ),
+          error: (error, stackTrace) => error_view.ErrorView(
+            message: 'Error loading item history: $error',
+            onRetry: () => ref.invalidate(historyProvider),
           ),
         );
-      },
-      loading: () => const loading_view.LoadingView(
-        message: 'Loading item history...',
-      ),
-      error: (error, stackTrace) => error_view.ErrorView(
-        message: 'Error loading item history: $error',
-        onRetry: () => ref.invalidate(historyProvider),
-      ),
-    );
   }
 
   Widget _buildHistoryCard(CostPriceHistory history) {
@@ -270,11 +273,12 @@ class _CostPriceHistoryScreenState extends ConsumerState<CostPriceHistoryScreen>
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: history.isPriceIncrease 
+                    color: history.isPriceIncrease
                         ? Colors.green.withOpacity(0.1)
-                        : history.isPriceDecrease 
+                        : history.isPriceDecrease
                             ? Colors.red.withOpacity(0.1)
                             : Colors.grey.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
@@ -284,9 +288,9 @@ class _CostPriceHistoryScreenState extends ConsumerState<CostPriceHistoryScreen>
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: history.isPriceIncrease 
-                          ? Colors.green 
-                          : history.isPriceDecrease 
+                      color: history.isPriceIncrease
+                          ? Colors.green
+                          : history.isPriceDecrease
                               ? Colors.red
                               : Colors.grey,
                     ),
@@ -530,7 +534,8 @@ class _CostPriceHistoryScreenState extends ConsumerState<CostPriceHistoryScreen>
     );
   }
 
-  Widget _buildSummaryItem(String title, String value, IconData icon, Color color) {
+  Widget _buildSummaryItem(
+      String title, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -624,9 +629,10 @@ class _CostPriceHistoryScreenState extends ConsumerState<CostPriceHistoryScreen>
                   ),
                   if (lastChange != null)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: lastChange.isPriceIncrease 
+                        color: lastChange.isPriceIncrease
                             ? Colors.green.withOpacity(0.2)
                             : Colors.red.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(6),
@@ -636,7 +642,9 @@ class _CostPriceHistoryScreenState extends ConsumerState<CostPriceHistoryScreen>
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: lastChange.isPriceIncrease ? Colors.green : Colors.red,
+                          color: lastChange.isPriceIncrease
+                              ? Colors.green
+                              : Colors.red,
                         ),
                       ),
                     ),
@@ -680,7 +688,8 @@ class _CostPriceHistoryScreenState extends ConsumerState<CostPriceHistoryScreen>
                 lineBarsData: [
                   LineChartBarData(
                     spots: histories.asMap().entries.map((entry) {
-                      return FlSpot(entry.key.toDouble(), entry.value.newCostPrice);
+                      return FlSpot(
+                          entry.key.toDouble(), entry.value.newCostPrice);
                     }).toList(),
                     isCurved: true,
                     color: AppTheme.primary,
@@ -776,8 +785,13 @@ class _CostPriceHistoryScreenState extends ConsumerState<CostPriceHistoryScreen>
                 borderData: FlBorderData(show: true),
                 lineBarsData: [
                   LineChartBarData(
-                    spots: histories.reversed.toList().asMap().entries.map((entry) {
-                      return FlSpot(entry.key.toDouble(), entry.value.newCostPrice);
+                    spots: histories.reversed
+                        .toList()
+                        .asMap()
+                        .entries
+                        .map((entry) {
+                      return FlSpot(
+                          entry.key.toDouble(), entry.value.newCostPrice);
                     }).toList(),
                     isCurved: true,
                     color: AppTheme.primary,
@@ -797,8 +811,9 @@ class _CostPriceHistoryScreenState extends ConsumerState<CostPriceHistoryScreen>
     final totalChanges = histories.length;
     final increases = histories.where((h) => h.isPriceIncrease).length;
     final decreases = histories.where((h) => h.isPriceDecrease).length;
-    final avgChange = totalChanges > 0 
-        ? histories.map((h) => h.priceChange).reduce((a, b) => a + b) / totalChanges
+    final avgChange = totalChanges > 0
+        ? histories.map((h) => h.priceChange).reduce((a, b) => a + b) /
+            totalChanges
         : 0.0;
 
     return Container(
@@ -823,10 +838,12 @@ class _CostPriceHistoryScreenState extends ConsumerState<CostPriceHistoryScreen>
           Row(
             children: [
               Expanded(
-                child: _buildStatItem('Total Changes', totalChanges.toString(), Icons.edit),
+                child: _buildStatItem(
+                    'Total Changes', totalChanges.toString(), Icons.edit),
               ),
               Expanded(
-                child: _buildStatItem('Increases', increases.toString(), Icons.trending_up),
+                child: _buildStatItem(
+                    'Increases', increases.toString(), Icons.trending_up),
               ),
             ],
           ),
@@ -834,10 +851,12 @@ class _CostPriceHistoryScreenState extends ConsumerState<CostPriceHistoryScreen>
           Row(
             children: [
               Expanded(
-                child: _buildStatItem('Decreases', decreases.toString(), Icons.trending_down),
+                child: _buildStatItem(
+                    'Decreases', decreases.toString(), Icons.trending_down),
               ),
               Expanded(
-                child: _buildStatItem('Avg Change', 'NGN ${avgChange.toStringAsFixed(2)}', Icons.analytics),
+                child: _buildStatItem('Avg Change',
+                    'NGN ${avgChange.toStringAsFixed(2)}', Icons.analytics),
               ),
             ],
           ),

@@ -17,10 +17,12 @@ class CustomerSelectionWidget extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<CustomerSelectionWidget> createState() => _CustomerSelectionWidgetState();
+  ConsumerState<CustomerSelectionWidget> createState() =>
+      _CustomerSelectionWidgetState();
 }
 
-class _CustomerSelectionWidgetState extends ConsumerState<CustomerSelectionWidget> {
+class _CustomerSelectionWidgetState
+    extends ConsumerState<CustomerSelectionWidget> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   List<Customer> _searchResults = [];
@@ -62,7 +64,7 @@ class _CustomerSelectionWidgetState extends ConsumerState<CustomerSelectionWidge
         query: query,
         limit: 10,
       );
-      
+
       if (mounted) {
         setState(() {
           _searchResults = customers;
@@ -134,7 +136,8 @@ class _CustomerSelectionWidgetState extends ConsumerState<CustomerSelectionWidge
           ),
           onChanged: _onSearchChanged,
           onTap: () {
-            if (_searchController.text.isNotEmpty && _searchResults.isNotEmpty) {
+            if (_searchController.text.isNotEmpty &&
+                _searchResults.isNotEmpty) {
               setState(() => _showResults = true);
             }
           },
@@ -192,13 +195,16 @@ class _CustomerSelectionWidgetState extends ConsumerState<CustomerSelectionWidge
                   Expanded(
                     child: ListView.builder(
                       shrinkWrap: true,
-                      itemCount: _searchResults.length + (widget.allowCreate ? 1 : 0),
+                      itemCount:
+                          _searchResults.length + (widget.allowCreate ? 1 : 0),
                       itemBuilder: (context, index) {
-                        if (widget.allowCreate && index == _searchResults.length) {
+                        if (widget.allowCreate &&
+                            index == _searchResults.length) {
                           return ListTile(
                             leading: const Icon(Icons.add),
                             title: const Text('Create New Customer'),
-                            subtitle: Text('Add "${_searchController.text}" as new customer'),
+                            subtitle: Text(
+                                'Add "${_searchController.text}" as new customer'),
                             onTap: _createNewCustomer,
                           );
                         }
@@ -206,14 +212,18 @@ class _CustomerSelectionWidgetState extends ConsumerState<CustomerSelectionWidge
                         final customer = _searchResults[index];
                         return ListTile(
                           leading: CircleAvatar(
-                            child: Text(customer.name.substring(0, 1).toUpperCase()),
+                            child: Text(
+                                customer.name.substring(0, 1).toUpperCase()),
                           ),
                           title: Text(customer.name),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(customer.phone),
-                              Text(customer.email, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                              Text(customer.email,
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade600)),
                             ],
                           ),
                           onTap: () => _selectCustomer(customer),
@@ -255,7 +265,8 @@ class _CustomerSelectionWidgetState extends ConsumerState<CustomerSelectionWidge
                       Text(widget.selectedCustomer!.phone),
                       Text(
                         widget.selectedCustomer!.email,
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.grey.shade600),
                       ),
                     ],
                   ),

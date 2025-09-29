@@ -22,7 +22,8 @@ class PermissionWidget extends ConsumerWidget {
             data: (storeRoles) => storeRoles[storeId] ?? [],
             orElse: () => [],
           );
-      final hasPermission = roles.any((role) => role.permissionIds.contains(permissionId));
+      final hasPermission =
+          roles.any((role) => role.permissionIds.contains(permissionId));
 
       if (hasPermission) {
         return child;

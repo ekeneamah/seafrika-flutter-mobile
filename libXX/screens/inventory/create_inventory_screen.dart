@@ -247,140 +247,145 @@ class _CreateInventoryScreenState extends ConsumerState<CreateInventoryScreen>
 
   Future<void> _showProductSelectionDialog() async {
     final Product? selectedProduct = await showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: Container(
-          width: double.maxFinite,
-          height: MediaQuery.of(context).size.height * 0.7,
-          decoration: BoxDecoration(
-            color: theme.AppTheme.glass,
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Column(
-            children: [
-              // Header
-              Container(
-                padding: const EdgeInsets.all(24),
+        context: context,
+        builder: (context) => Dialog(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24)),
+              child: Container(
+                width: double.maxFinite,
+                height: MediaQuery.of(context).size.height * 0.7,
                 decoration: BoxDecoration(
-                  color: theme.AppTheme.primary.withOpacity(0.05),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
-                  ),
+                  color: theme.AppTheme.glass,
+                  borderRadius: BorderRadius.circular(24),
                 ),
-                child: Row(
+                child: Column(
                   children: [
+                    // Header
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: theme.AppTheme.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        Icons.inventory_2_outlined,
-                        color: theme.AppTheme.primary,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Select Product',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: theme.AppTheme.textPrimary,
+                        color: theme.AppTheme.primary.withOpacity(0.05),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(24),
+                          topRight: Radius.circular(24),
                         ),
                       ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: theme.AppTheme.primary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.inventory_2_outlined,
+                              color: theme.AppTheme.primary,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Select Product',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                                color: theme.AppTheme.textPrimary,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon:
+                                Icon(Icons.close, color: theme.AppTheme.earth),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
+                      ),
                     ),
-                    IconButton(
-                      icon: Icon(Icons.close, color: theme.AppTheme.earth),
-                      onPressed: () => Navigator.pop(context),
+
+                    // Product List
+                    Expanded(
+                      child: StreamBuilder<List<Product>>(
+                        stream:
+                            ref.watch(productServiceProvider).streamProducts(),
+                        builder: (context, snapshot) {
+                          if (!snapshot.hasData) {
+                            return const Center(
+                                child: CircularProgressIndicator());
+                          }
+
+                          final products = snapshot.data!;
+                          if (products.isEmpty) {
+                            return Center(
+                              child: Text(
+                                'No products found',
+                                style: TextStyle(
+                                  color: theme.AppTheme.earth,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            );
+                          }
+
+                          return ListView.builder(
+                            itemCount: products.length,
+                            itemBuilder: (context, index) {
+                              final product = products[index];
+                              final isSelected =
+                                  _selectedProductIds.contains(product.id);
+                              return ListTile(
+                                leading: product.images.isNotEmpty
+                                    ? ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: CachedNetworkImage(
+                                          imageUrl: product.images[0],
+                                          width: 48,
+                                          height: 48,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      )
+                                    : Container(
+                                        width: 48,
+                                        height: 48,
+                                        decoration: BoxDecoration(
+                                          color: theme.AppTheme.earthLight
+                                              .withOpacity(0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                        ),
+                                        child: Icon(
+                                          Icons.image_not_supported,
+                                          color: theme.AppTheme.earth,
+                                          size: 24,
+                                        ),
+                                      ),
+                                title: Text(
+                                  product.name,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: theme.AppTheme.textPrimary,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  'NGN ${product.price.toStringAsFixed(2)}',
+                                  style: TextStyle(
+                                    color: theme.AppTheme.earth,
+                                  ),
+                                ),
+                                onTap: () {
+                                  Navigator.pop(context, product);
+                                },
+                              );
+                            },
+                          );
+                        },
+                      ),
                     ),
                   ],
                 ),
               ),
-
-              // Product List
-              Expanded(
-                child: StreamBuilder<List<Product>>(
-                  stream: ref.watch(productServiceProvider).streamProducts(),
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    final products = snapshot.data!;
-                    if (products.isEmpty) {
-                      return Center(
-                        child: Text(
-                          'No products found',
-                          style: TextStyle(
-                            color: theme.AppTheme.earth,
-                            fontSize: 16,
-                          ),
-                        ),
-                      );
-                    }
-
-                    return ListView.builder(
-                      itemCount: products.length,
-                      itemBuilder: (context, index) {
-                        final product = products[index];
-                        final isSelected =
-                            _selectedProductIds.contains(product.id);
-                        return ListTile(
-                          leading: product.images.isNotEmpty
-                              ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: CachedNetworkImage(
-                                    imageUrl: product.images[0],
-                                    width: 48,
-                                    height: 48,
-                                    fit: BoxFit.cover,
-                                  ),
-                                )
-                              : Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    color: theme.AppTheme.earthLight
-                                        .withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Icon(
-                                    Icons.image_not_supported,
-                                    color: theme.AppTheme.earth,
-                                    size: 24,
-                                  ),
-                                ),
-                          title: Text(
-                            product.name,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: theme.AppTheme.textPrimary,
-                            ),
-                          ),
-                          subtitle: Text(
-                            'NGN ${product.price.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              color: theme.AppTheme.earth,
-                            ),
-                          ),
-                          onTap: () {
-                            Navigator.pop(context, product);
-                          },
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ));
+            ));
 
     if (selectedProduct != null) {
       setState(() {
@@ -429,7 +434,8 @@ class _CreateInventoryScreenState extends ConsumerState<CreateInventoryScreen>
           purchaseOrderId: _selectedPurchaseOrderId,
           invoiceId: _selectedInvoiceId,
           costPrice: double.tryParse(_costPriceController.text) ?? 0.0,
-          sellingPrice: double.tryParse(_sellingPriceController.text) ?? 0.0, // Added
+          sellingPrice:
+              double.tryParse(_sellingPriceController.text) ?? 0.0, // Added
           maxDiscount: int.tryParse(_maxDiscountController.text) ?? 0, // Added
         );
         _showSnackBar('Inventory updated successfully', isError: false);
@@ -1033,130 +1039,135 @@ class _CreateInventoryScreenState extends ConsumerState<CreateInventoryScreen>
 
   Future<void> _showInvoiceSelectionDialog() async {
     final Invoice? selectedInvoice = await showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: Container(
-          width: double.maxFinite,
-          height: MediaQuery.of(context).size.height * 0.7,
-          decoration: BoxDecoration(
-            color: theme.AppTheme.glass,
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
+        context: context,
+        builder: (context) => Dialog(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24)),
+              child: Container(
+                width: double.maxFinite,
+                height: MediaQuery.of(context).size.height * 0.7,
                 decoration: BoxDecoration(
-                  color: theme.AppTheme.primary.withOpacity(0.05),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
-                  ),
+                  color: theme.AppTheme.glass,
+                  borderRadius: BorderRadius.circular(24),
                 ),
-                child: Row(
+                child: Column(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: theme.AppTheme.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        Icons.receipt_outlined,
-                        color: theme.AppTheme.primary,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Select Invoice',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: theme.AppTheme.textPrimary,
+                        color: theme.AppTheme.primary.withOpacity(0.05),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(24),
+                          topRight: Radius.circular(24),
                         ),
                       ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: theme.AppTheme.primary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.receipt_outlined,
+                              color: theme.AppTheme.primary,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Select Invoice',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                                color: theme.AppTheme.textPrimary,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon:
+                                Icon(Icons.close, color: theme.AppTheme.earth),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
+                      ),
                     ),
-                    IconButton(
-                      icon: Icon(Icons.close, color: theme.AppTheme.earth),
-                      onPressed: () => Navigator.pop(context),
+                    Expanded(
+                      child: StreamBuilder<List<Invoice>>(
+                        stream:
+                            ref.watch(invoiceServiceProvider).streamInvoices(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Center(
+                                child: CircularProgressIndicator());
+                          }
+
+                          final invoices = snapshot.data ?? [];
+                          if (invoices.isEmpty) {
+                            return Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.receipt_outlined,
+                                    size: 48,
+                                    color: theme.AppTheme.earth,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'No invoices found',
+                                    style: TextStyle(
+                                      color: theme.AppTheme.earth,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
+                          return ListView.builder(
+                            itemCount: invoices.length,
+                            itemBuilder: (context, index) {
+                              final invoice = invoices[index];
+                              return ListTile(
+                                title: Text(
+                                  'Invoice #${invoice.id}',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: theme.AppTheme.textPrimary,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  'Customer: ${invoice.customerName}',
+                                  style: TextStyle(
+                                    color: theme.AppTheme.earth,
+                                  ),
+                                ),
+                                trailing: Text(
+                                  'NGN ${invoice.total.toStringAsFixed(2)}',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.AppTheme.primary,
+                                  ),
+                                ),
+                                onTap: () {
+                                  Navigator.pop(context, invoice);
+                                },
+                              );
+                            },
+                          );
+                        },
+                      ),
                     ),
                   ],
                 ),
               ),
-              Expanded(
-                child: StreamBuilder<List<Invoice>>(
-                  stream: ref.watch(invoiceServiceProvider).streamInvoices(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    final invoices = snapshot.data ?? [];
-                    if (invoices.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.receipt_outlined,
-                              size: 48,
-                              color: theme.AppTheme.earth,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No invoices found',
-                              style: TextStyle(
-                                color: theme.AppTheme.earth,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    return ListView.builder(
-                      itemCount: invoices.length,
-                      itemBuilder: (context, index) {
-                        final invoice = invoices[index];
-                        return ListTile(
-                          title: Text(
-                            'Invoice #${invoice.id}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: theme.AppTheme.textPrimary,
-                            ),
-                          ),
-                          subtitle: Text(
-                            'Customer: ${invoice.customerName}',
-                            style: TextStyle(
-                              color: theme.AppTheme.earth,
-                            ),
-                          ),
-                          trailing: Text(
-                            'NGN ${invoice.total.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: theme.AppTheme.primary,
-                            ),
-                          ),
-                          onTap: () {
-                            Navigator.pop(context, invoice);
-                          },
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ));
+            ));
 
     if (selectedInvoice != null) {
       setState(() {
@@ -1174,132 +1185,136 @@ class _CreateInventoryScreenState extends ConsumerState<CreateInventoryScreen>
 
   Future<void> _showPurchaseOrderSelectionDialog() async {
     final PurchaseOrder? selectedOrder = await showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: Container(
-          width: double.maxFinite,
-          height: MediaQuery.of(context).size.height * 0.7,
-          decoration: BoxDecoration(
-            color: theme.AppTheme.glass,
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
+        context: context,
+        builder: (context) => Dialog(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24)),
+              child: Container(
+                width: double.maxFinite,
+                height: MediaQuery.of(context).size.height * 0.7,
                 decoration: BoxDecoration(
-                  color: theme.AppTheme.primary.withOpacity(0.05),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
-                  ),
+                  color: theme.AppTheme.glass,
+                  borderRadius: BorderRadius.circular(24),
                 ),
-                child: Row(
+                child: Column(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: theme.AppTheme.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        Icons.shopping_bag_outlined,
-                        color: theme.AppTheme.primary,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Select Purchase Order',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: theme.AppTheme.textPrimary,
+                        color: theme.AppTheme.primary.withOpacity(0.05),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(24),
+                          topRight: Radius.circular(24),
                         ),
                       ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: theme.AppTheme.primary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.shopping_bag_outlined,
+                              color: theme.AppTheme.primary,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Select Purchase Order',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                                color: theme.AppTheme.textPrimary,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon:
+                                Icon(Icons.close, color: theme.AppTheme.earth),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
+                      ),
                     ),
-                    IconButton(
-                      icon: Icon(Icons.close, color: theme.AppTheme.earth),
-                      onPressed: () => Navigator.pop(context),
+                    Expanded(
+                      child: StreamBuilder<List<PurchaseOrder>>(
+                        stream: ref
+                            .watch(purchaseOrderServiceProvider)
+                            .streamPurchaseOrders(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Center(
+                                child: CircularProgressIndicator());
+                          }
+
+                          final orders = snapshot.data ?? [];
+                          if (orders.isEmpty) {
+                            return Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.shopping_bag_outlined,
+                                    size: 48,
+                                    color: theme.AppTheme.earth,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'No purchase orders found',
+                                    style: TextStyle(
+                                      color: theme.AppTheme.earth,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
+                          return ListView.builder(
+                            itemCount: orders.length,
+                            itemBuilder: (context, index) {
+                              final order = orders[index];
+                              return ListTile(
+                                title: Text(
+                                  order.orderNumber,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: theme.AppTheme.textPrimary,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  'Supplier: ${order.supplierName}',
+                                  style: TextStyle(
+                                    color: theme.AppTheme.earth,
+                                  ),
+                                ),
+                                trailing: Text(
+                                  'NGN ${order.totalAmount.toStringAsFixed(2)}',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.AppTheme.primary,
+                                  ),
+                                ),
+                                onTap: () {
+                                  Navigator.pop(context, order);
+                                },
+                              );
+                            },
+                          );
+                        },
+                      ),
                     ),
                   ],
                 ),
               ),
-              Expanded(
-                child: StreamBuilder<List<PurchaseOrder>>(
-                  stream: ref
-                      .watch(purchaseOrderServiceProvider)
-                      .streamPurchaseOrders(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    final orders = snapshot.data ?? [];
-                    if (orders.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.shopping_bag_outlined,
-                              size: 48,
-                              color: theme.AppTheme.earth,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No purchase orders found',
-                              style: TextStyle(
-                                color: theme.AppTheme.earth,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    return ListView.builder(
-                      itemCount: orders.length,
-                      itemBuilder: (context, index) {
-                        final order = orders[index];
-                        return ListTile(
-                          title: Text(
-                            order.orderNumber,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: theme.AppTheme.textPrimary,
-                            ),
-                          ),
-                          subtitle: Text(
-                            'Supplier: ${order.supplierName}',
-                            style: TextStyle(
-                              color: theme.AppTheme.earth,
-                            ),
-                          ),
-                          trailing: Text(
-                            'NGN ${order.totalAmount.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: theme.AppTheme.primary,
-                            ),
-                          ),
-                          onTap: () {
-                            Navigator.pop(context, order);
-                          },
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ));
+            ));
 
     if (selectedOrder != null) {
       setState(() {
@@ -1319,123 +1334,129 @@ class _CreateInventoryScreenState extends ConsumerState<CreateInventoryScreen>
 
   Future<void> _showSupplierSelectionDialog() async {
     final Supplier? selectedSupplier = await showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: Container(
-          width: double.maxFinite,
-          height: MediaQuery.of(context).size.height * 0.7,
-          decoration: BoxDecoration(
-            color: theme.AppTheme.glass,
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
+        context: context,
+        builder: (context) => Dialog(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24)),
+              child: Container(
+                width: double.maxFinite,
+                height: MediaQuery.of(context).size.height * 0.7,
                 decoration: BoxDecoration(
-                  color: theme.AppTheme.primary.withOpacity(0.05),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
-                  ),
+                  color: theme.AppTheme.glass,
+                  borderRadius: BorderRadius.circular(24),
                 ),
-                child: Row(
+                child: Column(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: theme.AppTheme.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        Icons.business_outlined,
-                        color: theme.AppTheme.primary,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Select Supplier',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: theme.AppTheme.textPrimary,
+                        color: theme.AppTheme.primary.withOpacity(0.05),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(24),
+                          topRight: Radius.circular(24),
                         ),
                       ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: theme.AppTheme.primary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.business_outlined,
+                              color: theme.AppTheme.primary,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Select Supplier',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                                color: theme.AppTheme.textPrimary,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon:
+                                Icon(Icons.close, color: theme.AppTheme.earth),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
+                      ),
                     ),
-                    IconButton(
-                      icon: Icon(Icons.close, color: theme.AppTheme.earth),
-                      onPressed: () => Navigator.pop(context),
+                    Expanded(
+                      child: StreamBuilder<List<Supplier>>(
+                        stream: ref
+                            .watch(supplierServiceProvider)
+                            .streamSuppliers(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Center(
+                                child: CircularProgressIndicator());
+                          }
+
+                          final suppliers = snapshot.data ?? [];
+                          if (suppliers.isEmpty) {
+                            return Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.business_outlined,
+                                    size: 48,
+                                    color: theme.AppTheme.earth,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'No suppliers found',
+                                    style: TextStyle(
+                                      color: theme.AppTheme.earth,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
+                          return ListView.builder(
+                            itemCount: suppliers.length,
+                            itemBuilder: (context, index) {
+                              final supplier = suppliers[index];
+                              return ListTile(
+                                title: Text(
+                                  supplier.companyName,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: theme.AppTheme.textPrimary,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  supplier.email,
+                                  style: TextStyle(
+                                    color: theme.AppTheme.earth,
+                                  ),
+                                ),
+                                onTap: () {
+                                  Navigator.pop(context, supplier);
+                                },
+                              );
+                            },
+                          );
+                        },
+                      ),
                     ),
                   ],
                 ),
               ),
-              Expanded(
-                child: StreamBuilder<List<Supplier>>(
-                  stream: ref.watch(supplierServiceProvider).streamSuppliers(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    final suppliers = snapshot.data ?? [];
-                    if (suppliers.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.business_outlined,
-                              size: 48,
-                              color: theme.AppTheme.earth,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No suppliers found',
-                              style: TextStyle(
-                                color: theme.AppTheme.earth,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    return ListView.builder(
-                      itemCount: suppliers.length,
-                      itemBuilder: (context, index) {
-                        final supplier = suppliers[index];
-                        return ListTile(
-                          title: Text(
-                            supplier.companyName,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: theme.AppTheme.textPrimary,
-                            ),
-                          ),
-                          subtitle: Text(
-                            supplier.email,
-                            style: TextStyle(
-                              color: theme.AppTheme.earth,
-                            ),
-                          ),
-                          onTap: () {
-                            Navigator.pop(context, supplier);
-                          },
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-    ));
+            ));
 
     if (selectedSupplier != null) {
       setState(() {
@@ -1569,179 +1590,179 @@ class _WarehouseProductSelectionScreenState
     final isSelected = _selectedProductIds.contains(product.id);
 
     return _buildModernCard(
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () {
-            setState(() {
-              if (isSelected) {
-                _selectedProductIds.remove(product.id);
-              } else {
-                _selectedProductIds.add(product.id);
-              }
-            });
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(4),
-            child: Row(
-              children: [
-                // Selection Checkbox
-                Container(
-                  margin: const EdgeInsets.only(right: 16),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(
+        child: Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () {
+          setState(() {
+            if (isSelected) {
+              _selectedProductIds.remove(product.id);
+            } else {
+              _selectedProductIds.add(product.id);
+            }
+          });
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(4),
+          child: Row(
+            children: [
+              // Selection Checkbox
+              Container(
+                margin: const EdgeInsets.only(right: 16),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? theme.AppTheme.primary
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
                       color: isSelected
                           ? theme.AppTheme.primary
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: isSelected
-                            ? theme.AppTheme.primary
-                            : theme.AppTheme.earthLight,
-                        width: 2,
+                          : theme.AppTheme.earthLight,
+                      width: 2,
+                    ),
+                  ),
+                  child: isSelected
+                      ? const Icon(
+                          Icons.check,
+                          color: Colors.white,
+                          size: 16,
+                        )
+                      : null,
+                ),
+              ),
+
+              // Product Image
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: theme.AppTheme.whiteSmoke,
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: product.images.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: product.images.first,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(
+                            color: theme.AppTheme.whiteSmoke,
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                color: theme.AppTheme.primary,
+                                strokeWidth: 2,
+                              ),
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => Container(
+                            color: theme.AppTheme.whiteSmoke,
+                            child: Icon(
+                              Icons.broken_image_outlined,
+                              color: theme.AppTheme.earth,
+                              size: 24,
+                            ),
+                          ),
+                        )
+                      : Container(
+                          decoration: BoxDecoration(
+                            color: theme.AppTheme.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            Icons.inventory_2_outlined,
+                            color: theme.AppTheme.primary,
+                            size: 28,
+                          ),
+                        ),
+                ),
+              ),
+
+              const SizedBox(width: 16),
+
+              // Product Details
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      product.name,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: theme.AppTheme.textPrimary,
+                        height: 1.2,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: warehouseQty > 0
+                                ? theme.AppTheme.accent.withOpacity(0.1)
+                                : theme.AppTheme.secondary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'Warehouse: $warehouseQty',
+                            style: TextStyle(
+                              color: warehouseQty > 0
+                                  ? theme.AppTheme.accent
+                                  : theme.AppTheme.secondary,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: theme.AppTheme.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            product.category,
+                            style: TextStyle(
+                              color: theme.AppTheme.primary,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'NGN ${product.price.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: theme.AppTheme.primary,
                       ),
                     ),
-                    child: isSelected
-                        ? const Icon(
-                            Icons.check,
-                            color: Colors.white,
-                            size: 16,
-                          )
-                        : null,
-                  ),
+                  ],
                 ),
-
-                // Product Image
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: theme.AppTheme.whiteSmoke,
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: product.images.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: product.images.first,
-                            fit: BoxFit.cover,
-                            placeholder: (context, url) => Container(
-                              color: theme.AppTheme.whiteSmoke,
-                              child: Center(
-                                child: CircularProgressIndicator(
-                                  color: theme.AppTheme.primary,
-                                  strokeWidth: 2,
-                                ),
-                              ),
-                            ),
-                            errorWidget: (context, url, error) => Container(
-                              color: theme.AppTheme.whiteSmoke,
-                              child: Icon(
-                                Icons.broken_image_outlined,
-                                color: theme.AppTheme.earth,
-                                size: 24,
-                              ),
-                            ),
-                          )
-                        : Container(
-                            decoration: BoxDecoration(
-                              color: theme.AppTheme.primary.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(
-                              Icons.inventory_2_outlined,
-                              color: theme.AppTheme.primary,
-                              size: 28,
-                            ),
-                          ),
-                  ),
-                ),
-
-                const SizedBox(width: 16),
-
-                // Product Details
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        product.name,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: theme.AppTheme.textPrimary,
-                          height: 1.2,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: warehouseQty > 0
-                                  ? theme.AppTheme.accent.withOpacity(0.1)
-                                  : theme.AppTheme.secondary.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              'Warehouse: $warehouseQty',
-                              style: TextStyle(
-                                color: warehouseQty > 0
-                                    ? theme.AppTheme.accent
-                                    : theme.AppTheme.secondary,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: theme.AppTheme.primary.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              product.category,
-                              style: TextStyle(
-                                color: theme.AppTheme.primary,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'NGN ${product.price.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: theme.AppTheme.primary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
-      ));
+      ),
+    ));
   }
 
   void _onAddToStoreInventory() async {

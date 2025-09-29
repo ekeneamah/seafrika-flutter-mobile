@@ -23,9 +23,11 @@ class BusinessSelectionScreen extends StatelessWidget {
             trailing: const Icon(Icons.arrow_forward_ios),
             onTap: () async {
               final prefs = await SharedPreferences.getInstance();
+              await prefs.setString(SharedPreferencesKeys.selectedBusinessName,
+                  business.businessName);
               await prefs.setString(
-                  SharedPreferencesKeys.selectedBusinessName, business.businessName);
-              await prefs.setString(SharedPreferencesKeys.selectedBusinessOwnerId, business.vendorId);
+                  SharedPreferencesKeys.selectedBusinessOwnerId,
+                  business.vendorId);
               NavigationService.navigateToStaffNavigation();
             },
           );

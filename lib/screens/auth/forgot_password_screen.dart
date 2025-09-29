@@ -125,4 +125,4 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       ),
     );
   }
-} 
+}

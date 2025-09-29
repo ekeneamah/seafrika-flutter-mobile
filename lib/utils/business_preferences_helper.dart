@@ -10,28 +10,37 @@ class BusinessPreferencesHelper {
   /// Save complete business details to SharedPreferences
   static Future<void> saveSelectedBusiness(Business business) async {
     final prefs = await SharedPreferences.getInstance();
-    
-    await prefs.setString(SharedPreferencesKeys.selectedBusinessId, business.id);
-    await prefs.setString(SharedPreferencesKeys.selectedBusinessName, business.name);
-    await prefs.setString(SharedPreferencesKeys.selectedBusinessPhone, business.phone ?? '');
-    await prefs.setString(SharedPreferencesKeys.selectedBusinessAddress, business.address);
-    await prefs.setString(SharedPreferencesKeys.selectedBusinessOwnerId, business.ownerId);
-    await prefs.setString(SharedPreferencesKeys.selectedBusinessCategory, business.industry ?? '');
-    await prefs.setString(SharedPreferencesKeys.selectedBusinessDescription, business.description ?? '');
-    
+
+    await prefs.setString(
+        SharedPreferencesKeys.selectedBusinessId, business.id);
+    await prefs.setString(
+        SharedPreferencesKeys.selectedBusinessName, business.name);
+    await prefs.setString(
+        SharedPreferencesKeys.selectedBusinessPhone, business.phone ?? '');
+    await prefs.setString(
+        SharedPreferencesKeys.selectedBusinessAddress, business.address);
+    await prefs.setString(
+        SharedPreferencesKeys.selectedBusinessOwnerId, business.ownerId);
+    await prefs.setString(SharedPreferencesKeys.selectedBusinessCategory,
+        business.industry ?? '');
+    await prefs.setString(SharedPreferencesKeys.selectedBusinessDescription,
+        business.description ?? '');
+
     // Save country and state
     await prefs.setString('selected_business_country', business.country);
     await prefs.setString('selected_business_state', business.state);
-    
+
     if (business.logoUrl != null) {
-      await prefs.setString(SharedPreferencesKeys.selectedBusinessImageUrl, business.logoUrl!);
+      await prefs.setString(
+          SharedPreferencesKeys.selectedBusinessImageUrl, business.logoUrl!);
     }
   }
 
   /// Get selected business ID from SharedPreferences
   static Future<String?> getSelectedBusinessId() async {
     final prefs = await SharedPreferences.getInstance();
-    print('Selected Business ID: ${prefs.getString(SharedPreferencesKeys.selectedBusinessId)}');
+    print(
+        'Selected Business ID: ${prefs.getString(SharedPreferencesKeys.selectedBusinessId)}');
     return prefs.getString(SharedPreferencesKeys.selectedBusinessId);
   }
 
@@ -92,16 +101,23 @@ class BusinessPreferencesHelper {
   /// Get all selected business details as a map
   static Future<Map<String, String>> getSelectedBusinessDetails() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     return {
       'id': prefs.getString(SharedPreferencesKeys.selectedBusinessId) ?? '',
       'name': prefs.getString(SharedPreferencesKeys.selectedBusinessName) ?? '',
-      'phone': prefs.getString(SharedPreferencesKeys.selectedBusinessPhone) ?? '',
-      'address': prefs.getString(SharedPreferencesKeys.selectedBusinessAddress) ?? '',
-      'ownerId': prefs.getString(SharedPreferencesKeys.selectedBusinessOwnerId) ?? '',
-      'category': prefs.getString(SharedPreferencesKeys.selectedBusinessCategory) ?? '',
-      'description': prefs.getString(SharedPreferencesKeys.selectedBusinessDescription) ?? '',
-      'imageUrl': prefs.getString(SharedPreferencesKeys.selectedBusinessImageUrl) ?? '',
+      'phone':
+          prefs.getString(SharedPreferencesKeys.selectedBusinessPhone) ?? '',
+      'address':
+          prefs.getString(SharedPreferencesKeys.selectedBusinessAddress) ?? '',
+      'ownerId':
+          prefs.getString(SharedPreferencesKeys.selectedBusinessOwnerId) ?? '',
+      'category':
+          prefs.getString(SharedPreferencesKeys.selectedBusinessCategory) ?? '',
+      'description':
+          prefs.getString(SharedPreferencesKeys.selectedBusinessDescription) ??
+              '',
+      'imageUrl':
+          prefs.getString(SharedPreferencesKeys.selectedBusinessImageUrl) ?? '',
       'country': prefs.getString('selected_business_country') ?? '',
       'state': prefs.getString('selected_business_state') ?? '',
     };
@@ -110,7 +126,7 @@ class BusinessPreferencesHelper {
   /// Clear all selected business data from SharedPreferences
   static Future<void> clearSelectedBusiness() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     await prefs.remove(SharedPreferencesKeys.selectedBusinessId);
     await prefs.remove(SharedPreferencesKeys.selectedBusinessName);
     await prefs.remove(SharedPreferencesKeys.selectedBusinessPhone);
@@ -124,7 +140,8 @@ class BusinessPreferencesHelper {
   /// Check if a business is currently selected
   static Future<bool> hasSelectedBusiness() async {
     final prefs = await SharedPreferences.getInstance();
-    final businessId = prefs.getString(SharedPreferencesKeys.selectedBusinessId);
+    final businessId =
+        prefs.getString(SharedPreferencesKeys.selectedBusinessId);
     return businessId != null && businessId.isNotEmpty;
   }
 }

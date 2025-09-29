@@ -66,49 +66,51 @@ class StoreInventoryNotifier extends StateNotifier<StoreInventoryState> {
       : super(const StoreInventoryState());
 
   Future<void> loadInventory() async {
-  print('[StoreInventoryNotifier] Called loadInventory');
+    print('[StoreInventoryNotifier] Called loadInventory');
 
-  if (state.selectedStoreId == null) {
-    print('[StoreInventoryNotifier] No store selected — skipping inventory load.');
-    state = state.copyWith(
-      isLoading: false,
-      error: null,
-      items: [],
-    );
-    return;
+    if (state.selectedStoreId == null) {
+      print(
+          '[StoreInventoryNotifier] No store selected — skipping inventory load.');
+      state = state.copyWith(
+        isLoading: false,
+        error: null,
+        items: [],
+      );
+      return;
+    }
+
+    print(
+        '[StoreInventoryNotifier] Loading inventory for storeId: ${state.selectedStoreId}, vendorId: $_vendorId');
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      final snapshot = await _service.getStoreInventory(
+        vendorId: _vendorId,
+        storeId: state.selectedStoreId!,
+        searchQuery: state.searchQuery,
+      );
+
+      final items = snapshot.docs
+          .map((doc) => StoreInventory.fromFirestore(doc))
+          .toList();
+
+      print(
+          '[StoreInventoryNotifier] Inventory loaded successfully: ${items.length} items found');
+
+      state = state.copyWith(
+        items: items,
+        isLoading: false,
+        error: null,
+      );
+    } catch (error) {
+      print('[StoreInventoryNotifier] Error loading inventory: $error');
+
+      state = state.copyWith(
+        isLoading: false,
+        error: error.toString(),
+      );
+    }
   }
-
-  print('[StoreInventoryNotifier] Loading inventory for storeId: ${state.selectedStoreId}, vendorId: $_vendorId');
-  state = state.copyWith(isLoading: true, error: null);
-
-  try {
-    final snapshot = await _service.getStoreInventory(
-      vendorId: _vendorId,
-      storeId: state.selectedStoreId!,
-      searchQuery: state.searchQuery,
-    );
-
-    final items = snapshot.docs
-        .map((doc) => StoreInventory.fromFirestore(doc))
-        .toList();
-
-    print('[StoreInventoryNotifier] Inventory loaded successfully: ${items.length} items found');
-
-    state = state.copyWith(
-      items: items,
-      isLoading: false,
-      error: null,
-    );
-  } catch (error) {
-    print('[StoreInventoryNotifier] Error loading inventory: $error');
-
-    state = state.copyWith(
-      isLoading: false,
-      error: error.toString(),
-    );
-  }
-}
-
 
   void setSearchQuery(String query) {
     state = state.copyWith(searchQuery: query);

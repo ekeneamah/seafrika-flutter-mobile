@@ -1479,4 +1479,101 @@ class IntegrationService {
         return platformName.toLowerCase().replaceAll(' ', '_');
     }
   }
+
+  /// Get Messenger analytics for a specific integration
+  Future<Map<String, dynamic>> getMessengerAnalytics(
+      String integrationId) async {
+    try {
+      final idToken = await getUserIdToken();
+      debugPrint('call url ${ApiConfig.getMessengerAnalytics(integrationId)}');
+
+      final response = await http.get(
+        Uri.parse(ApiConfig.getMessengerAnalytics(integrationId)),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $idToken',
+          'Business-ID': _businessId,
+        },
+      );
+      debugPrint('Fetching Messenger analytics for integration $integrationId');
+      debugPrint('Response status: ${response.statusCode}');
+      debugPrint('Raw response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      } else if (response.statusCode == 401) {
+        throw IntegrationException('Authentication failed', 'AUTH_FAILED');
+      } else if (response.statusCode == 404) {
+        throw IntegrationException(
+            'No Messenger integration found', 'INTEGRATION_NOT_FOUND');
+      } else {
+        final errorBody = json.decode(response.body);
+        throw IntegrationException(
+          errorBody['message'] ?? 'Failed to fetch Messenger analytics',
+          'API_ERROR',
+        );
+      }
+    } catch (e) {
+      if (e is IntegrationException) {
+        rethrow;
+      }
+      if (kDebugMode) {
+        print('❌ DEBUG: Error fetching Messenger analytics: $e');
+      }
+      throw IntegrationException(
+        'Failed to fetch Messenger analytics: ${e.toString()}',
+        'NETWORK_ERROR',
+      );
+    }
+  }
+
+  /// Get Messenger conversations for a specific integration
+  Future<Map<String, dynamic>> getMessengerConversations(String integrationId,
+      {int limit = 25}) async {
+    try {
+      final idToken = await getUserIdToken();
+
+      final uri = Uri.parse(ApiConfig.getMessengerConversations(integrationId));
+      final queryParams = <String, String>{
+        'limit': limit.toString(),
+      };
+
+      final finalUri = uri.replace(queryParameters: queryParams);
+
+      final response = await http.get(
+        finalUri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $idToken',
+          'Business-ID': _businessId,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      } else if (response.statusCode == 401) {
+        throw IntegrationException('Authentication failed', 'AUTH_FAILED');
+      } else if (response.statusCode == 404) {
+        throw IntegrationException(
+            'No Messenger integration found', 'INTEGRATION_NOT_FOUND');
+      } else {
+        final errorBody = json.decode(response.body);
+        throw IntegrationException(
+          errorBody['message'] ?? 'Failed to fetch Messenger conversations',
+          'API_ERROR',
+        );
+      }
+    } catch (e) {
+      if (e is IntegrationException) {
+        rethrow;
+      }
+      if (kDebugMode) {
+        print('❌ DEBUG: Error fetching Messenger conversations: $e');
+      }
+      throw IntegrationException(
+        'Failed to fetch Messenger conversations: ${e.toString()}',
+        'NETWORK_ERROR',
+      );
+    }
+  }
 }

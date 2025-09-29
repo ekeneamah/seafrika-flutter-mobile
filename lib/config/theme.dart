@@ -15,7 +15,7 @@ class AppTheme {
   static const Color textSecondary = Color(0xFF1A1A1A);
   static const Color textColor = Color(0xFFF0F1C5); // sunlightFog
   static const Color backgroundColor = Color(0xFFF1F8E9);
-  
+
   // New modern colors for glassy interface
   static const Color glass = Color(0xFFFFFFFF);
   static const Color glassSecondary = Color(0xFFFAFAFA);
@@ -45,16 +45,26 @@ class AppTheme {
       ),
     ),
     textTheme: GoogleFonts.interTextTheme().copyWith(
-      displayLarge: GoogleFonts.inter(color: textPrimary, fontWeight: FontWeight.w700),
-      displayMedium: GoogleFonts.inter(color: textPrimary, fontWeight: FontWeight.w600),
-      displaySmall: GoogleFonts.inter(color: textPrimary, fontWeight: FontWeight.w600),
-      headlineMedium: GoogleFonts.inter(color: textPrimary, fontWeight: FontWeight.w600),
-      headlineSmall: GoogleFonts.inter(color: textPrimary, fontWeight: FontWeight.w600),
-      titleLarge: GoogleFonts.inter(color: textPrimary, fontWeight: FontWeight.w600),
-      titleMedium: GoogleFonts.inter(color: textPrimary, fontWeight: FontWeight.w500),
-      bodyLarge: GoogleFonts.inter(color: textSecondary, fontWeight: FontWeight.w400),
-      bodyMedium: GoogleFonts.inter(color: textSecondary, fontWeight: FontWeight.w400),
-      labelLarge: GoogleFonts.inter(color: textPrimary, fontWeight: FontWeight.w500),
+      displayLarge:
+          GoogleFonts.inter(color: textPrimary, fontWeight: FontWeight.w700),
+      displayMedium:
+          GoogleFonts.inter(color: textPrimary, fontWeight: FontWeight.w600),
+      displaySmall:
+          GoogleFonts.inter(color: textPrimary, fontWeight: FontWeight.w600),
+      headlineMedium:
+          GoogleFonts.inter(color: textPrimary, fontWeight: FontWeight.w600),
+      headlineSmall:
+          GoogleFonts.inter(color: textPrimary, fontWeight: FontWeight.w600),
+      titleLarge:
+          GoogleFonts.inter(color: textPrimary, fontWeight: FontWeight.w600),
+      titleMedium:
+          GoogleFonts.inter(color: textPrimary, fontWeight: FontWeight.w500),
+      bodyLarge:
+          GoogleFonts.inter(color: textSecondary, fontWeight: FontWeight.w400),
+      bodyMedium:
+          GoogleFonts.inter(color: textSecondary, fontWeight: FontWeight.w400),
+      labelLarge:
+          GoogleFonts.inter(color: textPrimary, fontWeight: FontWeight.w500),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(

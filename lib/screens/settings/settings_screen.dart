@@ -34,10 +34,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       setState(() {
-        _notificationsEnabled = prefs.getBool(SharedPreferencesKeys.notificationsEnabled) ?? true;
+        _notificationsEnabled =
+            prefs.getBool(SharedPreferencesKeys.notificationsEnabled) ?? true;
         _darkMode = prefs.getBool(SharedPreferencesKeys.darkMode) ?? false;
-        _language = prefs.getString(SharedPreferencesKeys.language) ?? 'English';
-        _analyticsEnabled = prefs.getBool(SharedPreferencesKeys.analyticsEnabled) ?? true;
+        _language =
+            prefs.getString(SharedPreferencesKeys.language) ?? 'English';
+        _analyticsEnabled =
+            prefs.getBool(SharedPreferencesKeys.analyticsEnabled) ?? true;
       });
     } catch (e) {
       debugPrint('Load settings error: $e');
@@ -51,10 +54,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     String vendorId = context.read<AuthService>().currentUser?.vendorId ?? '';
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(SharedPreferencesKeys.notificationsEnabled, _notificationsEnabled);
+      await prefs.setBool(
+          SharedPreferencesKeys.notificationsEnabled, _notificationsEnabled);
       await prefs.setBool(SharedPreferencesKeys.darkMode, _darkMode);
       await prefs.setString(SharedPreferencesKeys.language, _language);
-      await prefs.setBool(SharedPreferencesKeys.analyticsEnabled, _analyticsEnabled);
+      await prefs.setBool(
+          SharedPreferencesKeys.analyticsEnabled, _analyticsEnabled);
 
       // Update services
       if (_notificationsEnabled) {
@@ -154,10 +159,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ListTile(
                 leading: const Icon(Icons.business_center),
                 title: const Text('Business Inventory Management'),
-                subtitle: const Text('Manage all business inventory with bulk operations'),
+                subtitle: const Text(
+                    'Manage all business inventory with bulk operations'),
                 trailing: const Icon(Icons.arrow_forward_ios),
                 onTap: () {
-                  Navigator.pushNamed(context, AppRoutes.businessInventoryManagement);
+                  Navigator.pushNamed(
+                      context, AppRoutes.businessInventoryManagement);
                 },
               ),
               ListTile(
@@ -172,7 +179,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ListTile(
                 leading: const Icon(Icons.integration_instructions),
                 title: const Text('Integrations'),
-                subtitle: const Text('Connect with external platforms and services'),
+                subtitle:
+                    const Text('Connect with external platforms and services'),
                 trailing: const Icon(Icons.arrow_forward_ios),
                 onTap: () {
                   Navigator.pushNamed(context, AppRoutes.integrationManagement);

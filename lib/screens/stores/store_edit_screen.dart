@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vendor_app/models/store.dart';
-import 'package:vendor_app/providers/business_context_provider.dart' show businessContextProvider;
+import 'package:vendor_app/providers/business_context_provider.dart'
+    show businessContextProvider;
 import 'package:vendor_app/providers/service_providers.dart';
 import 'package:vendor_app/config/theme.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -33,11 +34,12 @@ class _StoreEditScreenState extends ConsumerState<StoreEditScreen>
   late Animation<double> _fadeAnimation;
   File? _selectedLogoFile;
   File? _selectedCoverFile;
-  
+
   // Store type and platform selection
   String _storeType = 'physical'; // Default to physical store
   String? _selectedPlatform; // For online stores
-  List<Map<String, dynamic>> _availablePlatforms = []; // Platforms from database
+  List<Map<String, dynamic>> _availablePlatforms =
+      []; // Platforms from database
   bool _isLoadingPlatforms = false;
 
   @override
@@ -82,7 +84,7 @@ class _StoreEditScreenState extends ConsumerState<StoreEditScreen>
         throw Exception('No business selected');
       }
       final platforms = await integrationService.getSupportedPlatforms();
-      
+
       setState(() {
         _availablePlatforms = platforms;
         _isLoadingPlatforms = false;
@@ -170,13 +172,13 @@ class _StoreEditScreenState extends ConsumerState<StoreEditScreen>
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     // Check for integration keys if it's an online store
     if (_storeType == 'online' && _selectedPlatform != null) {
       final shouldProceed = await _checkIntegrationKeys(_selectedPlatform!);
       if (!shouldProceed) return; // User chose not to proceed
     }
-    
+
     setState(() => _isLoading = true);
 
     try {
@@ -352,7 +354,7 @@ class _StoreEditScreenState extends ConsumerState<StoreEditScreen>
     );
   }
 
-   Widget _buildImagePicker({
+  Widget _buildImagePicker({
     required String title,
     required TextEditingController controller,
     required String storagePath,
@@ -360,9 +362,8 @@ class _StoreEditScreenState extends ConsumerState<StoreEditScreen>
     double? height,
   }) {
     // pick the right file field based on storagePath
-    final File? file = storagePath == 'store_logos'
-        ? _selectedLogoFile
-        : _selectedCoverFile;
+    final File? file =
+        storagePath == 'store_logos' ? _selectedLogoFile : _selectedCoverFile;
 
     final bool hasFile = file != null;
     final bool hasUrl = controller.text.isNotEmpty;
@@ -474,7 +475,7 @@ class _StoreEditScreenState extends ConsumerState<StoreEditScreen>
       ],
     );
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -582,18 +583,20 @@ class _StoreEditScreenState extends ConsumerState<StoreEditScreen>
                           v == null || v.isEmpty ? 'Enter description' : null,
                     ),
                     const SizedBox(height: 20),
-                    
+
                     // Store Type Selection
                     _buildStoreTypeSection(),
                     const SizedBox(height: 20),
-                    
+
                     TextFormField(
                       controller: _addressController,
                       textInputAction: TextInputAction.next,
                       textCapitalization: TextCapitalization.sentences,
                       keyboardType: TextInputType.streetAddress,
                       decoration: InputDecoration(
-                        labelText: _storeType == 'physical' ? 'Store Address' : 'Business Address (Optional)',
+                        labelText: _storeType == 'physical'
+                            ? 'Store Address'
+                            : 'Business Address (Optional)',
                         hintText: 'Enter store address',
                         prefixIcon: Icon(Icons.location_on_outlined,
                             color: AppTheme.primary),
@@ -601,7 +604,9 @@ class _StoreEditScreenState extends ConsumerState<StoreEditScreen>
                       validator: (v) {
                         // Address is required for physical stores, optional for online stores
                         if (_storeType == 'physical') {
-                          return v == null || v.isEmpty ? 'Enter address' : null;
+                          return v == null || v.isEmpty
+                              ? 'Enter address'
+                              : null;
                         }
                         return null; // Optional for online stores
                       },
@@ -617,8 +622,10 @@ class _StoreEditScreenState extends ConsumerState<StoreEditScreen>
                   phoneController: _phoneController,
                   emailController: _emailController,
                   accentColor: AppTheme.accent,
-                  phoneValidator: (v) => v == null || v.isEmpty ? 'Enter phone' : null,
-                  emailValidator: (v) => v == null || v.isEmpty ? 'Enter email' : null,
+                  phoneValidator: (v) =>
+                      v == null || v.isEmpty ? 'Enter phone' : null,
+                  emailValidator: (v) =>
+                      v == null || v.isEmpty ? 'Enter email' : null,
                   phoneHint: '+234 xxx xxx xxxx',
                   emailHint: 'store@example.com',
                   isPhoneRequired: true,
@@ -780,11 +787,12 @@ class _StoreEditScreenState extends ConsumerState<StoreEditScreen>
           ),
         ),
         const SizedBox(height: 12),
-        
+
         // Physical Store Radio Button
         RadioListTile<String>(
           title: const Text('Physical Store'),
-          subtitle: const Text('A brick-and-mortar store with physical location'),
+          subtitle:
+              const Text('A brick-and-mortar store with physical location'),
           value: 'physical',
           groupValue: _storeType,
           onChanged: (value) {
@@ -796,11 +804,12 @@ class _StoreEditScreenState extends ConsumerState<StoreEditScreen>
           activeColor: AppTheme.primary,
           contentPadding: EdgeInsets.zero,
         ),
-        
+
         // Online Store Radio Button
         RadioListTile<String>(
           title: const Text('Online Store'),
-          subtitle: const Text('An e-commerce store or marketplace integration'),
+          subtitle:
+              const Text('An e-commerce store or marketplace integration'),
           value: 'online',
           groupValue: _storeType,
           onChanged: (value) {
@@ -812,7 +821,7 @@ class _StoreEditScreenState extends ConsumerState<StoreEditScreen>
           activeColor: AppTheme.primary,
           contentPadding: EdgeInsets.zero,
         ),
-        
+
         // Platform Selection (only for online stores)
         if (_storeType == 'online') ...[
           const SizedBox(height: 16),
@@ -825,7 +834,6 @@ class _StoreEditScreenState extends ConsumerState<StoreEditScreen>
             ),
           ),
           const SizedBox(height: 8),
-          
           if (_isLoadingPlatforms)
             const Center(
               child: CircularProgressIndicator(),
@@ -884,12 +892,13 @@ class _StoreEditScreenState extends ConsumerState<StoreEditScreen>
       if (integrationService == null) {
         return false; // No business selected, cannot check integration
       }
-      final hasIntegration = await integrationService.hasIntegrationForPlatform(platform);
-      
+      final hasIntegration =
+          await integrationService.hasIntegrationForPlatform(platform);
+
       if (hasIntegration) {
         return true; // Integration exists, proceed with store creation
       }
-      
+
       // Show dialog asking user if they want to proceed without integration
       final shouldProceed = await showDialog<bool>(
         context: context,
@@ -913,7 +922,7 @@ class _StoreEditScreenState extends ConsumerState<StoreEditScreen>
           ],
         ),
       );
-      
+
       return shouldProceed ?? false;
     } catch (e) {
       // If there's an error checking integrations, allow creation but show warning

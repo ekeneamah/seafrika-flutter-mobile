@@ -40,8 +40,9 @@ class _InstagramAnalyticsScreenState
       if (integrationService == null) {
         throw Exception('No business selected');
       }
-      final analytics = await integrationService.getInstagramAnalytics(widget.integrationId);
-      
+      final analytics =
+          await integrationService.getInstagramAnalytics(widget.integrationId);
+
       if (mounted) {
         setState(() {
           _analytics = analytics;
@@ -77,7 +78,8 @@ class _InstagramAnalyticsScreenState
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+                      Icon(Icons.error_outline,
+                          size: 64, color: Colors.red[300]),
                       const SizedBox(height: 16),
                       Text(
                         _error!,
@@ -206,7 +208,8 @@ class _InstagramAnalyticsScreenState
     );
   }
 
-  Widget _buildMetricCard(String title, String value, IconData icon, Color color) {
+  Widget _buildMetricCard(
+      String title, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -260,7 +263,7 @@ class _InstagramAnalyticsScreenState
 
   Widget _buildEngagementCard() {
     final engagementRate = _analytics!['engagement_rate'] ?? 0.0;
-    
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -313,7 +316,7 @@ class _InstagramAnalyticsScreenState
           ),
           const SizedBox(height: 8),
           Text(
-            engagementRate > 3 
+            engagementRate > 3
                 ? 'Great engagement! Your content resonates well with your audience.'
                 : 'Consider posting more engaging content to increase interaction.',
             style: const TextStyle(
@@ -449,7 +452,8 @@ class _InstagramAnalyticsScreenState
     );
   }
 
-  Widget _buildActivityItem(String title, String value, IconData icon, Color color) {
+  Widget _buildActivityItem(
+      String title, String value, IconData icon, Color color) {
     return Row(
       children: [
         Container(
@@ -491,9 +495,9 @@ class _InstagramAnalyticsScreenState
 
   String _formatNumber(dynamic number) {
     if (number == null) return '0';
-    
+
     final num = number is String ? int.tryParse(number) ?? 0 : number as int;
-    
+
     if (num >= 1000000) {
       return '${(num / 1000000).toStringAsFixed(1)}M';
     } else if (num >= 1000) {

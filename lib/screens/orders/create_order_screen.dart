@@ -15,7 +15,7 @@ class CreateOrderScreen extends ConsumerStatefulWidget {
 class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
   final _formKey = GlobalKey<FormState>();
   final _notesController = TextEditingController();
-  
+
   Customer? _selectedCustomer;
   final List<OrderItem> _orderItems = [];
   bool _isLoading = false;
@@ -83,7 +83,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
     try {
       final orderService = ref.read(orderManagementServiceProvider);
       final vendorId = ref.read(vendorIdSyncProvider);
-      
+
       final order = Order(
         id: '', // Will be set by the service
         vendorId: vendorId,
@@ -104,7 +104,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
-      
+
       final orderId = await orderService.createOrder(order);
 
       if (mounted) {
@@ -174,9 +174,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Order Items Section
             Card(
               child: Padding(
@@ -199,17 +199,19 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    
                     if (_orderItems.isEmpty)
                       const Padding(
                         padding: EdgeInsets.all(32),
                         child: Center(
                           child: Column(
                             children: [
-                              Icon(Icons.shopping_cart, size: 64, color: Colors.grey),
+                              Icon(Icons.shopping_cart,
+                                  size: 64, color: Colors.grey),
                               SizedBox(height: 16),
                               Text('No items added yet'),
-                              Text('Tap "Add Item" to get started', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                              Text('Tap "Add Item" to get started',
+                                  style: TextStyle(
+                                      fontSize: 12, color: Colors.grey)),
                             ],
                           ),
                         ),
@@ -227,7 +229,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text('Quantity: ${item.quantity}'),
-                                    Text('Price: \$${item.price.toStringAsFixed(2)} each'),
+                                    Text(
+                                        'Price: \$${item.price.toStringAsFixed(2)} each'),
                                   ],
                                 ),
                                 trailing: Row(
@@ -235,7 +238,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                   children: [
                                     Text(
                                       '\$${item.total.toStringAsFixed(2)}',
-                                      style: Theme.of(context).textTheme.titleMedium,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium,
                                     ),
                                     IconButton(
                                       icon: const Icon(Icons.edit),
@@ -250,9 +255,7 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                               ),
                             );
                           }),
-                          
                           const Divider(),
-                          
                           Padding(
                             padding: const EdgeInsets.all(8),
                             child: Row(
@@ -264,10 +267,13 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                                 ),
                                 Text(
                                   '\$${_total.toStringAsFixed(2)}',
-                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    color: Theme.of(context).primaryColor,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleLarge
+                                      ?.copyWith(
+                                        color: Theme.of(context).primaryColor,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                 ),
                               ],
                             ),
@@ -278,9 +284,9 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Notes Section
             Card(
               child: Padding(
@@ -297,7 +303,8 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
                       controller: _notesController,
                       decoration: const InputDecoration(
                         labelText: 'Notes (Optional)',
-                        hintText: 'Add any special instructions or notes for this order',
+                        hintText:
+                            'Add any special instructions or notes for this order',
                         border: OutlineInputBorder(),
                       ),
                       maxLines: 3,
@@ -309,7 +316,6 @@ class _CreateOrderScreenState extends ConsumerState<CreateOrderScreen> {
           ],
         ),
       ),
-      
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -386,9 +392,10 @@ class _AddOrderItemDialogState extends State<_AddOrderItemDialog> {
 
     final quantity = int.parse(_quantityController.text);
     final price = double.parse(_priceController.text);
-    
+
     final item = OrderItem(
-      productId: widget.existingItem?.productId ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      productId: widget.existingItem?.productId ??
+          DateTime.now().millisecondsSinceEpoch.toString(),
       productName: _productNameController.text,
       quantity: quantity,
       price: price,

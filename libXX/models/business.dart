@@ -73,7 +73,8 @@ class Business {
       adminIds: List<String>.from(map['adminIds'] ?? []),
       isActive: map['isActive'] ?? true,
       createdAt: DateTime.parse(map['createdAt']),
-      updatedAt: map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : null,
+      updatedAt:
+          map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : null,
     );
   }
 

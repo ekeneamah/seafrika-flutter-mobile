@@ -31,12 +31,12 @@ class _CreateCustomerScreenState extends State<CreateCustomerScreen> {
   void initState() {
     super.initState();
     _isEditing = widget.customerId != null;
-    
+
     // Set initial name if provided
     if (widget.initialName != null) {
       _nameController.text = widget.initialName!;
     }
-    
+
     if (_isEditing) {
       _loadExistingCustomer();
     }
@@ -95,7 +95,8 @@ class _CreateCustomerScreenState extends State<CreateCustomerScreen> {
           address: _addressController.text,
           notes: _notesController.text,
         );
-        createdOrUpdatedCustomer = await customerService.fetchCustomer(widget.customerId!);
+        createdOrUpdatedCustomer =
+            await customerService.fetchCustomer(widget.customerId!);
       } else {
         createdOrUpdatedCustomer = await customerService.createCustomer(
           name: _nameController.text,

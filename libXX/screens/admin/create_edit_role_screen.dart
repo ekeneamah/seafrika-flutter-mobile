@@ -10,7 +10,8 @@ class CreateEditRoleScreen extends ConsumerStatefulWidget {
   const CreateEditRoleScreen({Key? key, this.role}) : super(key: key);
 
   @override
-  ConsumerState<CreateEditRoleScreen> createState() => _CreateEditRoleScreenState();
+  ConsumerState<CreateEditRoleScreen> createState() =>
+      _CreateEditRoleScreenState();
 }
 
 class _CreateEditRoleScreenState extends ConsumerState<CreateEditRoleScreen>
@@ -20,7 +21,7 @@ class _CreateEditRoleScreenState extends ConsumerState<CreateEditRoleScreen>
   late List<String> _selectedPermissions;
   bool _isSaving = false;
   bool _showPermissionSummary = false;
-  
+
   late AnimationController _fadeController;
   late AnimationController _slideController;
   late AnimationController _pulseController;
@@ -37,7 +38,8 @@ class _CreateEditRoleScreenState extends ConsumerState<CreateEditRoleScreen>
 
   void _initializeControllers() {
     _roleNameController = TextEditingController(text: widget.role?.name ?? '');
-    _descriptionController = TextEditingController(text: widget.role?.description ?? '');
+    _descriptionController =
+        TextEditingController(text: widget.role?.description ?? '');
     _selectedPermissions = List<String>.from(widget.role?.permissions ?? []);
   }
 
@@ -86,7 +88,8 @@ class _CreateEditRoleScreenState extends ConsumerState<CreateEditRoleScreen>
     super.dispose();
   }
 
-  Widget _buildGlassCard({required Widget child, EdgeInsets? padding, EdgeInsets? margin}) {
+  Widget _buildGlassCard(
+      {required Widget child, EdgeInsets? padding, EdgeInsets? margin}) {
     return Container(
       margin: margin ?? const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       padding: padding ?? const EdgeInsets.all(24),
@@ -136,27 +139,33 @@ class _CreateEditRoleScreenState extends ConsumerState<CreateEditRoleScreen>
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        (isEdit ? AppTheme.primary : AppTheme.secondary).withOpacity(0.15),
-                        (isEdit ? AppTheme.primary : AppTheme.secondary).withOpacity(0.05),
+                        (isEdit ? AppTheme.primary : AppTheme.secondary)
+                            .withOpacity(0.15),
+                        (isEdit ? AppTheme.primary : AppTheme.secondary)
+                            .withOpacity(0.05),
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(
-                      color: (isEdit ? AppTheme.primary : AppTheme.secondary).withOpacity(0.2),
+                      color: (isEdit ? AppTheme.primary : AppTheme.secondary)
+                          .withOpacity(0.2),
                       width: 1,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: (isEdit ? AppTheme.primary : AppTheme.secondary).withOpacity(0.2),
+                        color: (isEdit ? AppTheme.primary : AppTheme.secondary)
+                            .withOpacity(0.2),
                         blurRadius: 20,
                         offset: const Offset(0, 8),
                       ),
                     ],
                   ),
                   child: Icon(
-                    isEdit ? Icons.edit_outlined : Icons.admin_panel_settings_outlined,
+                    isEdit
+                        ? Icons.edit_outlined
+                        : Icons.admin_panel_settings_outlined,
                     size: 56,
                     color: isEdit ? AppTheme.primary : AppTheme.secondary,
                   ),
@@ -165,7 +174,6 @@ class _CreateEditRoleScreenState extends ConsumerState<CreateEditRoleScreen>
             },
           ),
           const SizedBox(height: 24),
-          
           Text(
             isEdit ? 'Edit Role' : 'Create New Role',
             style: TextStyle(
@@ -179,15 +187,17 @@ class _CreateEditRoleScreenState extends ConsumerState<CreateEditRoleScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             decoration: BoxDecoration(
-              color: (isEdit ? AppTheme.primary : AppTheme.secondary).withOpacity(0.1),
+              color: (isEdit ? AppTheme.primary : AppTheme.secondary)
+                  .withOpacity(0.1),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: (isEdit ? AppTheme.primary : AppTheme.secondary).withOpacity(0.2),
+                color: (isEdit ? AppTheme.primary : AppTheme.secondary)
+                    .withOpacity(0.2),
                 width: 1,
               ),
             ),
             child: Text(
-              isEdit 
+              isEdit
                   ? 'Update role information and permissions'
                   : 'Define a new role with specific permissions',
               style: TextStyle(
@@ -259,7 +269,7 @@ class _CreateEditRoleScreenState extends ConsumerState<CreateEditRoleScreen>
             ],
           ),
           const SizedBox(height: 28),
-          
+
           // Role Name Field
           Container(
             decoration: BoxDecoration(
@@ -323,9 +333,9 @@ class _CreateEditRoleScreenState extends ConsumerState<CreateEditRoleScreen>
               textCapitalization: TextCapitalization.words,
             ),
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // Description Field
           Container(
             decoration: BoxDecoration(
@@ -459,7 +469,8 @@ class _CreateEditRoleScreenState extends ConsumerState<CreateEditRoleScreen>
                   ),
                   if (_selectedPermissions.isNotEmpty)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
@@ -548,7 +559,8 @@ class _CreateEditRoleScreenState extends ConsumerState<CreateEditRoleScreen>
                               ),
                             ),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
                                 color: AppTheme.accent.withOpacity(0.2),
                                 borderRadius: BorderRadius.circular(8),
@@ -616,12 +628,15 @@ class _CreateEditRoleScreenState extends ConsumerState<CreateEditRoleScreen>
                             .where((p) => _selectedPermissions.contains(p.id))
                             .map(
                               (p) => Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 6),
                                 decoration: BoxDecoration(
-                                  color: _getCategoryColor(p.category).withOpacity(0.1),
+                                  color: _getCategoryColor(p.category)
+                                      .withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: _getCategoryColor(p.category).withOpacity(0.3),
+                                    color: _getCategoryColor(p.category)
+                                        .withOpacity(0.3),
                                     width: 1,
                                   ),
                                 ),
@@ -662,7 +677,8 @@ class _CreateEditRoleScreenState extends ConsumerState<CreateEditRoleScreen>
                     .where((p) => _selectedPermissions.contains(p.id))
                     .length;
 
-                final allSelected = selectedInCategory == categoryPermissions.length;
+                final allSelected =
+                    selectedInCategory == categoryPermissions.length;
 
                 return Container(
                   margin: const EdgeInsets.only(bottom: 20),
@@ -687,10 +703,12 @@ class _CreateEditRoleScreenState extends ConsumerState<CreateEditRoleScreen>
                     ],
                   ),
                   child: Theme(
-                    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                    data: Theme.of(context)
+                        .copyWith(dividerColor: Colors.transparent),
                     child: ExpansionTile(
                       initiallyExpanded: selectedInCategory > 0,
-                      tilePadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      tilePadding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
                       childrenPadding: const EdgeInsets.only(bottom: 20),
                       leading: Container(
                         padding: const EdgeInsets.all(12),
@@ -723,7 +741,8 @@ class _CreateEditRoleScreenState extends ConsumerState<CreateEditRoleScreen>
                       ),
                       subtitle: Container(
                         margin: const EdgeInsets.only(top: 6),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 4),
                         decoration: BoxDecoration(
                           color: categoryColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
@@ -746,9 +765,11 @@ class _CreateEditRoleScreenState extends ConsumerState<CreateEditRoleScreen>
                                 color: categoryColor.withOpacity(0.2),
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: Icon(Icons.check_circle, color: categoryColor, size: 20),
+                              child: Icon(Icons.check_circle,
+                                  color: categoryColor, size: 20),
                             )
-                          : Icon(Icons.keyboard_arrow_down, color: AppTheme.earth, size: 24),
+                          : Icon(Icons.keyboard_arrow_down,
+                              color: AppTheme.earth, size: 24),
                       children: [
                         // Select All / Deselect All
                         Padding(
@@ -773,10 +794,13 @@ class _CreateEditRoleScreenState extends ConsumerState<CreateEditRoleScreen>
                               child: InkWell(
                                 onTap: () {
                                   setState(() {
-                                    final updated = List<String>.from(_selectedPermissions);
-                                    final ids = categoryPermissions.map((p) => p.id);
+                                    final updated =
+                                        List<String>.from(_selectedPermissions);
+                                    final ids =
+                                        categoryPermissions.map((p) => p.id);
                                     if (allSelected) {
-                                      updated.removeWhere((id) => ids.contains(id));
+                                      updated.removeWhere(
+                                          (id) => ids.contains(id));
                                     } else {
                                       for (final id in ids) {
                                         if (!updated.contains(id)) {
@@ -794,13 +818,17 @@ class _CreateEditRoleScreenState extends ConsumerState<CreateEditRoleScreen>
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Icon(
-                                        allSelected ? Icons.deselect : Icons.select_all,
+                                        allSelected
+                                            ? Icons.deselect
+                                            : Icons.select_all,
                                         color: categoryColor,
                                         size: 20,
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
-                                        allSelected ? 'Deselect All' : 'Select All',
+                                        allSelected
+                                            ? 'Deselect All'
+                                            : 'Select All',
                                         style: TextStyle(
                                           color: categoryColor,
                                           fontWeight: FontWeight.w600,
@@ -820,7 +848,8 @@ class _CreateEditRoleScreenState extends ConsumerState<CreateEditRoleScreen>
                           padding: const EdgeInsets.symmetric(horizontal: 24),
                           child: Column(
                             children: categoryPermissions.map((permission) {
-                              final isSelected = _selectedPermissions.contains(permission.id);
+                              final isSelected =
+                                  _selectedPermissions.contains(permission.id);
                               return Container(
                                 margin: const EdgeInsets.only(bottom: 12),
                                 decoration: BoxDecoration(
@@ -847,7 +876,8 @@ class _CreateEditRoleScreenState extends ConsumerState<CreateEditRoleScreen>
                                   boxShadow: isSelected
                                       ? [
                                           BoxShadow(
-                                            color: categoryColor.withOpacity(0.2),
+                                            color:
+                                                categoryColor.withOpacity(0.2),
                                             blurRadius: 10,
                                             offset: const Offset(0, 2),
                                           ),
@@ -860,7 +890,8 @@ class _CreateEditRoleScreenState extends ConsumerState<CreateEditRoleScreen>
                                     borderRadius: BorderRadius.circular(16),
                                     onTap: () {
                                       setState(() {
-                                        final updated = List<String>.from(_selectedPermissions);
+                                        final updated = List<String>.from(
+                                            _selectedPermissions);
                                         if (isSelected) {
                                           updated.remove(permission.id);
                                         } else {
@@ -872,7 +903,8 @@ class _CreateEditRoleScreenState extends ConsumerState<CreateEditRoleScreen>
                                     child: Padding(
                                       padding: const EdgeInsets.all(16),
                                       child: Row(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Container(
                                             padding: const EdgeInsets.all(2),
@@ -880,7 +912,8 @@ class _CreateEditRoleScreenState extends ConsumerState<CreateEditRoleScreen>
                                               color: isSelected
                                                   ? categoryColor
                                                   : Colors.transparent,
-                                              borderRadius: BorderRadius.circular(6),
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
                                               border: Border.all(
                                                 color: isSelected
                                                     ? categoryColor
@@ -899,7 +932,8 @@ class _CreateEditRoleScreenState extends ConsumerState<CreateEditRoleScreen>
                                           const SizedBox(width: 16),
                                           Expanded(
                                             child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
                                               children: [
                                                 Text(
                                                   permission.name,
@@ -915,7 +949,8 @@ class _CreateEditRoleScreenState extends ConsumerState<CreateEditRoleScreen>
                                                 Text(
                                                   permission.description,
                                                   style: TextStyle(
-                                                    color: AppTheme.earth.withOpacity(0.8),
+                                                    color: AppTheme.earth
+                                                        .withOpacity(0.8),
                                                     fontSize: 14,
                                                     height: 1.4,
                                                   ),
@@ -1056,7 +1091,8 @@ class _CreateEditRoleScreenState extends ConsumerState<CreateEditRoleScreen>
                   backgroundColor: AppTheme.secondary,
                   foregroundColor: Colors.white,
                   elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -1126,17 +1162,17 @@ class _CreateEditRoleScreenState extends ConsumerState<CreateEditRoleScreen>
     }
 
     setState(() => _isSaving = true);
-    
+
     try {
       // TODO: Implement actual save logic with backend/Firestore
       await Future.delayed(const Duration(seconds: 2)); // Simulate API call
-      
+
       final isEdit = widget.role != null;
       _showSnackBar(
         isEdit ? 'Role updated successfully!' : 'Role created successfully!',
         isError: false,
       );
-      
+
       if (mounted) {
         Navigator.pop(context, true);
       }
@@ -1189,7 +1225,7 @@ class _CreateEditRoleScreenState extends ConsumerState<CreateEditRoleScreen>
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.role != null;
-    
+
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       extendBodyBehindAppBar: true,
@@ -1233,7 +1269,8 @@ class _CreateEditRoleScreenState extends ConsumerState<CreateEditRoleScreen>
             ),
           ),
           child: IconButton(
-            icon: Icon(Icons.arrow_back_ios, color: AppTheme.textPrimary, size: 20),
+            icon: Icon(Icons.arrow_back_ios,
+                color: AppTheme.textPrimary, size: 20),
             onPressed: () => Navigator.pop(context),
           ),
         ),
@@ -1281,22 +1318,22 @@ class _CreateEditRoleScreenState extends ConsumerState<CreateEditRoleScreen>
                 const SliverToBoxAdapter(
                   child: SizedBox(height: 100),
                 ),
-                
+
                 // Hero Section
                 SliverToBoxAdapter(
                   child: _buildHeroSection(),
                 ),
-                
+
                 // Role Info Section
                 SliverToBoxAdapter(
                   child: _buildRoleInfoSection(),
                 ),
-                
+
                 // Permissions Section
                 SliverToBoxAdapter(
                   child: _buildPermissionsSection(),
                 ),
-                
+
                 // Bottom padding for save button
                 const SliverToBoxAdapter(
                   child: SizedBox(height: 120),
@@ -1343,13 +1380,15 @@ class _CreateEditRoleScreenState extends ConsumerState<CreateEditRoleScreen>
                 gradient: LinearGradient(
                   colors: [
                     (isEdit ? AppTheme.primary : AppTheme.secondary),
-                    (isEdit ? AppTheme.primary : AppTheme.secondary).withOpacity(0.8),
+                    (isEdit ? AppTheme.primary : AppTheme.secondary)
+                        .withOpacity(0.8),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: (isEdit ? AppTheme.primary : AppTheme.secondary).withOpacity(0.4),
+                    color: (isEdit ? AppTheme.primary : AppTheme.secondary)
+                        .withOpacity(0.4),
                     blurRadius: 20,
                     offset: const Offset(0, 8),
                   ),
@@ -1399,7 +1438,9 @@ class _CreateEditRoleScreenState extends ConsumerState<CreateEditRoleScreen>
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Icon(
-                              isEdit ? Icons.save_outlined : Icons.admin_panel_settings_outlined,
+                              isEdit
+                                  ? Icons.save_outlined
+                                  : Icons.admin_panel_settings_outlined,
                               size: 20,
                             ),
                           ),

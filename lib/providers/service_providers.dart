@@ -114,7 +114,8 @@ final storeInventoryServiceProvider = Provider<StoreInventoryService>((ref) {
   return StoreInventoryService();
 });
 
-final businessInventoryServiceProvider = Provider<BusinessInventoryService>((ref) {
+final businessInventoryServiceProvider =
+    Provider<BusinessInventoryService>((ref) {
   return BusinessInventoryService();
 });
 
@@ -226,7 +227,8 @@ final storeRolesProvider =
 });
 
 final userServiceProvider = Provider<UserService>((ref) {
-  final businessId = ref.watch(authServiceProvider).currentUser?.businessId ?? '';
+  final businessId =
+      ref.watch(authServiceProvider).currentUser?.businessId ?? '';
   return UserService(
     firestore: ref.watch(firebaseFirestoreProvider),
     vendorId: ref.watch(vendorIdSyncProvider),
@@ -272,8 +274,7 @@ final customerServiceProvider = Provider<CustomerService>((ref) {
   );
 });
 
-final inventoryAllocationServiceProvider = Provider<InventoryAllocationService>((ref) {
+final inventoryAllocationServiceProvider =
+    Provider<InventoryAllocationService>((ref) {
   return InventoryAllocationService();
 });
-
-

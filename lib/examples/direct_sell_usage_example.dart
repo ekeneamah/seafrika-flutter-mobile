@@ -9,7 +9,8 @@ class MediaGalleryExample extends ConsumerStatefulWidget {
   const MediaGalleryExample({Key? key}) : super(key: key);
 
   @override
-  ConsumerState<MediaGalleryExample> createState() => _MediaGalleryExampleState();
+  ConsumerState<MediaGalleryExample> createState() =>
+      _MediaGalleryExampleState();
 }
 
 class _MediaGalleryExampleState extends ConsumerState<MediaGalleryExample> {
@@ -49,7 +50,7 @@ class _MediaGalleryExampleState extends ConsumerState<MediaGalleryExample> {
         start: 0,
         end: 20, // Load first 20 photos
       );
-      
+
       setState(() {
         _mediaAssets = assets;
         _isLoading = false;
@@ -60,7 +61,8 @@ class _MediaGalleryExampleState extends ConsumerState<MediaGalleryExample> {
   }
 
   Future<Widget> _buildAssetThumbnail(AssetEntity asset) async {
-    final bytes = await asset.thumbnailDataWithSize(const ThumbnailSize(200, 200));
+    final bytes =
+        await asset.thumbnailDataWithSize(const ThumbnailSize(200, 200));
     if (bytes != null) {
       return Image.memory(
         bytes,
@@ -153,7 +155,7 @@ class _MediaGalleryExampleState extends ConsumerState<MediaGalleryExample> {
                 },
               ),
             ),
-            
+
             // Overlay with action buttons
             Positioned.fill(
               child: Container(
@@ -190,7 +192,8 @@ class _MediaGalleryExampleState extends ConsumerState<MediaGalleryExample> {
                             padding: const EdgeInsets.symmetric(vertical: 4),
                             minimumSize: const Size(0, 32),
                           ),
-                          child: const Text('Sell', style: TextStyle(fontSize: 12)),
+                          child: const Text('Sell',
+                              style: TextStyle(fontSize: 12)),
                         ),
                       ),
                       const SizedBox(width: 4),
@@ -203,7 +206,8 @@ class _MediaGalleryExampleState extends ConsumerState<MediaGalleryExample> {
                             padding: const EdgeInsets.symmetric(vertical: 4),
                             minimumSize: const Size(0, 32),
                           ),
-                          child: const Text('Add', style: TextStyle(fontSize: 12)),
+                          child:
+                              const Text('Add', style: TextStyle(fontSize: 12)),
                         ),
                       ),
                     ],
@@ -219,7 +223,8 @@ class _MediaGalleryExampleState extends ConsumerState<MediaGalleryExample> {
                         padding: const EdgeInsets.symmetric(vertical: 4),
                         minimumSize: const Size(0, 32),
                       ),
-                      child: const Text('More Options', style: TextStyle(fontSize: 12)),
+                      child: const Text('More Options',
+                          style: TextStyle(fontSize: 12)),
                     ),
                   ),
                 ],
@@ -240,7 +245,9 @@ class _MediaGalleryExampleState extends ConsumerState<MediaGalleryExample> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      asset.type == AssetType.video ? Icons.videocam : Icons.photo,
+                      asset.type == AssetType.video
+                          ? Icons.videocam
+                          : Icons.photo,
                       color: Colors.white,
                       size: 14,
                     ),
@@ -291,7 +298,8 @@ class _MediaGalleryExampleState extends ConsumerState<MediaGalleryExample> {
       // This would trigger the quick add functionality
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Quick adding to ${_availableStores.first.name} inventory...'),
+          content: Text(
+              'Quick adding to ${_availableStores.first.name} inventory...'),
           backgroundColor: Colors.blue,
         ),
       );
@@ -327,10 +335,11 @@ class DirectSellUsageInstructions extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text(
                           'Direct Sell from Media',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: Colors.green,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    color: Colors.green,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                         ),
                       ],
                     ),
@@ -361,10 +370,11 @@ class DirectSellUsageInstructions extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text(
                           'Direct Add to Store Inventory',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: Colors.blue,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    color: Colors.blue,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                         ),
                       ],
                     ),
@@ -391,14 +401,16 @@ class DirectSellUsageInstructions extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.integration_instructions, color: Colors.orange),
+                        Icon(Icons.integration_instructions,
+                            color: Colors.orange),
                         const SizedBox(width: 8),
                         Text(
                           'Integration Examples',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: Colors.orange,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    color: Colors.orange,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                         ),
                       ],
                     ),
@@ -426,7 +438,8 @@ class DirectSellUsageInstructions extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).primaryColor,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
               ),
             ),

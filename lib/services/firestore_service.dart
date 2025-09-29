@@ -15,10 +15,14 @@ class FirestoreService {
         _auth = auth ?? FirebaseAuth.instance;
 
   // Collection references
-  CollectionReference get usersCollection => _firestore.collection(CollectionNames.users);
-  CollectionReference get vendorsCollection => _firestore.collection('vendors'); // Keep legacy vendor collection
-  CollectionReference get productsCollection => _firestore.collection(CollectionNames.products);
-  CollectionReference get mediaCollection => _firestore.collection(CollectionNames.media);
+  CollectionReference get usersCollection =>
+      _firestore.collection(CollectionNames.users);
+  CollectionReference get vendorsCollection =>
+      _firestore.collection('vendors'); // Keep legacy vendor collection
+  CollectionReference get productsCollection =>
+      _firestore.collection(CollectionNames.products);
+  CollectionReference get mediaCollection =>
+      _firestore.collection(CollectionNames.media);
   CollectionReference collection(String path) {
     return _firestore.collection(path);
   }
@@ -36,7 +40,8 @@ class FirestoreService {
     }
   }
 
-  Future<QuerySnapshot> getCollection(String collection, {
+  Future<QuerySnapshot> getCollection(
+    String collection, {
     Query<Object?> Function(Query<Object?> query)? queryBuilder,
   }) async {
     try {
@@ -51,7 +56,8 @@ class FirestoreService {
     }
   }
 
-  Future<DocumentReference> addDocument(String collection, Map<String, dynamic> data) async {
+  Future<DocumentReference> addDocument(
+      String collection, Map<String, dynamic> data) async {
     try {
       return await _firestore.collection(collection).add(data);
     } catch (e) {
@@ -60,7 +66,8 @@ class FirestoreService {
     }
   }
 
-  Future<void> updateDocument(String collection, String id, Map<String, dynamic> data) async {
+  Future<void> updateDocument(
+      String collection, String id, Map<String, dynamic> data) async {
     try {
       await _firestore.collection(collection).doc(id).update(data);
     } catch (e) {
@@ -82,10 +89,11 @@ class FirestoreService {
   Future<void> batchWrite(List<BatchOperation> operations) async {
     try {
       final batch = _firestore.batch();
-      
+
       for (final operation in operations) {
-        final docRef = _firestore.collection(operation.collection).doc(operation.id);
-        
+        final docRef =
+            _firestore.collection(operation.collection).doc(operation.id);
+
         switch (operation.type) {
           case BatchOperationType.create:
             batch.set(docRef, operation.data!);
@@ -98,7 +106,7 @@ class FirestoreService {
             break;
         }
       }
-      
+
       await batch.commit();
     } catch (e) {
       debugPrint('Error in batch write: $e');
@@ -107,7 +115,8 @@ class FirestoreService {
   }
 
   // Real-time listeners
-  Stream<QuerySnapshot> streamCollection(String collection, {
+  Stream<QuerySnapshot> streamCollection(
+    String collection, {
     Query<Object?> Function(Query<Object?> query)? queryBuilder,
   }) {
     Query query = _firestore.collection(collection);

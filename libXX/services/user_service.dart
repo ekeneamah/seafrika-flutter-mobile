@@ -12,12 +12,12 @@ class UserService {
   final NotificationService _notificationService;
   final String _businessId;
 
-  UserService({
-    required FirebaseFirestore firestore,
-    required String vendorId,
-    required NotificationService notificationService,
-    required String businessId
-  })  : _firestore = firestore,
+  UserService(
+      {required FirebaseFirestore firestore,
+      required String vendorId,
+      required NotificationService notificationService,
+      required String businessId})
+      : _firestore = firestore,
         _vendorId = vendorId,
         _businessId = businessId,
         _notificationService = notificationService;
@@ -90,8 +90,9 @@ class UserService {
   }) {
     try {
       // Start with vendorId filter as the first filter (required by Firestore rules)
-      Query query =
-          _firestore.collection('users').where('vendorId', isEqualTo: _vendorId);
+      Query query = _firestore
+          .collection('users')
+          .where('vendorId', isEqualTo: _vendorId);
 
       // Add additional filters in order
       if (teamId != null) {
@@ -99,8 +100,8 @@ class UserService {
       }
 
       if (role != null) {
-        query =
-            query.where('roles', arrayContains: role.toString().split('.').last);
+        query = query.where('roles',
+            arrayContains: role.toString().split('.').last);
       }
 
       if (isActive != null) {
@@ -182,14 +183,16 @@ class UserService {
     }
     if (isActive != null) updates['isActive'] = isActive;
     if (email != null) updates['email'] = email;
-    
+
     // Personal details
-    if (dateOfBirth != null) updates['dateOfBirth'] = dateOfBirth.toIso8601String();
-    if (weddingAnniversary != null) updates['weddingAnniversary'] = weddingAnniversary.toIso8601String();
+    if (dateOfBirth != null)
+      updates['dateOfBirth'] = dateOfBirth.toIso8601String();
+    if (weddingAnniversary != null)
+      updates['weddingAnniversary'] = weddingAnniversary.toIso8601String();
     if (address != null) updates['address'] = address;
     if (hobbies != null) updates['hobbies'] = hobbies;
     if (notes != null) updates['notes'] = notes;
-    
+
     updates['lastUpdatedAt'] = FieldValue.serverTimestamp();
 
     await _firestore.collection('users').doc(userId).update(updates);
@@ -294,21 +297,23 @@ class UserService {
           .where('email', isEqualTo: email.trim().toLowerCase())
           .limit(1)
           .get();
-          
+
       if (existingUsers.docs.isNotEmpty) {
-        throw Exception('A user with this email already exists in this business.');
+        throw Exception(
+            'A user with this email already exists in this business.');
       }
-      
+
       // Generate a unique ID for the user
       final userId = DateTime.now().millisecondsSinceEpoch.toString();
-      
+
       // Retrieve business details from BusinessPreferencesHelper
-      final businessDetails = await BusinessPreferencesHelper.getSelectedBusinessDetails();
+      final businessDetails =
+          await BusinessPreferencesHelper.getSelectedBusinessDetails();
       final businessName = businessDetails['name'] ?? '';
       final businessAddress = businessDetails['address'] ?? '';
       final country = businessDetails['country'] ?? '';
       final state = businessDetails['state'] ?? '';
-      
+
       // Create the user object
       final user = User(
         id: userId,
@@ -338,30 +343,36 @@ class UserService {
         hobbies: hobbies,
         notes: notes,
       );
-      
+
       // Create user in Firebase Authentication
       final userCredential = await auth.createUserWithEmailAndPassword(
         email: email.trim().toLowerCase(),
         password: defaultPassword,
       );
-      
+
       // Link Firebase Auth UID with the Firestore document
       final firebaseUserId = userCredential.user!.uid;
-      
+
       // Send email verification
       await userCredential.user!.sendEmailVerification();
-      
+
       // Save the user to Firestore with Firebase Auth UID as document ID
       final userData = {
         ...user.toMap(),
         'id': firebaseUserId, // Use Firebase Auth UID as the document ID
-        'authId': firebaseUserId, // Store Firebase Auth UID separately for reference
-        'isActive': true, // Ensure this field is explicitly set as it's required in security rules
-        'createdAt': FieldValue.serverTimestamp(), // Use server timestamp for consistency
-        'businessId': _businessId, // Explicitly set businessId as it's required in security rules
-        'roles': roles.map((role) => role.toString().split('.').last).toList(), // Ensure roles are correctly formatted
+        'authId':
+            firebaseUserId, // Store Firebase Auth UID separately for reference
+        'isActive':
+            true, // Ensure this field is explicitly set as it's required in security rules
+        'createdAt': FieldValue
+            .serverTimestamp(), // Use server timestamp for consistency
+        'businessId':
+            _businessId, // Explicitly set businessId as it's required in security rules
+        'roles': roles
+            .map((role) => role.toString().split('.').last)
+            .toList(), // Ensure roles are correctly formatted
       };
-      
+
       // Ensure all required fields are present
       if (!userData.containsKey('firstName') || userData['firstName'] == null) {
         userData['firstName'] = firstName.trim();
@@ -372,10 +383,13 @@ class UserService {
       if (!userData.containsKey('email') || userData['email'] == null) {
         userData['email'] = email.trim().toLowerCase();
       }
-      
+
       try {
         // Set the user data in Firestore
-        await _firestore.collection(CollectionNames.users).doc(firebaseUserId).set(userData);
+        await _firestore
+            .collection(CollectionNames.users)
+            .doc(firebaseUserId)
+            .set(userData);
       } catch (firestoreError) {
         // If there's an error with Firestore, log it but don't fail the whole process
         // since the Firebase Auth user has already been created
@@ -383,18 +397,19 @@ class UserService {
         // Could consider deleting the Auth user here to keep things in sync,
         // but that might cause other issues
       }
-      
+
       // Update the user object with the Firebase Auth UID
       final createdUser = user.copyWith(id: firebaseUserId);
-      
+
       // Send welcome email with login instructions
       // This would typically be done via a Cloud Function or a backend service
-      
+
       try {
         // Send notification about new user - wrap in try/catch to prevent failure
         await _notificationService.sendNotification(
           title: 'New Team Member Added',
-          message: '${user.firstName} ${user.lastName} has been added to your team',
+          message:
+              '${user.firstName} ${user.lastName} has been added to your team',
           type: NotificationType.system,
           priority: NotificationPriority.medium,
           data: {
@@ -408,37 +423,43 @@ class UserService {
         // Log notification errors but don't fail the whole operation
         print('Warning: Could not send notification: $notificationError');
       }
-      
+
       return createdUser;
     } catch (e) {
       print('Error adding business user: $e');
-      
+
       // Handle specific Firebase Auth errors
       if (e is FirebaseAuthException) {
         switch (e.code) {
           case 'email-already-in-use':
-            throw Exception('This email address is already in use by another account.');
+            throw Exception(
+                'This email address is already in use by another account.');
           case 'invalid-email':
             throw Exception('The email address is invalid.');
           case 'operation-not-allowed':
-            throw Exception('Email/password accounts are not enabled. Contact support.');
+            throw Exception(
+                'Email/password accounts are not enabled. Contact support.');
           case 'weak-password':
-            throw Exception('The password is too weak. Please use a stronger password.');
+            throw Exception(
+                'The password is too weak. Please use a stronger password.');
           default:
             throw Exception('Authentication error: ${e.message}');
         }
       }
-      
+
       // Handle Firestore permission errors
       if (e.toString().contains('permission-denied')) {
-        throw Exception('You do not have permission to add users to this business. Please check your account permissions or contact your administrator.');
+        throw Exception(
+            'You do not have permission to add users to this business. Please check your account permissions or contact your administrator.');
       }
-      
+
       // Handle other Firebase errors with a more user-friendly message
-      if (e.toString().contains('firebase') || e.toString().contains('firestore')) {
-        throw Exception('There was an issue connecting to the database. Please check your network connection and try again.');
+      if (e.toString().contains('firebase') ||
+          e.toString().contains('firestore')) {
+        throw Exception(
+            'There was an issue connecting to the database. Please check your network connection and try again.');
       }
-      
+
       rethrow;
     }
   }

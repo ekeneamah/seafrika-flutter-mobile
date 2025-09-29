@@ -173,8 +173,10 @@ class StoreInventoryNotifier extends StateNotifier<StoreInventoryState> {
     String? displayImageUrl,
   }) async {
     try {
-      final businessId = await BusinessPreferencesHelper.getSelectedBusinessId();
-      final businessName = await BusinessPreferencesHelper.getSelectedBusinessName();
+      final businessId =
+          await BusinessPreferencesHelper.getSelectedBusinessId();
+      final businessName =
+          await BusinessPreferencesHelper.getSelectedBusinessName();
       await _service.createStoreInventory(
         businessId: businessId!,
         businessName: businessName!,

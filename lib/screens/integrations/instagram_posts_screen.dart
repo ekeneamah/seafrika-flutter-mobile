@@ -167,7 +167,8 @@ class _InstagramPostsScreenState extends ConsumerState<InstagramPostsScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+                      Icon(Icons.error_outline,
+                          size: 64, color: Colors.red[300]),
                       const SizedBox(height: 16),
                       Text(
                         _error!,
@@ -318,8 +319,8 @@ class _InstagramPostsScreenState extends ConsumerState<InstagramPostsScreen> {
                   child: post['media_url'] != null
                       ? Image.network(
                           // For videos, use thumbnail_url if available, otherwise fallback to media_url
-                          isVideo && post['thumbnail_url'] != null 
-                              ? post['thumbnail_url'] 
+                          isVideo && post['thumbnail_url'] != null
+                              ? post['thumbnail_url']
                               : post['media_url'],
                           fit: BoxFit.cover,
                           loadingBuilder: (context, child, loadingProgress) {
@@ -328,7 +329,8 @@ class _InstagramPostsScreenState extends ConsumerState<InstagramPostsScreen> {
                               color: Colors.grey[200],
                               child: Center(
                                 child: CircularProgressIndicator(
-                                  value: loadingProgress.expectedTotalBytes != null
+                                  value: loadingProgress.expectedTotalBytes !=
+                                          null
                                       ? loadingProgress.cumulativeBytesLoaded /
                                           loadingProgress.expectedTotalBytes!
                                       : null,
@@ -361,13 +363,14 @@ class _InstagramPostsScreenState extends ConsumerState<InstagramPostsScreen> {
                         ),
                 ),
               ),
-              
+
               // Media type indicator
               Positioned(
                 top: 12,
                 right: 12,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.black.withOpacity(0.7),
                     borderRadius: BorderRadius.circular(12),
@@ -454,7 +457,8 @@ class _InstagramPostsScreenState extends ConsumerState<InstagramPostsScreen> {
                         label: const Text('View on Instagram'),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 8),
-                          side: BorderSide(color: AppTheme.primary.withOpacity(0.3)),
+                          side: BorderSide(
+                              color: AppTheme.primary.withOpacity(0.3)),
                         ),
                       ),
                     ),
@@ -523,7 +527,7 @@ class _InstagramPostsScreenState extends ConsumerState<InstagramPostsScreen> {
   void _sharePost(Map<String, dynamic> post) {
     final caption = post['caption'] ?? '';
     final permalink = post['permalink'] ?? '';
-    
+
     String shareText = '';
     if (caption.isNotEmpty) {
       shareText = caption;
@@ -535,14 +539,14 @@ class _InstagramPostsScreenState extends ConsumerState<InstagramPostsScreen> {
     } else {
       shareText = 'Check out this Instagram post!';
     }
-    
+
     Share.share(shareText, subject: 'Instagram Post');
   }
 
   void _viewComments(Map<String, dynamic> post) {
     final commentsCount = post['comments_count'] ?? 0;
     final postId = post['id'] ?? '';
-    
+
     if (commentsCount == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -587,7 +591,7 @@ class _InstagramPostsScreenState extends ConsumerState<InstagramPostsScreen> {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              
+
               // Header
               Padding(
                 padding: const EdgeInsets.all(16),
@@ -610,9 +614,9 @@ class _InstagramPostsScreenState extends ConsumerState<InstagramPostsScreen> {
                   ],
                 ),
               ),
-              
+
               const Divider(height: 1),
-              
+
               // Comments content
               Expanded(
                 child: _buildCommentsContent(postId, scrollController),
@@ -624,14 +628,15 @@ class _InstagramPostsScreenState extends ConsumerState<InstagramPostsScreen> {
     );
   }
 
-  Widget _buildCommentsContent(String postId, ScrollController scrollController) {
+  Widget _buildCommentsContent(
+      String postId, ScrollController scrollController) {
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: _loadCommentsForPost(postId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        
+
         if (snapshot.hasError) {
           return Center(
             child: Column(
@@ -657,9 +662,9 @@ class _InstagramPostsScreenState extends ConsumerState<InstagramPostsScreen> {
             ),
           );
         }
-        
+
         final comments = snapshot.data ?? [];
-        
+
         if (comments.isEmpty) {
           return const Center(
             child: Column(
@@ -681,7 +686,7 @@ class _InstagramPostsScreenState extends ConsumerState<InstagramPostsScreen> {
             ),
           );
         }
-        
+
         return ListView.builder(
           controller: scrollController,
           padding: const EdgeInsets.all(16),
@@ -701,7 +706,7 @@ class _InstagramPostsScreenState extends ConsumerState<InstagramPostsScreen> {
     final timestamp = comment['timestamp'] ?? '';
     final likeCount = comment['like_count'] ?? 0;
     final commentId = comment['id'] ?? '';
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
@@ -792,9 +797,9 @@ class _InstagramPostsScreenState extends ConsumerState<InstagramPostsScreen> {
         throw Exception('No business selected');
       }
 
-      final result = await integrationService.getInstagramComments(widget.integrationId, postId);
+      final result = await integrationService.getInstagramComments(
+          widget.integrationId, postId);
       return List<Map<String, dynamic>>.from(result['comments'] ?? []);
-      
     } catch (e) {
       throw Exception('Failed to load comments: $e');
     }
@@ -802,7 +807,7 @@ class _InstagramPostsScreenState extends ConsumerState<InstagramPostsScreen> {
 
   void _showReplyDialog(String commentId, String username) {
     final TextEditingController replyController = TextEditingController();
-    
+
     showDialog(
       context: context,
       builder: (context) {
@@ -843,7 +848,8 @@ class _InstagramPostsScreenState extends ConsumerState<InstagramPostsScreen> {
     );
   }
 
-  Future<void> _replyToComment(String commentId, String message, String username) async {
+  Future<void> _replyToComment(
+      String commentId, String message, String username) async {
     try {
       final integrationService = ref.read(integrationServiceProvider);
       if (integrationService == null) {
@@ -851,9 +857,10 @@ class _InstagramPostsScreenState extends ConsumerState<InstagramPostsScreen> {
       }
 
       // Find the post ID from current context (we need to track this)
-      // For now, we'll use a placeholder - in a real implementation, 
+      // For now, we'll use a placeholder - in a real implementation,
       // you'd need to track which post's comments are being viewed
-      String postId = 'current_post_id'; // This should be tracked when viewing comments
+      String postId =
+          'current_post_id'; // This should be tracked when viewing comments
 
       final result = await integrationService.replyToInstagramComment(
         widget.integrationId,
@@ -885,7 +892,8 @@ class _InstagramPostsScreenState extends ConsumerState<InstagramPostsScreen> {
   void _showCreatePostDialog() {
     showDialog(
       context: context,
-      builder: (context) => _CreatePostDialog(integrationId: widget.integrationId),
+      builder: (context) =>
+          _CreatePostDialog(integrationId: widget.integrationId),
     );
   }
 
@@ -1016,10 +1024,10 @@ class _CreatePostDialogState extends ConsumerState<_CreatePostDialog> {
   }
 
   Future<void> _createPost() async {
-    final mediaUrl = _selectedMediaType == 'IMAGE' 
+    final mediaUrl = _selectedMediaType == 'IMAGE'
         ? _imageUrlController.text.trim()
         : _videoUrlController.text.trim();
-        
+
     if (mediaUrl.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -1044,8 +1052,8 @@ class _CreatePostDialogState extends ConsumerState<_CreatePostDialog> {
         widget.integrationId,
         imageUrl: _selectedMediaType == 'IMAGE' ? mediaUrl : null,
         videoUrl: _selectedMediaType == 'VIDEO' ? mediaUrl : null,
-        caption: _captionController.text.trim().isNotEmpty 
-            ? _captionController.text.trim() 
+        caption: _captionController.text.trim().isNotEmpty
+            ? _captionController.text.trim()
             : null,
         mediaType: _selectedMediaType,
       );
@@ -1062,7 +1070,8 @@ class _CreatePostDialogState extends ConsumerState<_CreatePostDialog> {
                     onPressed: () async {
                       final uri = Uri.parse(result['permalink']);
                       if (await canLaunchUrl(uri)) {
-                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        await launchUrl(uri,
+                            mode: LaunchMode.externalApplication);
                       }
                     },
                   )

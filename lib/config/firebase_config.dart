@@ -24,8 +24,10 @@ class FirebaseConfig {
       );
 
       // Configure Firebase Storage
-      FirebaseStorage.instance.setMaxUploadRetryTime(const Duration(seconds: 30));
-      FirebaseStorage.instance.setMaxOperationRetryTime(const Duration(seconds: 30));
+      FirebaseStorage.instance
+          .setMaxUploadRetryTime(const Duration(seconds: 30));
+      FirebaseStorage.instance
+          .setMaxOperationRetryTime(const Duration(seconds: 30));
 
       // Configure Firestore settings
       FirebaseFirestore.instance.settings = const Settings(
@@ -39,4 +41,4 @@ class FirebaseConfig {
       rethrow;
     }
   }
-} 
+}

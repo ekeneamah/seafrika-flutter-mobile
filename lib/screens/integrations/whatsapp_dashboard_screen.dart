@@ -19,12 +19,13 @@ class WhatsAppDashboardScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<WhatsAppDashboardScreen> createState() => _WhatsAppDashboardScreenState();
+  ConsumerState<WhatsAppDashboardScreen> createState() =>
+      _WhatsAppDashboardScreenState();
 }
 
-class _WhatsAppDashboardScreenState extends ConsumerState<WhatsAppDashboardScreen>
+class _WhatsAppDashboardScreenState
+    extends ConsumerState<WhatsAppDashboardScreen>
     with TickerProviderStateMixin {
-  
   late TabController _tabController;
   bool _isLoading = false;
   String? _error;
@@ -83,9 +84,8 @@ class _WhatsAppDashboardScreenState extends ConsumerState<WhatsAppDashboardScree
     }
 
     final integrations = await integrationService.fetchIntegrations();
-    final integration = integrations
-        .where((i) => i.id == widget.integrationId)
-        .firstOrNull;
+    final integration =
+        integrations.where((i) => i.id == widget.integrationId).firstOrNull;
 
     if (integration == null) {
       throw Exception('Integration not found');
@@ -103,11 +103,13 @@ class _WhatsAppDashboardScreenState extends ConsumerState<WhatsAppDashboardScree
 
     try {
       final response = await http.get(
-        Uri.parse('https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/integrations/whatsapp/${widget.integrationId}/business-profile'),
+        Uri.parse(
+            'https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/integrations/whatsapp/${widget.integrationId}/business-profile'),
         headers: {
           'Business-ID': businessId,
           'User-ID': authService.currentUser?.id ?? '',
-          'Authorization': 'Bearer ${authService.currentUser?.accessToken ?? ''}',
+          'Authorization':
+              'Bearer ${authService.currentUser?.accessToken ?? ''}',
           'Content-Type': 'application/json',
         },
       );
@@ -130,11 +132,13 @@ class _WhatsAppDashboardScreenState extends ConsumerState<WhatsAppDashboardScree
 
     try {
       final response = await http.get(
-        Uri.parse('https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/integrations/whatsapp/${widget.integrationId}/messages'),
+        Uri.parse(
+            'https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/integrations/whatsapp/${widget.integrationId}/messages'),
         headers: {
           'Business-ID': businessId,
           'User-ID': authService.currentUser?.id ?? '',
-          'Authorization': 'Bearer ${authService.currentUser?.accessToken ?? ''}',
+          'Authorization':
+              'Bearer ${authService.currentUser?.accessToken ?? ''}',
           'Content-Type': 'application/json',
         },
       );
@@ -157,11 +161,13 @@ class _WhatsAppDashboardScreenState extends ConsumerState<WhatsAppDashboardScree
 
     try {
       final response = await http.get(
-        Uri.parse('https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/integrations/whatsapp/${widget.integrationId}/templates'),
+        Uri.parse(
+            'https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/integrations/whatsapp/${widget.integrationId}/templates'),
         headers: {
           'Business-ID': businessId,
           'User-ID': authService.currentUser?.id ?? '',
-          'Authorization': 'Bearer ${authService.currentUser?.accessToken ?? ''}',
+          'Authorization':
+              'Bearer ${authService.currentUser?.accessToken ?? ''}',
           'Content-Type': 'application/json',
         },
       );
@@ -184,11 +190,13 @@ class _WhatsAppDashboardScreenState extends ConsumerState<WhatsAppDashboardScree
 
     try {
       final response = await http.get(
-        Uri.parse('https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/integrations/whatsapp/${widget.integrationId}/analytics'),
+        Uri.parse(
+            'https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/integrations/whatsapp/${widget.integrationId}/analytics'),
         headers: {
           'Business-ID': businessId,
           'User-ID': authService.currentUser?.id ?? '',
-          'Authorization': 'Bearer ${authService.currentUser?.accessToken ?? ''}',
+          'Authorization':
+              'Bearer ${authService.currentUser?.accessToken ?? ''}',
           'Content-Type': 'application/json',
         },
       );
@@ -204,7 +212,8 @@ class _WhatsAppDashboardScreenState extends ConsumerState<WhatsAppDashboardScree
     }
   }
 
-  Future<void> _sendMessage(String to, String message, {String? templateName}) async {
+  Future<void> _sendMessage(String to, String message,
+      {String? templateName}) async {
     final businessId = ref.read(selectedBusinessIdProvider);
     final authService = ref.read(authServiceProvider);
     if (businessId == null) return;
@@ -227,11 +236,13 @@ class _WhatsAppDashboardScreenState extends ConsumerState<WhatsAppDashboardScree
       }
 
       final response = await http.post(
-        Uri.parse('https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/integrations/whatsapp/${widget.integrationId}/send-message'),
+        Uri.parse(
+            'https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/integrations/whatsapp/${widget.integrationId}/send-message'),
         headers: {
           'Business-ID': businessId,
           'User-ID': authService.currentUser?.id ?? '',
-          'Authorization': 'Bearer ${authService.currentUser?.accessToken ?? ''}',
+          'Authorization':
+              'Bearer ${authService.currentUser?.accessToken ?? ''}',
           'Content-Type': 'application/json',
         },
         body: json.encode(payload),
@@ -286,7 +297,8 @@ class _WhatsAppDashboardScreenState extends ConsumerState<WhatsAppDashboardScree
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+                      Icon(Icons.error_outline,
+                          size: 64, color: Colors.red[300]),
                       const SizedBox(height: 16),
                       Text(
                         _error!,
@@ -366,9 +378,12 @@ class _WhatsAppDashboardScreenState extends ConsumerState<WhatsAppDashboardScree
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: isOutgoing ? Colors.green.shade100 : Colors.blue.shade100,
+                    color: isOutgoing
+                        ? Colors.green.shade100
+                        : Colors.blue.shade100,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -376,7 +391,9 @@ class _WhatsAppDashboardScreenState extends ConsumerState<WhatsAppDashboardScree
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: isOutgoing ? Colors.green.shade700 : Colors.blue.shade700,
+                      color: isOutgoing
+                          ? Colors.green.shade700
+                          : Colors.blue.shade700,
                     ),
                   ),
                 ),
@@ -413,7 +430,9 @@ class _WhatsAppDashboardScreenState extends ConsumerState<WhatsAppDashboardScree
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isOutgoing ? 'To: ${message['to'] ?? 'Unknown'}' : 'From: ${message['from'] ?? 'Unknown'}',
+                        isOutgoing
+                            ? 'To: ${message['to'] ?? 'Unknown'}'
+                            : 'From: ${message['from'] ?? 'Unknown'}',
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
@@ -454,7 +473,8 @@ class _WhatsAppDashboardScreenState extends ConsumerState<WhatsAppDashboardScree
     );
   }
 
-  Widget _buildMessageContent(Map<String, dynamic> message, String messageType) {
+  Widget _buildMessageContent(
+      Map<String, dynamic> message, String messageType) {
     switch (messageType) {
       case 'text':
         return Text(
@@ -477,7 +497,8 @@ class _WhatsAppDashboardScreenState extends ConsumerState<WhatsAppDashboardScree
             if (message['template']?['components'] != null) ...[
               const SizedBox(height: 4),
               Text(
-                message['template']['components'][0]['text'] ?? 'Template message',
+                message['template']['components'][0]['text'] ??
+                    'Template message',
                 style: const TextStyle(fontSize: 16),
               ),
             ],
@@ -576,7 +597,8 @@ class _WhatsAppDashboardScreenState extends ConsumerState<WhatsAppDashboardScree
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: _getTemplateStatusColor(status),
                     borderRadius: BorderRadius.circular(12),
@@ -592,9 +614,9 @@ class _WhatsAppDashboardScreenState extends ConsumerState<WhatsAppDashboardScree
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 8),
-            
+
             Text(
               'Category: ${category.toUpperCase()}',
               style: TextStyle(
@@ -650,7 +672,7 @@ class _WhatsAppDashboardScreenState extends ConsumerState<WhatsAppDashboardScree
 
   Widget _buildTemplateComponent(Map<String, dynamic> component) {
     final type = component['type'] ?? 'unknown';
-    
+
     switch (type) {
       case 'HEADER':
         return Container(
@@ -704,7 +726,8 @@ class _WhatsAppDashboardScreenState extends ConsumerState<WhatsAppDashboardScree
                   final button = component['buttons'][index];
                   return Container(
                     margin: const EdgeInsets.only(top: 4),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.grey),
                       borderRadius: BorderRadius.circular(4),
@@ -744,7 +767,7 @@ class _WhatsAppDashboardScreenState extends ConsumerState<WhatsAppDashboardScree
           children: [
             // Business profile overview
             if (_businessProfile != null) _buildBusinessProfileOverview(),
-            
+
             const SizedBox(height: 24),
 
             // Analytics cards
@@ -766,7 +789,8 @@ class _WhatsAppDashboardScreenState extends ConsumerState<WhatsAppDashboardScree
                     SizedBox(height: 16),
                     Text(
                       'Analytics not available',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                     ),
                     SizedBox(height: 8),
                     Text('Analytics data will appear when available'),
@@ -837,7 +861,6 @@ class _WhatsAppDashboardScreenState extends ConsumerState<WhatsAppDashboardScree
                 ),
               ],
             ),
-            
             if (_businessProfile!['about'] != null ||
                 _businessProfile!['email'] != null ||
                 _businessProfile!['websites'] != null) ...[
@@ -845,23 +868,18 @@ class _WhatsAppDashboardScreenState extends ConsumerState<WhatsAppDashboardScree
               const Divider(),
               const SizedBox(height: 16),
             ],
-
             if (_businessProfile!['about'] != null) ...[
               _buildProfileInfo('About', _businessProfile!['about']),
               const SizedBox(height: 8),
             ],
-            
             if (_businessProfile!['email'] != null) ...[
               _buildProfileInfo('Email', _businessProfile!['email']),
               const SizedBox(height: 8),
             ],
-            
-            if (_businessProfile!['websites'] != null && 
+            if (_businessProfile!['websites'] != null &&
                 (_businessProfile!['websites'] as List).isNotEmpty) ...[
               _buildProfileInfo(
-                'Website', 
-                (_businessProfile!['websites'] as List).first
-              ),
+                  'Website', (_businessProfile!['websites'] as List).first),
             ],
           ],
         ),
@@ -901,10 +919,14 @@ class _WhatsAppDashboardScreenState extends ConsumerState<WhatsAppDashboardScree
       crossAxisSpacing: 12,
       mainAxisSpacing: 12,
       children: [
-        _buildStatCard('Messages Sent', _analytics?['sent']?.toString() ?? '0', Icons.send),
-        _buildStatCard('Messages Received', _analytics?['received']?.toString() ?? '0', Icons.inbox),
-        _buildStatCard('Templates', _templates.length.toString(), Icons.article),
-        _buildStatCard('Delivered', _analytics?['delivered']?.toString() ?? '0', Icons.check_circle),
+        _buildStatCard('Messages Sent', _analytics?['sent']?.toString() ?? '0',
+            Icons.send),
+        _buildStatCard('Messages Received',
+            _analytics?['received']?.toString() ?? '0', Icons.inbox),
+        _buildStatCard(
+            'Templates', _templates.length.toString(), Icons.article),
+        _buildStatCard('Delivered', _analytics?['delivered']?.toString() ?? '0',
+            Icons.check_circle),
       ],
     );
   }
@@ -957,7 +979,7 @@ class _WhatsAppDashboardScreenState extends ConsumerState<WhatsAppDashboardScree
               fontWeight: FontWeight.bold,
             ),
           ),
-          
+
           const SizedBox(height: 16),
 
           // Business Profile Settings
@@ -1110,7 +1132,8 @@ class _WhatsAppDashboardScreenState extends ConsumerState<WhatsAppDashboardScree
       context: context,
       builder: (context) => _UseTemplateDialog(
         template: template,
-        onSendTemplate: (to) => _sendMessage(to, '', templateName: template['name']),
+        onSendTemplate: (to) =>
+            _sendMessage(to, '', templateName: template['name']),
       ),
     );
   }
@@ -1198,7 +1221,8 @@ class _WhatsAppDashboardScreenState extends ConsumerState<WhatsAppDashboardScree
 
 class _SendMessageDialog extends StatefulWidget {
   final List<Map<String, dynamic>> templates;
-  final Function(String to, String message, {String? templateName}) onSendMessage;
+  final Function(String to, String message, {String? templateName})
+      onSendMessage;
 
   const _SendMessageDialog({
     required this.templates,
@@ -1240,7 +1264,7 @@ class _SendMessageDialogState extends State<_SendMessageDialog> {
             ),
             keyboardType: TextInputType.phone,
           ),
-          
+
           const SizedBox(height: 16),
 
           // Message type selection
@@ -1252,7 +1276,8 @@ class _SendMessageDialogState extends State<_SendMessageDialog> {
             ),
             items: const [
               DropdownMenuItem(value: 'text', child: Text('Text Message')),
-              DropdownMenuItem(value: 'template', child: Text('Template Message')),
+              DropdownMenuItem(
+                  value: 'template', child: Text('Template Message')),
             ],
             onChanged: (value) {
               setState(() {
@@ -1403,9 +1428,7 @@ class _UseTemplateDialogState extends State<_UseTemplateDialog> {
             ),
             keyboardType: TextInputType.phone,
           ),
-          
           const SizedBox(height: 16),
-          
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(

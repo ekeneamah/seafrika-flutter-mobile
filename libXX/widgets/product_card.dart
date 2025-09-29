@@ -122,7 +122,8 @@ class _ProductCardState extends State<ProductCard>
                                         ),
                                       ),
                                     ),
-                                    errorWidget: (context, url, error) => Container(
+                                    errorWidget: (context, url, error) =>
+                                        Container(
                                       color: AppTheme.whiteSmoke,
                                       child: Center(
                                         child: Icon(
@@ -145,7 +146,7 @@ class _ProductCardState extends State<ProductCard>
                                   ),
                           ),
                         ),
-                        
+
                         // Stock Status Badge
                         Positioned(
                           top: 12,
@@ -172,7 +173,9 @@ class _ProductCardState extends State<ProductCard>
                               ],
                             ),
                             child: Text(
-                              widget.product.stock > 0 ? 'In Stock' : 'Out of Stock',
+                              widget.product.stock > 0
+                                  ? 'In Stock'
+                                  : 'Out of Stock',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 10,
@@ -209,7 +212,7 @@ class _ProductCardState extends State<ProductCard>
                       ],
                     ),
                   ),
-                  
+
                   // Product Details
                   Expanded(
                     flex: 2,
@@ -230,9 +233,9 @@ class _ProductCardState extends State<ProductCard>
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          
+
                           const SizedBox(height: 6),
-                          
+
                           // Category
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -252,11 +255,12 @@ class _ProductCardState extends State<ProductCard>
                               ),
                             ),
                           ),
-                          
+
                           const Spacer(),
-                          
+
                           // Rating (if available)
-                          if (widget.product.rating != null && widget.product.rating! > 0) ...[
+                          if (widget.product.rating != null &&
+                              widget.product.rating! > 0) ...[
                             Row(
                               children: [
                                 RatingBarIndicator(
@@ -282,7 +286,7 @@ class _ProductCardState extends State<ProductCard>
                             ),
                             const SizedBox(height: 8),
                           ],
-                          
+
                           // Price and Action
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -312,7 +316,7 @@ class _ProductCardState extends State<ProductCard>
                                   ],
                                 ),
                               ),
-                              
+
                               // Quick Action Button
                               Container(
                                 decoration: BoxDecoration(

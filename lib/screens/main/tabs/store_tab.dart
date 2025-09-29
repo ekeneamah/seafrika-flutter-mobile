@@ -32,18 +32,18 @@ class _InventoryTabState extends ConsumerState<InventoryTab>
 
   @override
   void initState() {
-  super.initState();
-  _fadeController = AnimationController(
-    duration: const Duration(milliseconds: 500),
-    vsync: this,
-  );
-  _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(_fadeController);
+    super.initState();
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(_fadeController);
 
-  // defer loading (and fade) until after first paint
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    _checkBusinessSelectionAndInitialize();
-  });
-}
+    // defer loading (and fade) until after first paint
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkBusinessSelectionAndInitialize();
+    });
+  }
 
   @override
   void dispose() {
@@ -55,20 +55,21 @@ class _InventoryTabState extends ConsumerState<InventoryTab>
   Future<void> _checkBusinessSelectionAndInitialize() async {
     // Wait a moment for providers to initialize
     await Future.delayed(const Duration(milliseconds: 100));
-    
+
     // Check if a business is selected
-    bool hasSelectedBusiness = await BusinessPreferencesHelper.hasSelectedBusiness();
-    
+    bool hasSelectedBusiness =
+        await BusinessPreferencesHelper.hasSelectedBusiness();
+
     if (!hasSelectedBusiness) {
       print('No business selected');
       // No business selected, route to business list screen
       if (mounted) {
         Navigator.of(context).pushReplacementNamed(AppRoutes.businessList);
       }
-      
+
       return;
     }
-    
+
     // Get and print the actual business ID
     final businessId = await BusinessPreferencesHelper.getSelectedBusinessId();
     print('Business is selected: $businessId');
@@ -82,7 +83,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab>
 
   Future<void> _loadStoresAndProducts() async {
     print('🔄 [StoreTab] Loading stores and products...');
-    
+
     try {
       final storeService = ref.read(storeServiceProvider);
       await storeService.fetchStores();
@@ -115,79 +116,78 @@ class _InventoryTabState extends ConsumerState<InventoryTab>
   Future<void> _deleteInventory(StoreInventory inventory) async {
     try {
       final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppTheme.secondary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.delete_outline,
-                  color: AppTheme.secondary,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Delete Inventory',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-            ],
-          ),
-          content: Text(
-            'Are you sure you want to delete "${inventory.productName}"? This action cannot be undone.',
-            style: TextStyle(
-              color: AppTheme.textSecondary,
-              height: 1.5,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              style: TextButton.styleFrom(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          context: context,
+          builder: (context) => AlertDialog(
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(20)),
+                title: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.secondary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.delete_outline,
+                        color: AppTheme.secondary,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Delete Inventory',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              child: Text(
-                'Cancel',
-                style: TextStyle(
-                  color: AppTheme.earth,
-                  fontWeight: FontWeight.w500,
+                content: Text(
+                  'Are you sure you want to delete "${inventory.productName}"? This action cannot be undone.',
+                  style: TextStyle(
+                    color: AppTheme.textSecondary,
+                    height: 1.5,
+                  ),
                 ),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.secondary,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text(
-                'Delete',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
-              )
-      );
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(
+                        color: AppTheme.earth,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.secondary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Delete',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ));
 
       if (confirmed == true) {
         await ref
@@ -439,7 +439,8 @@ class _InventoryTabState extends ConsumerState<InventoryTab>
 
     print(
         '🔄 [StoreTab] Building - businessId: ${businessContext?.id}, isLoading: $isLoadingStores, stores: ${stores.length}, selectedStoreId: ${state.selectedStoreId}');
-    print('📊 [StoreTab] Inventory state - isLoading: ${state.isLoading}, error: ${state.error}, filteredItems: ${state.filteredItems.length}');
+    print(
+        '📊 [StoreTab] Inventory state - isLoading: ${state.isLoading}, error: ${state.error}, filteredItems: ${state.filteredItems.length}');
 
     // If no business is selected, show a message or redirect
     if (businessContext == null) {
@@ -486,12 +487,14 @@ class _InventoryTabState extends ConsumerState<InventoryTab>
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () {
-                  Navigator.of(context).pushReplacementNamed(AppRoutes.businessList);
+                  Navigator.of(context)
+                      .pushReplacementNamed(AppRoutes.businessList);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primary,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -572,335 +575,331 @@ class _InventoryTabState extends ConsumerState<InventoryTab>
         ],
       ),
       body: isLoadingStores
-           ? Center(child: CircularProgressIndicator(color: AppTheme.primary))
-           : stores.isEmpty
-               ? _NoStoreView(onAddStore: () async {
-                   print('➕ [StoreTab] Opening store creation from empty state');
-                   final created = await Navigator.push(
-                     context,
-                        MaterialPageRoute(
-                            builder: (_) => const StoreEditScreen()),
-                      );
-                      if (created == true) {
-                        print(
-                            '✅ [StoreTab] Store created from empty state, refreshing...');
-                        await storeService.fetchStores();
-                        final stores = storeService.stores;
-                        if (stores.isNotEmpty) {
-                          print(
-                              '🏪 [StoreTab] Setting selected store to: ${stores.first.id}');
-                          ref
-                              .read(storeInventoryProvider.notifier)
-                              .setSelectedStore(stores.first.id);
-                        }
-                      } else {
-                        print(
-                            '❌ [StoreTab] Store creation cancelled from empty state');
-                      }
-                    })
-                  : CustomScrollView(
-                      slivers: [
-                        // Store Selection Header
-                        SliverToBoxAdapter(
-                          child: Container(
-                            margin: const EdgeInsets.all(16),
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppTheme.primary.withOpacity(0.04),
-                                  blurRadius: 15,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
+          ? Center(child: CircularProgressIndicator(color: AppTheme.primary))
+          : stores.isEmpty
+              ? _NoStoreView(onAddStore: () async {
+                  print('➕ [StoreTab] Opening store creation from empty state');
+                  final created = await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const StoreEditScreen()),
+                  );
+                  if (created == true) {
+                    print(
+                        '✅ [StoreTab] Store created from empty state, refreshing...');
+                    await storeService.fetchStores();
+                    final stores = storeService.stores;
+                    if (stores.isNotEmpty) {
+                      print(
+                          '🏪 [StoreTab] Setting selected store to: ${stores.first.id}');
+                      ref
+                          .read(storeInventoryProvider.notifier)
+                          .setSelectedStore(stores.first.id);
+                    }
+                  } else {
+                    print(
+                        '❌ [StoreTab] Store creation cancelled from empty state');
+                  }
+                })
+              : CustomScrollView(
+                  slivers: [
+                    // Store Selection Header
+                    SliverToBoxAdapter(
+                      child: Container(
+                        margin: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.primary.withOpacity(0.04),
+                              blurRadius: 15,
+                              offset: const Offset(0, 2),
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color:
-                                            AppTheme.primary.withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Icon(
-                                        Icons.store_outlined,
-                                        color: AppTheme.primary,
-                                        size: 20,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 16, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: AppTheme.whiteSmoke,
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                          border: Border.all(
-                                            color: AppTheme.earthLight,
-                                            width: 1,
-                                          ),
-                                        ),
-                                        child: DropdownButton<Store>(
-                                          isExpanded: true,
-                                          value: stores.firstWhere(
-                                            (s) =>
-                                                s.id == state.selectedStoreId,
-                                            orElse: () => stores.first,
-                                          ),
-                                          underline: const SizedBox.shrink(),
-                                          icon: Icon(
-                                            Icons.keyboard_arrow_down,
-                                            color: AppTheme.earth,
-                                          ),
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w500,
-                                            color: AppTheme.textPrimary,
-                                          ),
-                                          items: stores
-                                              .map((store) =>
-                                                  DropdownMenuItem<Store>(
-                                                    value: store,
-                                                    child: Text(store.name),
-                                                  ))
-                                              .toList(),
-                                          onChanged: (store) {
-                                            if (store != null) {
-                                              print(
-                                                  '🔄 [StoreTab] Store selected: ${store.id}');
-                                              ref
-                                                  .read(storeInventoryProvider
-                                                      .notifier)
-                                                  .setSelectedStore(store.id);
-                                            }
-                                          },
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Container(
-                                      decoration: BoxDecoration(
-                                        color: AppTheme.accent.withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: IconButton(
-                                        icon: Icon(
-                                          Icons.add_business_outlined,
-                                          color: AppTheme.accent,
-                                          size: 20,
-                                        ),
-                                        tooltip: 'Add Store',
-                                        onPressed: () async {
-                                          print(
-                                              '➕ [StoreTab] Opening store creation from dropdown');
-                                          final created = await Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                                builder: (_) =>
-                                                    const StoreEditScreen()),
-                                          );
-                                          if (created == true) {
-                                            print(
-                                                '✅ [StoreTab] Store created from dropdown, refreshing...');
-                                            await storeService.fetchStores();
-                                            final stores = storeService.stores;
-                                            if (stores.isNotEmpty) {
-                                              print(
-                                                  '🏪 [StoreTab] Setting selected store to: ${stores.first.id}');
-                                              ref
-                                                  .read(storeInventoryProvider
-                                                      .notifier)
-                                                  .setSelectedStore(
-                                                      stores.first.id);
-                                            }
-                                          } else {
-                                            print(
-                                                '❌ [StoreTab] Store creation cancelled from dropdown');
-                                          }
-                                        },
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
+                          ],
                         ),
-
-                        // Search and Filter Section
-                        SliverToBoxAdapter(
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 16),
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppTheme.primary.withOpacity(0.04),
-                                  blurRadius: 15,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Column(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
                               children: [
                                 Container(
+                                  padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color: AppTheme.whiteSmoke,
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                      color: AppTheme.earthLight,
-                                      width: 1,
-                                    ),
+                                    color: AppTheme.primary.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(10),
                                   ),
-                                  child: TextField(
-                                    controller: _searchController,
-                                    decoration: InputDecoration(
-                                      hintText: 'Search inventory...',
-                                      hintStyle: TextStyle(
-                                        color: AppTheme.earth,
-                                        fontWeight: FontWeight.w400,
-                                      ),
-                                      prefixIcon: Icon(
-                                        Icons.search_outlined,
-                                        color: AppTheme.earth,
-                                      ),
-                                      border: InputBorder.none,
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 16,
-                                      ),
-                                    ),
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: AppTheme.textPrimary,
-                                    ),
-                                    onChanged: (value) {
-                                      print(
-                                          '🔍 [StoreTab] Search query changed: $value');
-                                      ref
-                                          .read(storeInventoryProvider.notifier)
-                                          .setSearchQuery(value);
-                                    },
+                                  child: Icon(
+                                    Icons.store_outlined,
+                                    color: AppTheme.primary,
+                                    size: 20,
                                   ),
                                 ),
-                                const SizedBox(height: 16),
-                                SingleChildScrollView(
-                                  scrollDirection: Axis.horizontal,
-                                  child: Row(
-                                    children: [
-                                      _buildCategoryChip('All'),
-                                      _buildCategoryChip('Electronics'),
-                                      _buildCategoryChip('Clothing'),
-                                      _buildCategoryChip('Home'),
-                                      _buildCategoryChip('Beauty'),
-                                      _buildCategoryChip('Sports'),
-                                    ],
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.whiteSmoke,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: AppTheme.earthLight,
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: DropdownButton<Store>(
+                                      isExpanded: true,
+                                      value: stores.firstWhere(
+                                        (s) => s.id == state.selectedStoreId,
+                                        orElse: () => stores.first,
+                                      ),
+                                      underline: const SizedBox.shrink(),
+                                      icon: Icon(
+                                        Icons.keyboard_arrow_down,
+                                        color: AppTheme.earth,
+                                      ),
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500,
+                                        color: AppTheme.textPrimary,
+                                      ),
+                                      items: stores
+                                          .map((store) =>
+                                              DropdownMenuItem<Store>(
+                                                value: store,
+                                                child: Text(store.name),
+                                              ))
+                                          .toList(),
+                                      onChanged: (store) {
+                                        if (store != null) {
+                                          print(
+                                              '🔄 [StoreTab] Store selected: ${store.id}');
+                                          ref
+                                              .read(storeInventoryProvider
+                                                  .notifier)
+                                              .setSelectedStore(store.id);
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.accent.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: IconButton(
+                                    icon: Icon(
+                                      Icons.add_business_outlined,
+                                      color: AppTheme.accent,
+                                      size: 20,
+                                    ),
+                                    tooltip: 'Add Store',
+                                    onPressed: () async {
+                                      print(
+                                          '➕ [StoreTab] Opening store creation from dropdown');
+                                      final created = await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (_) =>
+                                                const StoreEditScreen()),
+                                      );
+                                      if (created == true) {
+                                        print(
+                                            '✅ [StoreTab] Store created from dropdown, refreshing...');
+                                        await storeService.fetchStores();
+                                        final stores = storeService.stores;
+                                        if (stores.isNotEmpty) {
+                                          print(
+                                              '🏪 [StoreTab] Setting selected store to: ${stores.first.id}');
+                                          ref
+                                              .read(storeInventoryProvider
+                                                  .notifier)
+                                              .setSelectedStore(
+                                                  stores.first.id);
+                                        }
+                                      } else {
+                                        print(
+                                            '❌ [StoreTab] Store creation cancelled from dropdown');
+                                      }
+                                    },
                                   ),
                                 ),
                               ],
                             ),
-                          ),
+                          ],
                         ),
+                      ),
+                    ),
 
-                        const SliverToBoxAdapter(child: SizedBox(height: 16)),
-
-                        // Inventory Content
-                        if (state.isLoading)
-                          const SliverFillRemaining(
-                            child: LoadingView(),
-                          )
-                        else if (state.error != null)
-                          SliverFillRemaining(
-                            child: error.ErrorView(
-                              message: state.error!,
-                              onRetry: () {
-                                print('🔄 [StoreTab] Retrying inventory load');
-                                ref
-                                    .read(storeInventoryProvider.notifier)
-                                    .loadInventory();
-                              },
+                    // Search and Filter Section
+                    SliverToBoxAdapter(
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.primary.withOpacity(0.04),
+                              blurRadius: 15,
+                              offset: const Offset(0, 2),
                             ),
-                          )
-                        else if (state.selectedStoreId != null && state.filteredItems.isEmpty)
-                          SliverFillRemaining(
-                            child: stores.isNotEmpty
-                                ? _NoInventoryView(
-                                    store: stores.firstWhere(
-                                      (s) => s.id == state.selectedStoreId,
-                                      orElse: () => stores.first,
-                                    ),
-                                    onAddInventory: () {
-                                      print(
-                                          '📦 [StoreTab] Opening inventory list for store: ${state.selectedStoreId}');
-                                      Navigator.pushNamed(
-                                        context,
-                                        AppRoutes.inventoryList,
-                                        arguments: {
-                                          'storeId': state.selectedStoreId
-                                        },
-                                      );
-                                    },
-                                  )
-                                : Center(
-                                    child: Text(
-                                      'No store data available',
-                                      style: TextStyle(
-                                        color: AppTheme.textSecondary,
-                                        fontSize: 16,
-                                      ),
-                                    ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                color: AppTheme.whiteSmoke,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: AppTheme.earthLight,
+                                  width: 1,
+                                ),
+                              ),
+                              child: TextField(
+                                controller: _searchController,
+                                decoration: InputDecoration(
+                                  hintText: 'Search inventory...',
+                                  hintStyle: TextStyle(
+                                    color: AppTheme.earth,
+                                    fontWeight: FontWeight.w400,
                                   ),
-                          )
-                        else
-                          SliverPadding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            sliver: SliverList(
-                              delegate: SliverChildBuilderDelegate(
-                                (context, index) {
-                                  final inventory = state.filteredItems[index];
-                                  return _StoreInventoryCard(
-                                    inventory: inventory,
-                                    onTap: () {
-                                      // Navigate to store inventory detail screen
-                                      print('📦 [StoreTab] Opening store inventory detail: ${inventory.id}');
-                                      Navigator.pushNamed(
-                                        context,
-                                        AppRoutes.inventoryDetail,
-                                        arguments: {
-                                          'businessId': inventory.businessId,
-                                          'storeId': inventory.storeId,
-                                          'inventoryId': inventory.id,
-                                        },
-                                      );
-                                    },
-                                    onLongPress: () {
-                                      print(
-                                          '⚙️ [StoreTab] Showing options for inventory: ${inventory.id}');
-                                      _showInventoryOptions(inventory);
+                                  prefixIcon: Icon(
+                                    Icons.search_outlined,
+                                    color: AppTheme.earth,
+                                  ),
+                                  border: InputBorder.none,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 16,
+                                  ),
+                                ),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: AppTheme.textPrimary,
+                                ),
+                                onChanged: (value) {
+                                  print(
+                                      '🔍 [StoreTab] Search query changed: $value');
+                                  ref
+                                      .read(storeInventoryProvider.notifier)
+                                      .setSearchQuery(value);
+                                },
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: [
+                                  _buildCategoryChip('All'),
+                                  _buildCategoryChip('Electronics'),
+                                  _buildCategoryChip('Clothing'),
+                                  _buildCategoryChip('Home'),
+                                  _buildCategoryChip('Beauty'),
+                                  _buildCategoryChip('Sports'),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const SliverToBoxAdapter(child: SizedBox(height: 16)),
+
+                    // Inventory Content
+                    if (state.isLoading)
+                      const SliverFillRemaining(
+                        child: LoadingView(),
+                      )
+                    else if (state.error != null)
+                      SliverFillRemaining(
+                        child: error.ErrorView(
+                          message: state.error!,
+                          onRetry: () {
+                            print('🔄 [StoreTab] Retrying inventory load');
+                            ref
+                                .read(storeInventoryProvider.notifier)
+                                .loadInventory();
+                          },
+                        ),
+                      )
+                    else if (state.selectedStoreId != null &&
+                        state.filteredItems.isEmpty)
+                      SliverFillRemaining(
+                        child: stores.isNotEmpty
+                            ? _NoInventoryView(
+                                store: stores.firstWhere(
+                                  (s) => s.id == state.selectedStoreId,
+                                  orElse: () => stores.first,
+                                ),
+                                onAddInventory: () {
+                                  print(
+                                      '📦 [StoreTab] Opening inventory list for store: ${state.selectedStoreId}');
+                                  Navigator.pushNamed(
+                                    context,
+                                    AppRoutes.inventoryList,
+                                    arguments: {
+                                      'storeId': state.selectedStoreId
                                     },
                                   );
                                 },
-                                childCount: state.filteredItems.length,
+                              )
+                            : Center(
+                                child: Text(
+                                  'No store data available',
+                                  style: TextStyle(
+                                    color: AppTheme.textSecondary,
+                                    fontSize: 16,
+                                  ),
+                                ),
                               ),
-                            ),
+                      )
+                    else
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final inventory = state.filteredItems[index];
+                              return _StoreInventoryCard(
+                                inventory: inventory,
+                                onTap: () {
+                                  // Navigate to store inventory detail screen
+                                  print(
+                                      '📦 [StoreTab] Opening store inventory detail: ${inventory.id}');
+                                  Navigator.pushNamed(
+                                    context,
+                                    AppRoutes.inventoryDetail,
+                                    arguments: {
+                                      'businessId': inventory.businessId,
+                                      'storeId': inventory.storeId,
+                                      'inventoryId': inventory.id,
+                                    },
+                                  );
+                                },
+                                onLongPress: () {
+                                  print(
+                                      '⚙️ [StoreTab] Showing options for inventory: ${inventory.id}');
+                                  _showInventoryOptions(inventory);
+                                },
+                              );
+                            },
+                            childCount: state.filteredItems.length,
                           ),
+                        ),
+                      ),
 
-                        // Bottom padding for tab bar
-                        const SliverToBoxAdapter(child: SizedBox(height: 100)),
-                      ],
-                    ),
-            
+                    // Bottom padding for tab bar
+                    const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                  ],
+                ),
     );
   }
 }
@@ -1097,7 +1096,8 @@ class _StoreInventoryCard extends ConsumerWidget {
       name: inventory.productName,
       description: inventory.notes ?? '',
       price: inventory.unitPrice,
-      images: inventory.displayImageUrl != null && inventory.displayImageUrl!.isNotEmpty
+      images: inventory.displayImageUrl != null &&
+              inventory.displayImageUrl!.isNotEmpty
           ? [inventory.displayImageUrl!]
           : [],
       stock: inventory.quantity,

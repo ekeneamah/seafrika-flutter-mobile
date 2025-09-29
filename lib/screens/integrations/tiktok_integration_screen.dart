@@ -155,8 +155,8 @@ class _TikTokIntegrationScreenState
       final authService = ref.read(authServiceProvider);
       final response = await http.get(
         Uri.parse(
-          'https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/v1/config/tiktok/auth-url'
-          '?redirect_uri=${Uri.encodeComponent('https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/v1/config/tiktok/oauth/redirect')}'
+          'https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/config/tiktok/auth-url'
+          '?redirect_uri=${Uri.encodeComponent('https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/config/tiktok/oauth/redirect')}'
           '&state=${Uri.encodeComponent('vendor_${DateTime.now().millisecondsSinceEpoch}')}',
         ),
         headers: {
@@ -167,6 +167,8 @@ class _TikTokIntegrationScreenState
           'Content-Type': 'application/json',
         },
       );
+      debugPrint(
+          '🔍 TikTokIntegrationScreen._startTikTokConnection RAW Backend Response: ${response.body}');
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);

@@ -146,7 +146,8 @@ class _UsersScreenState extends State<UsersScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(user.email),
-            Text('Roles: ${user.roles.map((r) => r.toString().split('.').last).join(', ')}'),
+            Text(
+                'Roles: ${user.roles.map((r) => r.toString().split('.').last).join(', ')}'),
             Text('Teams: ${user.teamIds.length}'),
           ],
         ),
@@ -342,7 +343,9 @@ class _UsersScreenState extends State<UsersScreen> {
                   businessAddress: businessAddressController.text,
                   country: countryController.text,
                   state: stateController.text,
-                  phone: phoneController.text.isEmpty ? null : phoneController.text,
+                  phone: phoneController.text.isEmpty
+                      ? null
+                      : phoneController.text,
                   teamIds: [],
                   roles: selectedRoles.toList(),
                 );
@@ -397,7 +400,8 @@ class _UsersScreenState extends State<UsersScreen> {
             context: context,
             builder: (context) => AlertDialog(
               title: const Text('Delete User'),
-              content: Text('Are you sure you want to delete ${user.fullName}?'),
+              content:
+                  Text('Are you sure you want to delete ${user.fullName}?'),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context, false),
@@ -574,7 +578,9 @@ class _UsersScreenState extends State<UsersScreen> {
                 ...teams.map(
                   (team) => CheckboxListTile(
                     title: Text(team.name),
-                    subtitle: team.description != null ? Text(team.description!) : null,
+                    subtitle: team.description != null
+                        ? Text(team.description!)
+                        : null,
                     value: selectedTeamIds.contains(team.id),
                     onChanged: (value) {
                       setState(() {
@@ -611,4 +617,4 @@ class _UsersScreenState extends State<UsersScreen> {
       );
     }
   }
-} 
+}

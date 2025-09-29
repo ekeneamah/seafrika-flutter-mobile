@@ -34,10 +34,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       setState(() {
-        _notificationsEnabled = prefs.getBool(SharedPreferencesKeys.notificationsEnabled) ?? true;
+        _notificationsEnabled =
+            prefs.getBool(SharedPreferencesKeys.notificationsEnabled) ?? true;
         _darkMode = prefs.getBool(SharedPreferencesKeys.darkMode) ?? false;
-        _language = prefs.getString(SharedPreferencesKeys.language) ?? 'English';
-        _analyticsEnabled = prefs.getBool(SharedPreferencesKeys.analyticsEnabled) ?? true;
+        _language =
+            prefs.getString(SharedPreferencesKeys.language) ?? 'English';
+        _analyticsEnabled =
+            prefs.getBool(SharedPreferencesKeys.analyticsEnabled) ?? true;
       });
     } catch (e) {
       debugPrint('Load settings error: $e');
@@ -51,10 +54,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     String vendorId = context.read<AuthService>().currentUser?.vendorId ?? '';
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(SharedPreferencesKeys.notificationsEnabled, _notificationsEnabled);
+      await prefs.setBool(
+          SharedPreferencesKeys.notificationsEnabled, _notificationsEnabled);
       await prefs.setBool(SharedPreferencesKeys.darkMode, _darkMode);
       await prefs.setString(SharedPreferencesKeys.language, _language);
-      await prefs.setBool(SharedPreferencesKeys.analyticsEnabled, _analyticsEnabled);
+      await prefs.setBool(
+          SharedPreferencesKeys.analyticsEnabled, _analyticsEnabled);
 
       // Update services
       if (_notificationsEnabled) {

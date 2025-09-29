@@ -3,7 +3,7 @@
 /// This screen shows:
 /// - Store-level inventory details
 /// - Product information
-/// - Stock status and quantities  
+/// - Stock status and quantities
 /// - Store location and notes
 /// - Store-specific actions
 ///
@@ -27,7 +27,9 @@ final storeInventoryServiceProvider = Provider<StoreInventoryService>((ref) {
 });
 
 /// Provider for a single store inventory item
-final storeInventoryDetailProvider = FutureProvider.family<StoreInventory?, StoreInventoryDetailParams>((ref, params) async {
+final storeInventoryDetailProvider =
+    FutureProvider.family<StoreInventory?, StoreInventoryDetailParams>(
+        (ref, params) async {
   final service = ref.read(storeInventoryServiceProvider);
   return service.getStoreInventoryById(
     businessId: params.businessId,
@@ -58,7 +60,8 @@ class StoreInventoryDetailParams {
   }
 
   @override
-  int get hashCode => businessId.hashCode ^ storeId.hashCode ^ inventoryId.hashCode;
+  int get hashCode =>
+      businessId.hashCode ^ storeId.hashCode ^ inventoryId.hashCode;
 }
 
 class StoreInventoryDetailScreen extends ConsumerWidget {
@@ -81,7 +84,7 @@ class StoreInventoryDetailScreen extends ConsumerWidget {
       inventoryId: inventoryId,
     );
     final inventoryAsync = ref.watch(storeInventoryDetailProvider(params));
-    
+
     return inventoryAsync.when(
       loading: () => const Scaffold(
         body: loading_view.LoadingView(),
@@ -101,13 +104,14 @@ class StoreInventoryDetailScreen extends ConsumerWidget {
             ),
           );
         }
-        
+
         return _buildDetailScreen(context, ref, storeInventory, params);
       },
     );
   }
 
-  Widget _buildDetailScreen(BuildContext context, WidgetRef ref, StoreInventory storeInventory, StoreInventoryDetailParams params) {
+  Widget _buildDetailScreen(BuildContext context, WidgetRef ref,
+      StoreInventory storeInventory, StoreInventoryDetailParams params) {
     return Scaffold(
       backgroundColor: theme.AppTheme.backgroundColor,
       appBar: AppBar(
@@ -121,7 +125,8 @@ class StoreInventoryDetailScreen extends ConsumerWidget {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          return Future.sync(() => ref.refresh(storeInventoryDetailProvider(params)));
+          return Future.sync(
+              () => ref.refresh(storeInventoryDetailProvider(params)));
         },
         child: ListView(
           padding: const EdgeInsets.all(16),
@@ -129,7 +134,8 @@ class StoreInventoryDetailScreen extends ConsumerWidget {
             _buildStatusCard(context, storeInventory),
             const SizedBox(height: 16),
             _buildDetailsCard(context, storeInventory),
-            if (storeInventory.notes != null && storeInventory.notes!.isNotEmpty) ...[
+            if (storeInventory.notes != null &&
+                storeInventory.notes!.isNotEmpty) ...[
               const SizedBox(height: 16),
               _buildNotesCard(context, storeInventory),
             ],
@@ -141,7 +147,7 @@ class StoreInventoryDetailScreen extends ConsumerWidget {
 
   Widget _buildStatusCard(BuildContext context, StoreInventory storeInventory) {
     final bool isLowStock = storeInventory.isLowStock;
-    final Color statusColor = storeInventory.quantity > 0 
+    final Color statusColor = storeInventory.quantity > 0
         ? (isLowStock ? Colors.orange : Colors.green)
         : Colors.red;
     final String statusText = storeInventory.status.toUpperCase();
@@ -163,12 +169,13 @@ class StoreInventoryDetailScreen extends ConsumerWidget {
                   child: Text(
                     storeInventory.productName,
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: statusColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
@@ -233,7 +240,8 @@ class StoreInventoryDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatsItem(String label, String value, IconData icon, Color color) {
+  Widget _buildStatsItem(
+      String label, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(12),
       margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -265,7 +273,8 @@ class StoreInventoryDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildDetailsCard(BuildContext context, StoreInventory storeInventory) {
+  Widget _buildDetailsCard(
+      BuildContext context, StoreInventory storeInventory) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -279,17 +288,19 @@ class StoreInventoryDetailScreen extends ConsumerWidget {
             Text(
               'Store Details',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 12),
             _buildDetailRow('Store ID', storeInventory.storeId),
             _buildDetailRow('Business', storeInventory.businessName),
             _buildDetailRow('Category', storeInventory.category),
-            if (storeInventory.location != null && storeInventory.location!.isNotEmpty)
+            if (storeInventory.location != null &&
+                storeInventory.location!.isNotEmpty)
               _buildDetailRow('Location', storeInventory.location!),
             _buildDetailRow('Created', _formatDate(storeInventory.createdAt)),
-            _buildDetailRow('Last Updated', _formatDate(storeInventory.updatedAt)),
+            _buildDetailRow(
+                'Last Updated', _formatDate(storeInventory.updatedAt)),
           ],
         ),
       ),
@@ -310,8 +321,8 @@ class StoreInventoryDetailScreen extends ConsumerWidget {
             Text(
               'Notes',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 8),
             Text(storeInventory.notes!),
@@ -352,7 +363,8 @@ class StoreInventoryDetailScreen extends ConsumerWidget {
     return '${date.day}/${date.month}/${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }
 
-  void _showActionMenu(BuildContext context, WidgetRef ref, StoreInventory storeInventory) {
+  void _showActionMenu(
+      BuildContext context, WidgetRef ref, StoreInventory storeInventory) {
     showModalBottomSheet(
       context: context,
       builder: (context) => SafeArea(

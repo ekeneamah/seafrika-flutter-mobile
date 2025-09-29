@@ -21,7 +21,10 @@ class PermissionService {
   }
 
   Future<void> createPermission(Permission permission) async {
-    await _firestore.collection('permissions').doc(permission.id).set(permission.toMap());
+    await _firestore
+        .collection('permissions')
+        .doc(permission.id)
+        .set(permission.toMap());
   }
 
   Future<void> createRole(Role role) async {
@@ -33,7 +36,8 @@ class PermissionService {
     final roleIds = List<String>.from(userSnapshot.data()?['roleIds'] ?? []);
 
     for (final roleId in roleIds) {
-      final roleSnapshot = await _firestore.collection('roles').doc(roleId).get();
+      final roleSnapshot =
+          await _firestore.collection('roles').doc(roleId).get();
       final role = Role.fromMap(roleSnapshot.data()!);
       if (role.permissionIds.contains(permissionId)) {
         return true;

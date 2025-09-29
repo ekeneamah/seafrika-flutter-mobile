@@ -79,7 +79,7 @@ class ResponsiveContactDisplay extends StatelessWidget {
   Widget _buildSectionHeader(BuildContext context) {
     final iconSize = _getIconSize(context);
     final color = accentColor ?? AppTheme.primary;
-    
+
     return Row(
       children: [
         Container(
@@ -112,22 +112,22 @@ class ResponsiveContactDisplay extends StatelessWidget {
 
   Widget _buildContactInfo(BuildContext context) {
     final shouldStack = _shouldStackFields(context);
-    
+
     return Column(
       children: [
         // Main contact fields
         if (name != null) _buildInfoRow(context, 'Name', name!),
-        
-        shouldStack 
+
+        shouldStack
             ? _buildStackedContactFields(context)
             : _buildRowContactFields(context),
-        
+
         // Additional fields
         if (address != null && address!.isNotEmpty) ...[
           const SizedBox(height: 8),
           _buildInfoRow(context, 'Address', address!),
         ],
-        
+
         if (notes != null && notes!.isNotEmpty) ...[
           const SizedBox(height: 8),
           _buildInfoRow(context, 'Notes', notes!),
@@ -154,9 +154,9 @@ class ResponsiveContactDisplay extends StatelessWidget {
   Widget _buildRowContactFields(BuildContext context) {
     final hasEmail = email != null && email!.isNotEmpty;
     final hasPhone = phone != null && phone!.isNotEmpty;
-    
+
     if (!hasEmail && !hasPhone) return const SizedBox.shrink();
-    
+
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Row(
@@ -173,9 +173,9 @@ class ResponsiveContactDisplay extends StatelessWidget {
 
   Widget _buildEmailInfoRow(BuildContext context) {
     return _buildActionableInfoRow(
-      context, 
-      'Email', 
-      email!, 
+      context,
+      'Email',
+      email!,
       Icons.email_outlined,
       onEmailTap,
     );
@@ -183,9 +183,9 @@ class ResponsiveContactDisplay extends StatelessWidget {
 
   Widget _buildPhoneInfoRow(BuildContext context) {
     return _buildActionableInfoRow(
-      context, 
-      'Phone', 
-      phone!, 
+      context,
+      'Phone',
+      phone!,
       Icons.phone_outlined,
       onPhoneTap,
     );
@@ -225,14 +225,14 @@ class ResponsiveContactDisplay extends StatelessWidget {
   }
 
   Widget _buildActionableInfoRow(
-    BuildContext context, 
-    String label, 
+    BuildContext context,
+    String label,
     String value,
     IconData icon,
     VoidCallback? onTap,
   ) {
     final color = accentColor ?? AppTheme.primary;
-    
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(

@@ -5,30 +5,52 @@ import 'package:vendor_app/providers/facebook_providers.dart';
 import 'package:vendor_app/providers/business_context_provider.dart';
 import 'package:vendor_app/providers/service_providers.dart';
 import 'package:vendor_app/widgets/integration_app_bar.dart';
-import 'package:vendor_app/theme/app_theme.dart';
 import 'package:vendor_app/screens/integrations/facebook_post_creator_screen.dart';
-import 'package:vendor_app/screens/integrations/facebook_messenger_screen.dart';
-import 'package:vendor_app/screens/integrations/facebook_insights_screen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
 class FacebookDashboardScreen extends ConsumerStatefulWidget {
-  const FacebookDashboardScreen({super.key});
+  final String integrationId;
+  final int initialTab;
+
+  const FacebookDashboardScreen({
+    super.key,
+    required this.integrationId,
+    this.initialTab = 0,
+  });
 
   @override
-  ConsumerState<FacebookDashboardScreen> createState() => _FacebookDashboardScreenState();
+  ConsumerState<FacebookDashboardScreen> createState() =>
+      _FacebookDashboardScreenState();
 }
 
-class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScreen>
+class _FacebookDashboardScreenState
+    extends ConsumerState<FacebookDashboardScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  FacebookPage? _selectedPage;
 
   @override
   void initState() {
     super.initState();
+    debugPrint(
+        '📱 FacebookEnhancedDashboard: initState called with integrationId: ${widget.integrationId}');
     _tabController = TabController(length: 4, vsync: this);
-    _loadFacebookData();
+
+    // Add listener to track tab changes
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        final tabNames = ['Overview', 'Posts', 'Messages', 'Insights'];
+        debugPrint(
+            '📊 FacebookEnhancedDashboard: Tab changed to ${tabNames[_tabController.index]} (index: ${_tabController.index})');
+      }
+    });
+
+    // Defer data loading until after the first build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      debugPrint(
+          '📱 FacebookEnhancedDashboard: Post-frame callback triggered, loading Facebook data');
+      _loadFacebookData();
+    });
   }
 
   @override
@@ -40,33 +62,100 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
   void _loadFacebookData() {
     final businessId = ref.read(selectedBusinessIdProvider);
     final authService = ref.read(authServiceProvider);
-    
-    if (businessId != null) {
-      // Load user profile
+
+    debugPrint(
+        '📱 FacebookEnhancedDashboard: Loading Facebook data for integration');
+    debugPrint('   🏢 Business ID: $businessId');
+    debugPrint('   🔗 Integration ID: ${widget.integrationId}');
+    debugPrint('   👤 User ID: ${authService.currentUser?.id}');
+    debugPrint(
+        '   🔑 Has Token: ${authService.currentUser?.accessToken != null}');
+
+    if (businessId != null && widget.integrationId.isNotEmpty) {
+      debugPrint(
+          '📱 FacebookEnhancedDashboard: Prerequisites met, loading integration data');
+
+      // Load user profile using integrationId
+      debugPrint(
+          '📱 FacebookEnhancedDashboard: Calling loadUserProfile with integrationId');
       ref.read(facebookAuthProvider.notifier).loadUserProfile(
-        businessId: businessId,
-        userId: authService.currentUser?.id,
-        token: authService.currentUser?.accessToken,
-      );
-      
-      // Load user pages
+            integrationId: widget.integrationId,
+            businessId: businessId,
+            userId: authService.currentUser?.id,
+            token: authService.currentUser?.accessToken,
+          );
+
+      // Load page info for this specific integration (single page)
+      debugPrint(
+          '📱 FacebookEnhancedDashboard: Loading page info for integration');
       ref.read(facebookPagesProvider.notifier).loadPages(
-        businessId: businessId,
-        userId: authService.currentUser?.id,
-        token: authService.currentUser?.accessToken,
-      );
+            integrationId: widget.integrationId,
+            businessId: businessId,
+            userId: authService.currentUser?.id,
+            token: authService.currentUser?.accessToken,
+          );
+
+      // Automatically load posts for the integration's page
+      debugPrint('📱 FacebookEnhancedDashboard: Loading posts for integration');
+      _loadPostsForIntegration();
+    } else {
+      debugPrint(
+          '❌ FacebookEnhancedDashboard: Prerequisites not met for loading data');
+      debugPrint('   🏢 Business ID null: ${businessId == null}');
+      debugPrint('   🔗 Integration ID empty: ${widget.integrationId.isEmpty}');
+    }
+  }
+
+  void _loadPostsForIntegration() {
+    final businessId = ref.read(selectedBusinessIdProvider);
+    final authService = ref.read(authServiceProvider);
+
+    debugPrint(
+        '📝 FacebookEnhancedDashboard: Loading posts for integration: ${widget.integrationId}');
+    debugPrint('📝 Business ID: $businessId');
+    debugPrint('📝 User ID: ${authService.currentUser?.id}');
+    debugPrint(
+        '📝 Token available: ${authService.currentUser?.accessToken != null}');
+
+    if (businessId != null) {
+      debugPrint(
+          '📝 Calling facebookPostsProvider.loadIntegrationPosts with integrationId...');
+      ref.read(facebookPostsProvider.notifier).loadIntegrationPosts(
+            integrationId: widget.integrationId,
+            businessId: businessId,
+            userId: authService.currentUser?.id,
+            token: authService.currentUser?.accessToken,
+          );
+    } else {
+      debugPrint(
+          '❌ FacebookEnhancedDashboard: Cannot load posts - businessId is null');
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('📱 FacebookEnhancedDashboard: Building widget');
+
     final businessId = ref.watch(selectedBusinessIdProvider);
-    final authService = ref.watch(authServiceProvider);
     final facebookAuth = ref.watch(facebookAuthProvider);
     final facebookPages = ref.watch(facebookPagesProvider);
     final facebookPosts = ref.watch(facebookPostsProvider);
 
+    debugPrint('📊 Provider States:');
+    debugPrint('   🏢 Business ID: $businessId');
+    debugPrint('   🔐 Auth authenticated: ${facebookAuth.isAuthenticated}');
+    debugPrint('   🔐 Auth loading: ${facebookAuth.isLoading}');
+    debugPrint('   🔐 Auth error: ${facebookAuth.error}');
+    debugPrint('   📄 Pages loading: ${facebookPages.isLoading}');
+    debugPrint('   📄 Pages count: ${facebookPages.pages.length}');
+    debugPrint('   📄 Pages error: ${facebookPages.error}');
+    debugPrint('   📝 Posts loading: ${facebookPosts.isLoading}');
+    debugPrint('   📝 Posts count: ${facebookPosts.posts.length}');
+    debugPrint('   📝 Posts error: ${facebookPosts.error}');
+
     if (businessId == null) {
+      debugPrint(
+          '❌ FacebookEnhancedDashboard: No business selected, showing error state');
       return Scaffold(
         appBar: const IntegrationAppBar(title: 'Facebook Dashboard'),
         body: const Center(
@@ -87,16 +176,29 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
         ],
       ),
       body: facebookAuth.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? (() {
+              debugPrint('⏳ FacebookEnhancedDashboard: Showing loading state');
+              return const Center(child: CircularProgressIndicator());
+            })()
           : facebookAuth.error != null
               ? _buildErrorState(facebookAuth.error!)
               : facebookAuth.user == null
-                  ? _buildUnauthenticatedState()
-                  : _buildAuthenticatedState(),
+                  ? (() {
+                      debugPrint(
+                          '🔓 FacebookEnhancedDashboard: User not authenticated, showing unauthenticated state');
+                      return _buildUnauthenticatedState();
+                    })()
+                  : (() {
+                      debugPrint(
+                          '✅ FacebookEnhancedDashboard: User authenticated, showing authenticated state');
+                      return _buildAuthenticatedState();
+                    })(),
     );
   }
 
   Widget _buildErrorState(String error) {
+    debugPrint(
+        '❌ FacebookEnhancedDashboard: Building error state with error: $error');
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -110,7 +212,11 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
           ),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: _loadFacebookData,
+            onPressed: () {
+              debugPrint(
+                  '🔄 FacebookEnhancedDashboard: Retry button pressed from error state');
+              _loadFacebookData();
+            },
             child: const Text('Retry'),
           ),
         ],
@@ -138,6 +244,8 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
           const SizedBox(height: 32),
           ElevatedButton.icon(
             onPressed: () {
+              debugPrint(
+                  '🔗 FacebookEnhancedDashboard: Connect Facebook button pressed, navigating back to integration screen');
               // Navigate back to integration screen for authentication
               Navigator.pop(context);
             },
@@ -155,41 +263,46 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
   }
 
   Widget _buildAuthenticatedState() {
+    debugPrint('✅ FacebookEnhancedDashboard: Building authenticated state');
     final facebookAuth = ref.watch(facebookAuthProvider);
     final facebookPages = ref.watch(facebookPagesProvider);
 
-    return Column(
-      children: [
-        // User Info Header
-        _buildUserInfoHeader(facebookAuth.user!),
-        
-        // Page Selector
-        if (facebookPages.pages.isNotEmpty) _buildPageSelector(facebookPages.pages),
-        
-        // Tab Bar
-        TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(icon: Icon(Icons.dashboard), text: 'Overview'),
-            Tab(icon: Icon(Icons.post_add), text: 'Posts'),
-            Tab(icon: Icon(Icons.message), text: 'Messages'),
-            Tab(icon: Icon(Icons.analytics), text: 'Insights'),
-          ],
-        ),
-        
-        // Tab Views
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              _buildOverviewTab(),
-              _buildPostsTab(),
-              _buildMessagesTab(),
-              _buildInsightsTab(),
-            ],
+    debugPrint('   👤 User: ${facebookAuth.user?.name}');
+    debugPrint('   📄 Available pages: ${facebookPages.pages.length}');
+
+    return NestedScrollView(
+      headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+        return <Widget>[
+          SliverToBoxAdapter(
+            child: Column(
+              children: [
+                // User Info Header
+                _buildUserInfoHeader(facebookAuth.user!),
+
+                // Tab Bar
+                TabBar(
+                  controller: _tabController,
+                  tabs: const [
+                    Tab(icon: Icon(Icons.dashboard), text: 'Overview'),
+                    Tab(icon: Icon(Icons.post_add), text: 'Posts'),
+                    Tab(icon: Icon(Icons.message), text: 'Messages'),
+                    Tab(icon: Icon(Icons.analytics), text: 'Insights'),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ];
+      },
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildOverviewTab(),
+          _buildPostsTab(),
+          _buildMessagesTab(),
+          _buildInsightsTab(),
+        ],
+      ),
     );
   }
 
@@ -201,8 +314,10 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
         children: [
           CircleAvatar(
             radius: 30,
-            backgroundImage: user.picture != null ? NetworkImage(user.picture!) : null,
-            child: user.picture == null ? Text(user.name[0].toUpperCase()) : null,
+            backgroundImage:
+                user.picture != null ? NetworkImage(user.picture!) : null,
+            child:
+                user.picture == null ? Text(user.name[0].toUpperCase()) : null,
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -211,7 +326,8 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
               children: [
                 Text(
                   user.name,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 if (user.email != null)
                   Text(
@@ -226,144 +342,80 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
     );
   }
 
-  Widget _buildPageSelector(List<FacebookPage> pages) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: DropdownButtonFormField<FacebookPage>(
-        value: _selectedPage,
-        decoration: const InputDecoration(
-          labelText: 'Select Facebook Page',
-          border: OutlineInputBorder(),
-        ),
-        items: pages.map((page) {
-          return DropdownMenuItem(
-            value: page,
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 16,
-                  backgroundImage: page.picture != null ? NetworkImage(page.picture!) : null,
-                  child: page.picture == null ? Text(page.name[0].toUpperCase()) : null,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(page.name, overflow: TextOverflow.ellipsis),
-                      Text(
-                        page.category,
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        }).toList(),
-        onChanged: (FacebookPage? page) {
-          setState(() {
-            _selectedPage = page;
-          });
-          if (page != null) {
-            ref.read(facebookPagesProvider.notifier).selectPage(page);
-            _loadPagePosts(page.id);
-          }
-        },
-      ),
-    );
-  }
-
   Widget _buildOverviewTab() {
     final facebookPages = ref.watch(facebookPagesProvider);
-    
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Quick Stats Cards
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatCard(
-                  'Pages',
-                  facebookPages.pages.length.toString(),
-                  Icons.pages,
-                  Colors.blue,
+
+    return CustomScrollView(
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.all(16),
+          sliver: SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Quick Stats Cards
+                _buildStatsGrid(),
+
+                const SizedBox(height: 24),
+
+                // Quick Actions
+                const Text(
+                  'Quick Actions',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildStatCard(
-                  'Selected Page',
-                  _selectedPage?.name ?? 'None',
-                  Icons.public,
-                  Colors.green,
-                ),
-              ),
-            ],
+                const SizedBox(height: 16),
+
+                if (facebookPages.pages.isNotEmpty) ...[
+                  _buildQuickActionButton(
+                    'Create Post',
+                    Icons.post_add,
+                    Colors.blue,
+                    () => _navigateToPostCreator(),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildQuickActionButton(
+                    'Upload Photo',
+                    Icons.photo_camera,
+                    Colors.green,
+                    () => _uploadPhoto(),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildQuickActionButton(
+                    'Upload Video',
+                    Icons.videocam,
+                    Colors.orange,
+                    () => _uploadVideo(),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildQuickActionButton(
+                    'Share to Timeline',
+                    Icons.share,
+                    Colors.purple,
+                    () => _shareToTimeline(),
+                  ),
+                ] else ...[
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      'Select a Facebook page to access quick actions',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
-          
-          const SizedBox(height: 24),
-          
-          // Quick Actions
-          const Text(
-            'Quick Actions',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
-          
-          if (_selectedPage != null) ...[
-            _buildQuickActionButton(
-              'Create Post',
-              Icons.post_add,
-              Colors.blue,
-              () => _navigateToPostCreator(),
-            ),
-            const SizedBox(height: 8),
-            _buildQuickActionButton(
-              'Upload Photo',
-              Icons.photo_camera,
-              Colors.green,
-              () => _uploadPhoto(),
-            ),
-            const SizedBox(height: 8),
-            _buildQuickActionButton(
-              'Upload Video',
-              Icons.videocam,
-              Colors.orange,
-              () => _uploadVideo(),
-            ),
-            const SizedBox(height: 8),
-            _buildQuickActionButton(
-              'Share to Timeline',
-              Icons.share,
-              Colors.purple,
-              () => _shareToTimeline(),
-            ),
-          ] else ...[
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Text(
-                'Select a Facebook page to access quick actions',
-                style: TextStyle(color: Colors.grey),
-              ),
-            ),
-          ],
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+      String title, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -392,7 +444,124 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
     );
   }
 
-  Widget _buildQuickActionButton(String title, IconData icon, Color color, VoidCallback onTap) {
+  Widget _buildStatsGrid() {
+    final facebookPages = ref.watch(facebookPagesProvider);
+    final facebookPosts = ref.watch(facebookPostsProvider);
+    final facebookAuth = ref.watch(facebookAuthProvider);
+
+    // Get the page data if available
+    final page =
+        facebookPages.pages.isNotEmpty ? facebookPages.pages.first : null;
+    final postsCount = facebookPosts.posts.length;
+    final fanCount = page?.fanCount ?? 0;
+    final followersCount = page?.followersCount ?? 0;
+
+    // Connection check based on having valid page data
+    final isConnected = facebookAuth.isAuthenticated &&
+        page != null &&
+        page.id.isNotEmpty &&
+        page.name.isNotEmpty &&
+        !facebookPages.isLoading &&
+        facebookPages.error == null;
+
+    debugPrint('📊 FacebookEnhancedDashboard: Building stats grid');
+    debugPrint('   👥 Fan Count: $fanCount');
+    debugPrint('   👥 Followers Count: $followersCount');
+    debugPrint('   📝 Posts Count: $postsCount');
+    debugPrint('   🔗 Auth Connected: ${facebookAuth.isAuthenticated}');
+    debugPrint('   📄 Page Available: ${page != null}');
+    if (page != null) {
+      debugPrint('   📄 Page ID: ${page.id}');
+      debugPrint('   📄 Page Name: ${page.name}');
+      debugPrint('   📄 Page Category: ${page.category}');
+      debugPrint('   📄 Page About: ${page.about}');
+      debugPrint('   📄 Page Fan Count: ${page.fanCount}');
+      debugPrint('   📄 Page Followers Count: ${page.followersCount}');
+      debugPrint(
+          '   📄 Page Access Token: ${page.accessToken != null ? 'Present' : 'Missing'}');
+      debugPrint('   📄 Page Tasks: ${page.tasks}');
+    }
+    debugPrint('   🔗 Final Connected Status: $isConnected');
+    debugPrint('   ❓ Status Check Details:');
+    debugPrint('      - Auth authenticated: ${facebookAuth.isAuthenticated}');
+    debugPrint('      - Page not null: ${page != null}');
+    debugPrint('      - Page ID not empty: ${page?.id.isNotEmpty ?? false}');
+    debugPrint(
+        '      - Page name not empty: ${page?.name.isNotEmpty ?? false}');
+    debugPrint('      - Not loading: ${!facebookPages.isLoading}');
+    debugPrint('      - No error: ${facebookPages.error == null}');
+    if (facebookPages.error != null) {
+      debugPrint('      - Error details: ${facebookPages.error}');
+    }
+    if (facebookAuth.error != null) {
+      debugPrint('      - Auth error details: ${facebookAuth.error}');
+    }
+
+    return Row(
+      children: [
+        Expanded(
+          child: _buildStatCard(
+            'Fans',
+            _getStatValue(
+              isLoading: facebookPages.isLoading,
+              hasError: facebookPages.error != null,
+              value: _formatNumber(fanCount),
+            ),
+            Icons.people,
+            Colors.blue,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildStatCard(
+            'Followers',
+            _getStatValue(
+              isLoading: facebookPages.isLoading,
+              hasError: facebookPages.error != null,
+              value: _formatNumber(followersCount),
+            ),
+            Icons.person_add,
+            Colors.green,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildStatCard(
+            'Posts',
+            _getStatValue(
+              isLoading: facebookPosts.isLoading,
+              hasError: facebookPosts.error != null,
+              value: postsCount.toString(),
+            ),
+            Icons.post_add,
+            Colors.orange,
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatNumber(int number) {
+    if (number >= 1000000) {
+      return '${(number / 1000000).toStringAsFixed(1)}M';
+    } else if (number >= 1000) {
+      return '${(number / 1000).toStringAsFixed(1)}K';
+    }
+    return number.toString();
+  }
+
+  String _getStatValue({
+    required bool isLoading,
+    required bool hasError,
+    required String value,
+  }) {
+    if (hasError) return 'Error';
+    if (isLoading) return '...';
+    return value;
+  }
+
+  Widget _buildQuickActionButton(
+      String title, IconData icon, Color color, VoidCallback onTap) {
     return Card(
       child: ListTile(
         leading: CircleAvatar(
@@ -408,45 +577,109 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
 
   Widget _buildPostsTab() {
     final facebookPosts = ref.watch(facebookPostsProvider);
-    
-    if (_selectedPage == null) {
+    final facebookPages = ref.watch(facebookPagesProvider);
+
+    if (facebookPages.pages.isEmpty && !facebookPages.isLoading) {
       return const Center(
-        child: Text('Please select a Facebook page to view posts'),
+        child: Text('Page information not available'),
       );
     }
-    
-    return Column(
-      children: [
+
+    return CustomScrollView(
+      slivers: [
         // Create Post Button
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: ElevatedButton.icon(
-            onPressed: _navigateToPostCreator,
-            icon: const Icon(Icons.add),
-            label: const Text('Create New Post'),
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size(double.infinity, 48),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: ElevatedButton.icon(
+              onPressed: _navigateToPostCreator,
+              icon: const Icon(Icons.add),
+              label: const Text('Create New Post'),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 48),
+              ),
             ),
           ),
         ),
-        
+
         // Posts List
-        Expanded(
-          child: facebookPosts.isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : facebookPosts.error != null
-                  ? Center(child: Text('Error: ${facebookPosts.error}'))
-                  : facebookPosts.posts.isEmpty
-                      ? const Center(child: Text('No posts found'))
-                      : ListView.builder(
-                          itemCount: facebookPosts.posts.length,
-                          itemBuilder: (context, index) {
+        facebookPosts.isLoading
+            ? (() {
+                debugPrint(
+                    '⏳ FacebookEnhancedDashboard: Posts loading for integration: ${widget.integrationId}');
+                return const SliverFillRemaining(
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              })()
+            : facebookPosts.error != null
+                ? SliverFillRemaining(
+                    child: _buildPostsErrorState(facebookPosts.error!),
+                  )
+                : facebookPosts.posts.isEmpty
+                    ? SliverFillRemaining(
+                        child: _buildNoPostsState(),
+                      )
+                    : SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
                             final post = facebookPosts.posts[index];
                             return _buildPostCard(post);
                           },
+                          childCount: facebookPosts.posts.length,
                         ),
-        ),
+                      ),
       ],
+    );
+  }
+
+  Widget _buildPostsErrorState(String error) {
+    debugPrint(
+        '❌ FacebookEnhancedDashboard: Building posts error state with error: $error');
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline, size: 64, color: Colors.red),
+          const SizedBox(height: 16),
+          Text(
+            'Posts Error: $error',
+            style: const TextStyle(color: Colors.red),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () {
+              debugPrint(
+                  '🔄 FacebookEnhancedDashboard: Retrying posts load from error state');
+              _loadPostsForIntegration();
+            },
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoPostsState() {
+    debugPrint('📝 FacebookEnhancedDashboard: Building no posts state');
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.post_add, size: 64, color: Colors.grey),
+          SizedBox(height: 16),
+          Text(
+            'No posts found',
+            style: TextStyle(fontSize: 18, color: Colors.grey),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Posts will appear here once available',
+            style: TextStyle(color: Colors.grey),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 
@@ -461,27 +694,47 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
             // Post Header
             Row(
               children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundImage: _selectedPage?.picture != null 
-                      ? NetworkImage(_selectedPage!.picture!) 
-                      : null,
-                  child: _selectedPage?.picture == null 
-                      ? Text(_selectedPage?.name[0].toUpperCase() ?? 'P') 
-                      : null,
+                Consumer(
+                  builder: (context, ref, child) {
+                    final facebookPages = ref.watch(facebookPagesProvider);
+                    final page = facebookPages.pages.isNotEmpty
+                        ? facebookPages.pages.first
+                        : null;
+
+                    return CircleAvatar(
+                      radius: 20,
+                      backgroundImage: page?.picture != null
+                          ? NetworkImage(page!.picture!)
+                          : null,
+                      child: page?.picture == null
+                          ? Text(page?.name[0].toUpperCase() ?? 'P')
+                          : null,
+                    );
+                  },
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        _selectedPage?.name ?? 'Page',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      Consumer(
+                        builder: (context, ref, child) {
+                          final facebookPages =
+                              ref.watch(facebookPagesProvider);
+                          final page = facebookPages.pages.isNotEmpty
+                              ? facebookPages.pages.first
+                              : null;
+
+                          return Text(
+                            page?.name ?? 'Page',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          );
+                        },
                       ),
                       Text(
                         _formatDateTime(post.createdTime),
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        style:
+                            const TextStyle(fontSize: 12, color: Colors.grey),
                       ),
                     ],
                   ),
@@ -507,15 +760,15 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 12),
-            
+
             // Post Content
             if (post.message != null) ...[
               Text(post.message!),
               const SizedBox(height: 8),
             ],
-            
+
             if (post.picture != null) ...[
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
@@ -527,7 +780,7 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
               ),
               const SizedBox(height: 8),
             ],
-            
+
             // Post Actions
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -555,7 +808,8 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
     );
   }
 
-  Widget _buildPostActionButton(IconData icon, String label, VoidCallback onTap) {
+  Widget _buildPostActionButton(
+      IconData icon, String label, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -573,12 +827,14 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
   }
 
   Widget _buildMessagesTab() {
-    if (_selectedPage == null) {
+    final facebookPages = ref.watch(facebookPagesProvider);
+
+    if (facebookPages.pages.isEmpty && !facebookPages.isLoading) {
       return const Center(
-        child: Text('Please select a Facebook page to view messages'),
+        child: Text('Page information not available'),
       );
     }
-    
+
     return const Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -601,12 +857,14 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
   }
 
   Widget _buildInsightsTab() {
-    if (_selectedPage == null) {
+    final facebookPages = ref.watch(facebookPagesProvider);
+
+    if (facebookPages.pages.isEmpty && !facebookPages.isLoading) {
       return const Center(
-        child: Text('Please select a Facebook page to view insights'),
+        child: Text('Page information not available'),
       );
     }
-    
+
     return const Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -628,74 +886,94 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
     );
   }
 
-  void _loadPagePosts(String pageId) {
-    final businessId = ref.read(selectedBusinessIdProvider);
-    final authService = ref.read(authServiceProvider);
-    
-    if (businessId != null) {
-      ref.read(facebookPostsProvider.notifier).loadPagePosts(
-        pageId: pageId,
-        businessId: businessId,
-        userId: authService.currentUser?.id,
-        token: authService.currentUser?.accessToken,
-      );
-    }
-  }
-
   void _navigateToPostCreator() {
-    if (_selectedPage != null) {
+    final facebookPages = ref.read(facebookPagesProvider);
+    debugPrint(
+        '➕ FacebookEnhancedDashboard: Navigate to post creator requested');
+
+    if (facebookPages.pages.isNotEmpty) {
+      final page = facebookPages.pages.first;
+      debugPrint('➕ Navigation successful for page: ${page.name} (${page.id})');
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => FacebookPostCreatorScreen(page: _selectedPage!),
+          builder: (context) => FacebookPostCreatorScreen(page: page),
         ),
       ).then((_) {
         // Reload posts after returning from post creator
-        _loadPagePosts(_selectedPage!.id);
+        debugPrint(
+            '🔄 FacebookEnhancedDashboard: Returned from post creator, reloading posts');
+        _loadPostsForIntegration();
       });
+    } else {
+      debugPrint(
+          '❌ FacebookEnhancedDashboard: Cannot navigate to post creator - no page information available');
     }
   }
 
   void _uploadPhoto() async {
-    if (_selectedPage == null) return;
-    
+    final facebookPages = ref.read(facebookPagesProvider);
+    debugPrint('📸 FacebookEnhancedDashboard: Upload photo requested');
+
+    if (facebookPages.pages.isEmpty) {
+      debugPrint(
+          '❌ FacebookEnhancedDashboard: Cannot upload photo - no page information available');
+      return;
+    }
+
+    final page = facebookPages.pages.first;
+    debugPrint('📸 Opening image picker for page: ${page.name}');
     final picker = ImagePicker();
     final image = await picker.pickImage(source: ImageSource.gallery);
-    
+
     if (image != null) {
+      debugPrint('📸 Image selected: ${image.path}');
       final businessId = ref.read(selectedBusinessIdProvider);
       final authService = ref.read(authServiceProvider);
-      
+
+      debugPrint('📸 Business ID: $businessId');
+      debugPrint('📸 User ID: ${authService.currentUser?.id}');
+
       if (businessId != null) {
+        debugPrint('📸 Uploading photo to Facebook...');
         await ref.read(facebookPostsProvider.notifier).uploadPhoto(
-          pageId: _selectedPage!.id,
-          photo: File(image.path),
-          businessId: businessId,
-          userId: authService.currentUser?.id,
-          token: authService.currentUser?.accessToken,
-        );
+              pageId: page.id,
+              photo: File(image.path),
+              businessId: businessId,
+              userId: authService.currentUser?.id,
+              token: authService.currentUser?.accessToken,
+            );
+        debugPrint(
+            '✅ FacebookEnhancedDashboard: Photo upload request completed');
+      } else {
+        debugPrint(
+            '❌ FacebookEnhancedDashboard: Cannot upload photo - business ID is null');
       }
+    } else {
+      debugPrint('❌ FacebookEnhancedDashboard: Photo upload cancelled by user');
     }
   }
 
   void _uploadVideo() async {
-    if (_selectedPage == null) return;
-    
+    final facebookPages = ref.read(facebookPagesProvider);
+    if (facebookPages.pages.isEmpty) return;
+
+    final page = facebookPages.pages.first;
     final picker = ImagePicker();
     final video = await picker.pickVideo(source: ImageSource.gallery);
-    
+
     if (video != null) {
       final businessId = ref.read(selectedBusinessIdProvider);
       final authService = ref.read(authServiceProvider);
-      
+
       if (businessId != null) {
         await ref.read(facebookPostsProvider.notifier).uploadVideo(
-          pageId: _selectedPage!.id,
-          video: File(video.path),
-          businessId: businessId,
-          userId: authService.currentUser?.id,
-          token: authService.currentUser?.accessToken,
-        );
+              pageId: page.id,
+              video: File(video.path),
+              businessId: businessId,
+              userId: authService.currentUser?.id,
+              token: authService.currentUser?.accessToken,
+            );
       }
     }
   }
@@ -711,7 +989,7 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
   Widget _buildShareToTimelineDialog() {
     final messageController = TextEditingController();
     final linkController = TextEditingController();
-    
+
     return AlertDialog(
       title: const Text('Share to Timeline'),
       content: Column(
@@ -742,7 +1020,8 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
         ),
         ElevatedButton(
           onPressed: () {
-            _performShareToTimeline(messageController.text, linkController.text);
+            _performShareToTimeline(
+                messageController.text, linkController.text);
             Navigator.pop(context);
           },
           child: const Text('Share'),
@@ -753,11 +1032,11 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
 
   void _performShareToTimeline(String message, String? link) async {
     if (message.isEmpty) return;
-    
+
     final businessId = ref.read(selectedBusinessIdProvider);
     final authService = ref.read(authServiceProvider);
     final facebookService = ref.read(facebookServiceProvider);
-    
+
     if (businessId != null) {
       try {
         await facebookService.shareToTimeline(
@@ -767,7 +1046,7 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
           userId: authService.currentUser?.id,
           token: authService.currentUser?.accessToken,
         );
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Shared to timeline successfully')),
         );
@@ -782,34 +1061,34 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
   void _deletePost(String postId) async {
     final businessId = ref.read(selectedBusinessIdProvider);
     final authService = ref.read(authServiceProvider);
-    
+
     if (businessId != null) {
       await ref.read(facebookPostsProvider.notifier).deletePost(
-        postId: postId,
-        businessId: businessId,
-        userId: authService.currentUser?.id,
-        token: authService.currentUser?.accessToken,
-      );
+            postId: postId,
+            businessId: businessId,
+            userId: authService.currentUser?.id,
+            token: authService.currentUser?.accessToken,
+          );
     }
   }
 
   void _toggleLike(String postId) async {
     final businessId = ref.read(selectedBusinessIdProvider);
     final authService = ref.read(authServiceProvider);
-    
+
     if (businessId != null) {
       await ref.read(facebookPostsProvider.notifier).toggleLike(
-        postId: postId,
-        businessId: businessId,
-        userId: authService.currentUser?.id,
-        token: authService.currentUser?.accessToken,
-      );
+            postId: postId,
+            businessId: businessId,
+            userId: authService.currentUser?.id,
+            token: authService.currentUser?.accessToken,
+          );
     }
   }
 
   void _showCommentDialog(String postId) {
     final commentController = TextEditingController();
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -841,19 +1120,19 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
 
   void _addComment(String postId, String message) async {
     if (message.isEmpty) return;
-    
+
     final businessId = ref.read(selectedBusinessIdProvider);
     final authService = ref.read(authServiceProvider);
-    
+
     if (businessId != null) {
       await ref.read(facebookPostsProvider.notifier).commentOnPost(
-        postId: postId,
-        message: message,
-        businessId: businessId,
-        pageId: _selectedPage?.id,
-        userId: authService.currentUser?.id,
-        token: authService.currentUser?.accessToken,
-      );
+            postId: postId,
+            message: message,
+            businessId: businessId,
+            pageId: widget.integrationId,
+            userId: authService.currentUser?.id,
+            token: authService.currentUser?.accessToken,
+          );
     }
   }
 
@@ -906,7 +1185,8 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
       case FacebookReactionType.haha:
         return const Icon(Icons.sentiment_very_satisfied, color: Colors.yellow);
       case FacebookReactionType.sad:
-        return const Icon(Icons.sentiment_very_dissatisfied, color: Colors.blue);
+        return const Icon(Icons.sentiment_very_dissatisfied,
+            color: Colors.blue);
       case FacebookReactionType.angry:
         return const Icon(Icons.sentiment_very_dissatisfied, color: Colors.red);
     }
@@ -915,29 +1195,29 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
   void _addReaction(String postId, FacebookReactionType reaction) async {
     final businessId = ref.read(selectedBusinessIdProvider);
     final authService = ref.read(authServiceProvider);
-    
+
     if (businessId != null) {
       await ref.read(facebookPostsProvider.notifier).addReaction(
-        postId: postId,
-        reactionType: reaction,
-        businessId: businessId,
-        userId: authService.currentUser?.id,
-        token: authService.currentUser?.accessToken,
-      );
+            postId: postId,
+            reactionType: reaction,
+            businessId: businessId,
+            userId: authService.currentUser?.id,
+            token: authService.currentUser?.accessToken,
+          );
     }
   }
 
   void _disconnectFacebook() async {
     final businessId = ref.read(selectedBusinessIdProvider);
     final authService = ref.read(authServiceProvider);
-    
+
     if (businessId != null) {
       await ref.read(facebookAuthProvider.notifier).disconnect(
-        businessId: businessId,
-        userId: authService.currentUser?.id,
-        token: authService.currentUser?.accessToken,
-      );
-      
+            businessId: businessId,
+            userId: authService.currentUser?.id,
+            token: authService.currentUser?.accessToken,
+          );
+
       // Navigate back to integration screen
       Navigator.pop(context);
     }
@@ -948,7 +1228,7 @@ class _FacebookDashboardScreenState extends ConsumerState<FacebookDashboardScree
       final dt = DateTime.parse(dateTime);
       final now = DateTime.now();
       final difference = now.difference(dt);
-      
+
       if (difference.inDays > 0) {
         return '${difference.inDays}d ago';
       } else if (difference.inHours > 0) {

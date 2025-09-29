@@ -23,7 +23,8 @@ import 'package:vendor_app/models/business_inventory.dart';
 import 'package:vendor_app/models/store_inventory.dart';
 import 'package:vendor_app/models/booking.dart';
 import 'package:vendor_app/models/product.dart';
-import 'package:vendor_app/providers/business_inventory_provider.dart' as biz_inventory;
+import 'package:vendor_app/providers/business_inventory_provider.dart'
+    as biz_inventory;
 import 'package:vendor_app/providers/store_distribution_provider.dart';
 import 'package:vendor_app/services/navigation_service.dart';
 import 'package:vendor_app/services/store_inventory_service.dart';
@@ -52,8 +53,9 @@ class InventoryDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final businessInventoryAsync = ref.watch(biz_inventory.businessInventoryDetailProvider(businessInventoryId));
-    
+    final businessInventoryAsync = ref.watch(
+        biz_inventory.businessInventoryDetailProvider(businessInventoryId));
+
     return businessInventoryAsync.when(
       loading: () => const Scaffold(
         body: loading_view.LoadingView(),
@@ -61,7 +63,8 @@ class InventoryDetailScreen extends ConsumerWidget {
       error: (error, stackTrace) => Scaffold(
         body: error_view.ErrorView(
           message: 'Failed to load inventory details: $error',
-          onRetry: () => ref.refresh(biz_inventory.businessInventoryDetailProvider(businessInventoryId)),
+          onRetry: () => ref.refresh(biz_inventory
+              .businessInventoryDetailProvider(businessInventoryId)),
         ),
       ),
       data: (businessInventory) {
@@ -69,17 +72,19 @@ class InventoryDetailScreen extends ConsumerWidget {
           return Scaffold(
             body: error_view.ErrorView(
               message: 'Inventory item not found',
-              onRetry: () => ref.refresh(biz_inventory.businessInventoryDetailProvider(businessInventoryId)),
+              onRetry: () => ref.refresh(biz_inventory
+                  .businessInventoryDetailProvider(businessInventoryId)),
             ),
           );
         }
-        
+
         return _buildDetailScreen(context, ref, businessInventory);
       },
     );
   }
 
-  Widget _buildDetailScreen(BuildContext context, WidgetRef ref, BusinessInventory businessInventory) {
+  Widget _buildDetailScreen(BuildContext context, WidgetRef ref,
+      BusinessInventory businessInventory) {
     return Scaffold(
       backgroundColor: theme.AppTheme.backgroundColor,
       appBar: AppBar(
@@ -93,12 +98,14 @@ class InventoryDetailScreen extends ConsumerWidget {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          ref.refresh(biz_inventory.businessInventoryDetailProvider(businessInventoryId));
+          ref.refresh(biz_inventory
+              .businessInventoryDetailProvider(businessInventoryId));
         },
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            if (businessInventory.displayImageUrl != null && businessInventory.displayImageUrl!.isNotEmpty) ...[
+            if (businessInventory.displayImageUrl != null &&
+                businessInventory.displayImageUrl!.isNotEmpty) ...[
               _buildImageCarousel(context, businessInventory.displayImageUrl!),
               const SizedBox(height: 16),
             ],
@@ -107,7 +114,8 @@ class InventoryDetailScreen extends ConsumerWidget {
             _buildDetailsCard(context, businessInventory),
             const SizedBox(height: 16),
             _buildStoreDistributionCard(context, ref, businessInventory),
-            if (businessInventory.notes != null && businessInventory.notes!.isNotEmpty) ...[
+            if (businessInventory.notes != null &&
+                businessInventory.notes!.isNotEmpty) ...[
               const SizedBox(height: 16),
               _buildNotesCard(context, businessInventory),
             ],
@@ -117,7 +125,8 @@ class InventoryDetailScreen extends ConsumerWidget {
     );
   }
 
-  void _showActionMenu(BuildContext context, WidgetRef ref, BusinessInventory businessInventory) {
+  void _showActionMenu(BuildContext context, WidgetRef ref,
+      BusinessInventory businessInventory) {
     showModalBottomSheet(
       context: context,
       builder: (context) => SafeArea(
@@ -207,8 +216,8 @@ class InventoryDetailScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _showSellDialog(
-      BuildContext context, WidgetRef ref, BusinessInventory businessInventory) async {
+  Future<void> _showSellDialog(BuildContext context, WidgetRef ref,
+      BusinessInventory businessInventory) async {
     final quantityController = TextEditingController();
     final priceController = TextEditingController(
       text: businessInventory.sellingPrice.toString(),
@@ -278,7 +287,8 @@ class InventoryDetailScreen extends ConsumerWidget {
     if (result != null) {
       try {
         // Since we're working with BusinessInventory, we need to use BusinessInventoryService
-        final businessInventoryService = ref.read(biz_inventory.businessInventoryServiceProvider);
+        final businessInventoryService =
+            ref.read(biz_inventory.businessInventoryServiceProvider);
         // For now, we'll call updateAvailableQuantity to reduce the available quantity
         await businessInventoryService.updateAvailableQuantity(
           businessInventoryId: businessInventory.id,
@@ -297,8 +307,8 @@ class InventoryDetailScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _showBookingDialog(
-      BuildContext context, WidgetRef ref, BusinessInventory businessInventory) async {
+  Future<void> _showBookingDialog(BuildContext context, WidgetRef ref,
+      BusinessInventory businessInventory) async {
     final bookingController = TextEditingController();
     final nameController = TextEditingController();
     final emailController = TextEditingController();
@@ -372,10 +382,12 @@ class InventoryDetailScreen extends ConsumerWidget {
       try {
         // TODO: Implement booking functionality for BusinessInventory
         // This would need to create a booking record and reserve quantity from business inventory
-        
+
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Booking functionality not yet implemented for business inventory')),
+          const SnackBar(
+              content: Text(
+                  'Booking functionality not yet implemented for business inventory')),
         );
       } catch (e) {
         if (!context.mounted) return;
@@ -386,8 +398,8 @@ class InventoryDetailScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _showStoreDialog(
-      BuildContext context, WidgetRef ref, BusinessInventory businessInventory) async {
+  Future<void> _showStoreDialog(BuildContext context, WidgetRef ref,
+      BusinessInventory businessInventory) async {
     final storeController = TextEditingController();
     final quantityController = TextEditingController();
 
@@ -442,12 +454,13 @@ class InventoryDetailScreen extends ConsumerWidget {
       try {
         // TODO: Implement store allocation for BusinessInventory
         // This would need to allocate business inventory to a specific store
-        final businessInventoryService = ref.read(biz_inventory.businessInventoryServiceProvider);
+        final businessInventoryService =
+            ref.read(biz_inventory.businessInventoryServiceProvider);
         await businessInventoryService.updateAvailableQuantity(
           businessInventoryId: businessInventory.id,
           quantityChange: -(result['quantity'] as int),
         );
-        
+
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Items pushed to store successfully')),
@@ -461,8 +474,8 @@ class InventoryDetailScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _showAddQuantityDialog(
-      BuildContext context, WidgetRef ref, BusinessInventory businessInventory) async {
+  Future<void> _showAddQuantityDialog(BuildContext context, WidgetRef ref,
+      BusinessInventory businessInventory) async {
     final quantityController = TextEditingController();
     final priceController = TextEditingController(
       text: businessInventory.sellingPrice.toString(),
@@ -534,7 +547,8 @@ class InventoryDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatusCard(BuildContext context, BusinessInventory businessInventory) {
+  Widget _buildStatusCard(
+      BuildContext context, BusinessInventory businessInventory) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -549,7 +563,9 @@ class InventoryDetailScreen extends ConsumerWidget {
                       : Colors.green.withOpacity(0.1),
                   child: Icon(
                     Icons.inventory,
-                    color: businessInventory.isLowStock ? Colors.red : Colors.green,
+                    color: businessInventory.isLowStock
+                        ? Colors.red
+                        : Colors.green,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -566,8 +582,9 @@ class InventoryDetailScreen extends ConsumerWidget {
                             ? 'Low Stock'
                             : 'Stock Level Normal',
                         style: TextStyle(
-                          color:
-                              businessInventory.isLowStock ? Colors.red : Colors.green,
+                          color: businessInventory.isLowStock
+                              ? Colors.red
+                              : Colors.green,
                         ),
                       ),
                     ],
@@ -597,7 +614,8 @@ class InventoryDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildDetailsCard(BuildContext context, BusinessInventory businessInventory) {
+  Widget _buildDetailsCard(
+      BuildContext context, BusinessInventory businessInventory) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -631,7 +649,8 @@ class InventoryDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildNotesCard(BuildContext context, BusinessInventory businessInventory) {
+  Widget _buildNotesCard(
+      BuildContext context, BusinessInventory businessInventory) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -673,13 +692,15 @@ class InventoryDetailScreen extends ConsumerWidget {
     return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute}';
   }
 
-  Widget _buildStoreDistributionCard(BuildContext context, WidgetRef ref, BusinessInventory businessInventory) {
+  Widget _buildStoreDistributionCard(BuildContext context, WidgetRef ref,
+      BusinessInventory businessInventory) {
     final storeDistributionParams = StoreDistributionParams(
       businessId: businessInventory.businessId,
       businessInventoryId: businessInventory.id,
     );
-    
-    final storeDistributionAsync = ref.watch(storeDistributionProvider(storeDistributionParams));
+
+    final storeDistributionAsync =
+        ref.watch(storeDistributionProvider(storeDistributionParams));
 
     return Card(
       elevation: 2,
@@ -697,12 +718,13 @@ class InventoryDetailScreen extends ConsumerWidget {
                 Text(
                   'Store Distribution',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.refresh),
-                  onPressed: () => ref.refresh(storeDistributionProvider(storeDistributionParams)),
+                  onPressed: () => ref.refresh(
+                      storeDistributionProvider(storeDistributionParams)),
                 ),
               ],
             ),
@@ -719,11 +741,13 @@ class InventoryDetailScreen extends ConsumerWidget {
                   padding: const EdgeInsets.all(20),
                   child: Column(
                     children: [
-                      const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                      const Icon(Icons.error_outline,
+                          color: Colors.red, size: 48),
                       const SizedBox(height: 8),
                       Text('Error loading store distribution: $error'),
                       TextButton(
-                        onPressed: () => ref.refresh(storeDistributionProvider(storeDistributionParams)),
+                        onPressed: () => ref.refresh(
+                            storeDistributionProvider(storeDistributionParams)),
                         child: const Text('Retry'),
                       ),
                     ],
@@ -738,7 +762,8 @@ class InventoryDetailScreen extends ConsumerWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.store_outlined, color: Colors.grey, size: 48),
+                          Icon(Icons.store_outlined,
+                              color: Colors.grey, size: 48),
                           SizedBox(height: 8),
                           Flexible(
                             child: Text(
@@ -756,7 +781,9 @@ class InventoryDetailScreen extends ConsumerWidget {
                 }
 
                 return Column(
-                  children: storeDistribution.map((store) => _buildStoreDistributionItem(store)).toList(),
+                  children: storeDistribution
+                      .map((store) => _buildStoreDistributionItem(store))
+                      .toList(),
                 );
               },
             ),
@@ -775,9 +802,8 @@ class InventoryDetailScreen extends ConsumerWidget {
     final location = store['location'] as String? ?? '';
     final status = store['status'] as String? ?? 'active';
 
-    final Color statusColor = quantity > 0 
-        ? (isLowStock ? Colors.orange : Colors.green)
-        : Colors.red;
+    final Color statusColor =
+        quantity > 0 ? (isLowStock ? Colors.orange : Colors.green) : Colors.red;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),

@@ -682,7 +682,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen>
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
                   error: (error, stack) => ErrorView(
-                    message: error.toString().contains('permission') 
+                    message: error.toString().contains('permission')
                         ? 'Permission denied. Please ensure you have the correct role to manage users.'
                         : 'Error loading users: ${error.toString()}',
                     onRetry: () => setState(() {}),

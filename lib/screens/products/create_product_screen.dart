@@ -97,17 +97,17 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen>
   void initState() {
     super.initState();
     _initializeAnimations();
-    
+
     // Set default minimum quantity for new products
     if (widget.productId == null) {
       _minQuantityController.text = '1'; // Default minimum quantity
     }
-    
+
     // Validate user authentication and business context
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _validateUserAndBusinessContext();
     });
-    
+
     if (widget.productId != null) {
       _loadProduct();
     }
@@ -142,13 +142,14 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen>
       }
 
       // Both validations passed - user can create products
-      print('User validation passed - vendorId: $vendorId, businessId: $businessId');
+      print(
+          'User validation passed - vendorId: $vendorId, businessId: $businessId');
       return true;
-      
     } catch (e) {
       print('Error during user validation: $e');
       if (mounted) {
-        _showSnackBar('Authentication error. Please login again.', isError: true);
+        _showSnackBar('Authentication error. Please login again.',
+            isError: true);
         await NavigationService.navigateToAndClearStack(AppRoutes.login);
       }
       return false;
@@ -210,7 +211,8 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen>
         _priceController.text = product.price.toString();
         _stockController.text = product.stock.toString();
         _minQuantityController.text = product.minQuantity.toString();
-        _selectedCategory = product.category.isNotEmpty ? product.category : 'Electronics';
+        _selectedCategory =
+            product.category.isNotEmpty ? product.category : 'Electronics';
 
         // Load existing images into _selectedImages
         _selectedImages.clear();
@@ -218,11 +220,15 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen>
           try {
             // Download image bytes for thumbnail (or use a placeholder if fails)
             final uri = Uri.parse(imageUrl);
-            final bytes = await NetworkAssetBundle(uri).load(imageUrl).then((bd) => bd.buffer.asUint8List());
-            _selectedImages.add(_SelectedImage(filePath: imageUrl, thumbnail: bytes));
+            final bytes = await NetworkAssetBundle(uri)
+                .load(imageUrl)
+                .then((bd) => bd.buffer.asUint8List());
+            _selectedImages
+                .add(_SelectedImage(filePath: imageUrl, thumbnail: bytes));
           } catch (e) {
             // If download fails, use an empty/placeholder thumbnail
-            _selectedImages.add(_SelectedImage(filePath: imageUrl, thumbnail: Uint8List(0)));
+            _selectedImages.add(
+                _SelectedImage(filePath: imageUrl, thumbnail: Uint8List(0)));
           }
         }
         setState(() {});
@@ -347,12 +353,16 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen>
       }
 
       // Upload only local images
-      final List<String> uploadedImageUrls = await _uploadAllImages(localImages);
-      final List<String> allImageUrls = [...remoteImageUrls, ...uploadedImageUrls];
-      final displayImageUrl = allImageUrls.isNotEmpty &&
-              _displayImageIndex < allImageUrls.length
-          ? allImageUrls[_displayImageIndex]
-          : null;
+      final List<String> uploadedImageUrls =
+          await _uploadAllImages(localImages);
+      final List<String> allImageUrls = [
+        ...remoteImageUrls,
+        ...uploadedImageUrls
+      ];
+      final displayImageUrl =
+          allImageUrls.isNotEmpty && _displayImageIndex < allImageUrls.length
+              ? allImageUrls[_displayImageIndex]
+              : null;
 
       final product = Product(
         id: widget.productId ?? '',
@@ -360,7 +370,9 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen>
         description: _descriptionController.text,
         price: double.parse(_priceController.text),
         stock: int.parse(_stockController.text),
-        minQuantity: _minQuantityController.text.isEmpty ? 1 : int.parse(_minQuantityController.text),
+        minQuantity: _minQuantityController.text.isEmpty
+            ? 1
+            : int.parse(_minQuantityController.text),
         category: _selectedCategory,
         vendorId: vendorId,
         businessId: businessId!,
@@ -396,7 +408,8 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen>
     }
   }
 
-  Future<List<String>> _uploadAllImages([List<_SelectedImage>? imagesToUpload]) async {
+  Future<List<String>> _uploadAllImages(
+      [List<_SelectedImage>? imagesToUpload]) async {
     final List<String> urls = [];
     final images = imagesToUpload ?? _selectedImages;
     if (images.isEmpty) return urls;
@@ -417,8 +430,10 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen>
       try {
         final file = File(imgObj.filePath);
         final imageBytes = await file.readAsBytes();
-        final fileName = 'product_image_${DateTime.now().millisecondsSinceEpoch}_$i';
-        final downloadUrl = await mediaService.uploadMediaFromBytesWithCompression(
+        final fileName =
+            'product_image_${DateTime.now().millisecondsSinceEpoch}_$i';
+        final downloadUrl =
+            await mediaService.uploadMediaFromBytesWithCompression(
           bytes: imageBytes,
           fileName: fileName,
           type: 'image',
@@ -432,7 +447,8 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen>
         );
         if (downloadUrl != null) {
           urls.add(downloadUrl);
-          debugPrint('Image $i uploaded successfully with WebP compression: $downloadUrl');
+          debugPrint(
+              'Image $i uploaded successfully with WebP compression: $downloadUrl');
         } else {
           throw Exception('Failed to upload image $i');
         }
@@ -1048,7 +1064,7 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen>
             builder: (context, constraints) {
               // Use horizontal layout for screens wider than 600px, vertical for smaller
               final isWideScreen = constraints.maxWidth > 600;
-              
+
               if (isWideScreen) {
                 // Horizontal layout for larger screens
                 return Row(
@@ -1056,8 +1072,8 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen>
                     Expanded(
                       child: TextFormField(
                         controller: _priceController,
-                        keyboardType:
-                            const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
                         textInputAction: TextInputAction.next,
                         decoration: InputDecoration(
                           labelText: 'Price',
@@ -1504,8 +1520,8 @@ class _CroppingDialogState extends State<_CroppingDialog> {
 
             final fileName =
                 'product_${DateTime.now().millisecondsSinceEpoch}.jpg';
-            final savedFile =
-                await File(croppedFile.path).copy('${imagesDir.path}/$fileName');
+            final savedFile = await File(croppedFile.path)
+                .copy('${imagesDir.path}/$fileName');
 
             final bytes = await savedFile
                 .readAsBytes(); // Define bytes **after** copying the file
@@ -1520,7 +1536,8 @@ class _CroppingDialogState extends State<_CroppingDialog> {
             // User cancelled cropping - navigate back to previous screen
             if (!mounted) return;
             Navigator.of(context).pop(); // Close the cropping dialog
-            Navigator.of(context).pop(); // Navigate back to previous screen (media detail)
+            Navigator.of(context)
+                .pop(); // Navigate back to previous screen (media detail)
             return;
           }
         } catch (e) {
@@ -1528,7 +1545,8 @@ class _CroppingDialogState extends State<_CroppingDialog> {
           print('Error during image cropping: $e');
           if (!mounted) return;
           Navigator.of(context).pop(); // Close the cropping dialog
-          Navigator.of(context).pop(); // Navigate back to previous screen (media detail)
+          Navigator.of(context)
+              .pop(); // Navigate back to previous screen (media detail)
           return;
         }
       }
@@ -1617,7 +1635,8 @@ class _CroppingDialogState extends State<_CroppingDialog> {
           onPressed: () {
             // Cancel cropping and navigate back to previous screen
             Navigator.of(context).pop(); // Close the cropping dialog
-            Navigator.of(context).pop(); // Navigate back to previous screen (media detail)
+            Navigator.of(context)
+                .pop(); // Navigate back to previous screen (media detail)
           },
           child: Text(
             'Cancel',

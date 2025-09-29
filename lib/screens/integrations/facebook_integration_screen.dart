@@ -3,12 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:vendor_app/models/integration.dart';
-import 'package:vendor_app/models/facebook_models.dart';
 import 'package:vendor_app/providers/service_providers.dart';
 import 'package:vendor_app/providers/business_context_provider.dart';
-import 'package:vendor_app/providers/facebook_providers.dart';
-import 'package:vendor_app/services/integration_service.dart';
-import 'package:vendor_app/services/facebook_service.dart';
+import 'package:vendor_app/config/api_config.dart';
 import 'package:vendor_app/widgets/integration_app_bar.dart';
 import 'package:vendor_app/theme/app_theme.dart';
 import 'facebook_enhanced_dashboard_screen.dart';
@@ -44,6 +41,7 @@ class _FacebookIntegrationScreenState
 
   Future<void> _checkExistingIntegration() async {
     final businessId = ref.read(selectedBusinessIdProvider);
+    debugPrint('Checking existing integration for business: $businessId');
     if (businessId == null) {
       setState(() {
         _isLoading = false;
@@ -71,9 +69,11 @@ class _FacebookIntegrationScreenState
 
       // If integrationId is provided, fetch that specific integration
       if (widget.integrationId != null) {
+        debugPrint('Fetching specific integration: ${widget.integrationId}');
         try {
           facebookIntegration =
               await integrationService.fetchIntegration(widget.integrationId!);
+          debugPrint('Fetched integration: $facebookIntegration');
         } catch (e) {
           setState(() {
             _error = 'Failed to load integration: $e';
@@ -81,15 +81,10 @@ class _FacebookIntegrationScreenState
           });
           return;
         }
-      } else {
-        // Otherwise, search for any Facebook integration
-        final integrations = await integrationService.fetchIntegrations();
-        facebookIntegration = integrations
-            .where((integration) => integration.channel == 'facebook')
-            .firstOrNull;
       }
 
       if (facebookIntegration != null) {
+        debugPrint('Found Facebook integration: ${facebookIntegration.id}');
         setState(() {
           _currentIntegration = facebookIntegration;
         });
@@ -114,9 +109,10 @@ class _FacebookIntegrationScreenState
     if (businessId == null) return;
 
     try {
+      debugPrint(
+          'Loading Facebook page for integration: ${_currentIntegration!.id}');
       final response = await http.get(
-        Uri.parse(
-            'https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/integrations/facebook/${_currentIntegration!.id}/page-info'),
+        Uri.parse(ApiConfig.getFacebookPageInfo(_currentIntegration!.id)),
         headers: {
           'Business-ID': businessId,
           'User-ID': authService.currentUser?.id ?? '',
@@ -126,8 +122,18 @@ class _FacebookIntegrationScreenState
         },
       );
 
+      debugPrint('RLT response: ${response.statusCode} - ${response.body}');
+
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
+        debugPrint('Facebook page data: ${json.encode(responseData)}');
+        if (responseData['picture'] != null) {
+          debugPrint('Picture data: ${json.encode(responseData['picture'])}');
+          if (responseData['picture']['data'] != null) {
+            debugPrint(
+                'Picture URL: ${responseData['picture']['data']['url']}');
+          }
+        }
         setState(() {
           _facebookPage = responseData;
         });
@@ -165,12 +171,11 @@ class _FacebookIntegrationScreenState
     try {
       // Get Facebook auth URL from backend (same as Instagram since Facebook Page management uses same OAuth flow)
       final authService = ref.read(authServiceProvider);
+      final redirectUri = ApiConfig.getFacebookOAuthRedirect();
+      final state = 'vendor_${DateTime.now().millisecondsSinceEpoch}';
       final response = await http.get(
         Uri.parse(
-          'https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/v1/config/facebook/instagram/auth-url'
-          '?redirect_uri=${Uri.encodeComponent('https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/v1/config/facebook/oauth/redirect')}'
-          '&state=${Uri.encodeComponent('vendor_${DateTime.now().millisecondsSinceEpoch}')}',
-        ),
+            ApiConfig.getFacebookConfigAuthUrlWithRedirect(redirectUri, state)),
         headers: {
           'Content-Type': 'application/json',
           'Business-ID': businessId,
@@ -393,12 +398,10 @@ class _FacebookIntegrationScreenState
       integrationService, String businessId) async {
     try {
       // Try to fetch page from backend (indicates successful OAuth)
-      final pageUrl =
-          'https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/v1/config/facebook/page-info';
       final authService = ref.read(authServiceProvider);
 
       final response = await http.get(
-        Uri.parse(pageUrl),
+        Uri.parse(ApiConfig.getFacebookConfigPageInfo()),
         headers: {
           'Content-Type': 'application/json',
           'Business-ID': businessId,
@@ -455,7 +458,9 @@ class _FacebookIntegrationScreenState
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (context) => const FacebookDashboardScreen(),
+            builder: (context) => FacebookDashboardScreen(
+              integrationId: integration.id,
+            ),
           ),
         );
       }
@@ -603,47 +608,7 @@ class _FacebookIntegrationScreenState
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.error_outline,
-                          size: 64, color: Colors.red[300]),
-                      const SizedBox(height: 16),
-                      Text(
-                        _error!,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          ElevatedButton(
-                            onPressed: _startFacebookConnection,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF1877F2),
-                              foregroundColor: Colors.white,
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.facebook, size: 16),
-                                SizedBox(width: 8),
-                                Text('Connect Facebook'),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          ElevatedButton(
-                            onPressed: _checkExistingIntegration,
-                            child: const Text('Retry'),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                )
+              ? _buildErrorView()
               : _buildContent(),
     );
   }
@@ -654,6 +619,41 @@ class _FacebookIntegrationScreenState
     } else {
       return _buildConnectedScreen();
     }
+  }
+
+  Widget _buildErrorView() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
+          const SizedBox(height: 16),
+          Text(
+            'Error Loading Integration',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              _error!,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                _error = null;
+              });
+              _checkExistingIntegration();
+            },
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildConnectionScreen() {
@@ -809,54 +809,54 @@ class _FacebookIntegrationScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Connection status
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.green.shade50,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.green.shade200),
-            ),
-            child: Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.green,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.check,
-                    color: Colors.white,
-                    size: 32,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Facebook Connected',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Connected on ${_currentIntegration!.createdAt.toString().split(' ')[0]}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.green.shade700,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          // Hero section with page profile
+          if (_facebookPage != null) _buildPageHeroSection(),
 
-          const SizedBox(height: 24),
-
-          // Facebook page info
-          if (_facebookPage != null) _buildPageInfo(),
+          if (_facebookPage == null) ...[
+            // Connection status fallback when no page data
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.green.shade200),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.green,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.check,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Facebook Connected',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Connected on ${_currentIntegration!.createdAt.toString().split(' ')[0]}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.green.shade700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
 
           const SizedBox(height: 24),
 
@@ -1020,125 +1020,269 @@ class _FacebookIntegrationScreenState
     );
   }
 
-  Widget _buildPageInfo() {
+  Widget _buildPageHeroSection() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Theme.of(context).dividerColor),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF1877F2),
+            Color(0xFF4267B2),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1877F2).withOpacity(0.3),
+            offset: const Offset(0, 8),
+            blurRadius: 24,
+          ),
+        ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Connection status indicator
           Row(
             children: [
-              if (_facebookPage!['picture'] != null) ...[
-                ClipRRect(
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    _facebookPage!['picture']['data']['url'],
-                    width: 48,
-                    height: 48,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(Icons.business, color: Colors.grey),
-                    ),
-                  ),
                 ),
-                const SizedBox(width: 12),
-              ],
+                child: const Icon(
+                  Icons.check_circle,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Connected',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                onPressed: _loadFacebookPage,
+                icon: const Icon(
+                  Icons.refresh,
+                  color: Colors.white,
+                  size: 20,
+                ),
+                tooltip: 'Refresh page info',
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+
+          // Page profile section
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Profile picture
+              ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: _facebookPage!['picture'] != null &&
+                        _facebookPage!['picture']['data'] != null &&
+                        _facebookPage!['picture']['data']['url'] != null
+                    ? Image.network(
+                        _facebookPage!['picture']['data']['url'],
+                        width: 80,
+                        height: 80,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) {
+                            return child;
+                          }
+                          return Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Center(
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          debugPrint(
+                              'Failed to load Facebook profile picture: $error');
+                          debugPrint(
+                              'Image URL: ${_facebookPage!['picture']['data']['url']}');
+                          return Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Icon(
+                              Icons.facebook,
+                              color: Colors.white,
+                              size: 40,
+                            ),
+                          );
+                        },
+                        headers: const {
+                          'User-Agent':
+                              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                        },
+                      )
+                    : Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Icon(
+                          Icons.facebook,
+                          color: Colors.white,
+                          size: 40,
+                        ),
+                      ),
+              ),
+
+              const SizedBox(width: 16),
+
+              // Page details
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      _facebookPage!['name'] ?? 'Unknown Page',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    // Page name and verification
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _facebookPage!['name'] ?? 'Unknown Page',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        if (_facebookPage!['is_verified'] == true) ...[
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.verified,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                        ],
+                      ],
                     ),
+
+                    // Category
                     if (_facebookPage!['category'] != null) ...[
                       const SizedBox(height: 4),
                       Text(
                         _facebookPage!['category'],
                         style: TextStyle(
+                          color: Colors.white.withOpacity(0.8),
                           fontSize: 14,
-                          color: Colors.grey[600],
                         ),
                       ),
                     ],
+
+                    const SizedBox(height: 12),
+
+                    // Stats row
+                    Row(
+                      children: [
+                        if (_facebookPage!['fan_count'] != null) ...[
+                          _buildHeroStat(
+                            'Fans',
+                            _formatCount(_facebookPage!['fan_count']),
+                          ),
+                          const SizedBox(width: 20),
+                        ],
+                        if (_facebookPage!['followers_count'] != null)
+                          _buildHeroStat(
+                            'Followers',
+                            _formatCount(_facebookPage!['followers_count']),
+                          ),
+                      ],
+                    ),
                   ],
                 ),
               ),
-              if (_facebookPage!['is_verified'] == true)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.blue,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Text(
-                    'Verified',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
             ],
           ),
+
+          // About section
           if (_facebookPage!['about'] != null ||
               _facebookPage!['description'] != null) ...[
             const SizedBox(height: 16),
-            Text(
-              _facebookPage!['about'] ?? _facebookPage!['description'] ?? '',
-              style: const TextStyle(fontSize: 14),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                _facebookPage!['about'] ?? _facebookPage!['description'] ?? '',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.9),
+                  fontSize: 13,
+                  height: 1.4,
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
+
           const SizedBox(height: 16),
-          Row(
-            children: [
-              if (_facebookPage!['fan_count'] != null) ...[
-                _buildStatChip(
-                    'Fans', _formatCount(_facebookPage!['fan_count'])),
-                const SizedBox(width: 8),
-              ],
-              if (_facebookPage!['followers_count'] != null) ...[
-                _buildStatChip('Followers',
-                    _formatCount(_facebookPage!['followers_count'])),
-              ],
-            ],
+
+          // Connection date
+          Text(
+            'Connected on ${_currentIntegration!.createdAt.toString().split(' ')[0]}',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.7),
+              fontSize: 12,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildStatChip(String label, String value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1877F2).withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Text(
-        '$value $label',
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF1877F2),
+  Widget _buildHeroStat(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-      ),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.8),
+            fontSize: 12,
+          ),
+        ),
+      ],
     );
   }
 
@@ -1155,123 +1299,141 @@ class _FacebookIntegrationScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Quick Actions',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+        Text(
+          'Facebook Pages Features',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
         ),
         const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: _buildActionCard(
-                'Posts',
-                'Manage posts',
-                Icons.post_add,
-                () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const FacebookDashboardScreen(),
-                    ),
-                  );
-                },
+
+        // Feature Cards
+        _buildFeatureCard(
+          icon: Icons.analytics,
+          title: 'Page Insights',
+          description:
+              'View detailed analytics and performance metrics for your Facebook Page.',
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => FacebookDashboardScreen(
+                  integrationId: _currentIntegration?.id ?? '',
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildActionCard(
-                'Comments',
-                'Handle comments',
-                Icons.comment,
-                () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const FacebookDashboardScreen(),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
+            );
+          },
         ),
+
         const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildActionCard(
-                'Messages',
-                'Page messages',
-                Icons.message,
-                () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const FacebookDashboardScreen(),
-                    ),
-                  );
-                },
+
+        _buildFeatureCard(
+          icon: Icons.post_add,
+          title: 'Manage Posts',
+          description:
+              'Create, schedule, and manage posts for your Facebook Page.',
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => FacebookDashboardScreen(
+                  integrationId: _currentIntegration?.id ?? '',
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildActionCard(
-                'Analytics',
-                'View insights',
-                Icons.analytics,
-                () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const FacebookDashboardScreen(),
-                    ),
-                  );
-                },
+            );
+          },
+        ),
+
+        const SizedBox(height: 12),
+
+        _buildFeatureCard(
+          icon: Icons.message,
+          title: 'Messages & Comments',
+          description:
+              'Respond to messages and comments on your Facebook Page.',
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => FacebookDashboardScreen(
+                  integrationId: _currentIntegration?.id ?? '',
+                ),
               ),
-            ),
-          ],
+            );
+          },
+        ),
+
+        const SizedBox(height: 12),
+
+        _buildFeatureCard(
+          icon: Icons.settings,
+          title: 'Integration Settings',
+          description:
+              'Configure sync settings and manage your Facebook Pages integration.',
+          onTap: () {
+            // Navigate to integration settings
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Integration settings coming soon!'),
+              ),
+            );
+          },
         ),
       ],
     );
   }
 
-  Widget _buildActionCard(
-      String title, String subtitle, IconData icon, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Theme.of(context).dividerColor),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              size: 32,
-              color: AppTheme.primary,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
+  Widget _buildFeatureCard({
+    required IconData icon,
+    required String title,
+    required String description,
+    required VoidCallback onTap,
+  }) {
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1877F2).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  icon,
+                  color: const Color(0xFF1877F2),
+                  size: 24,
+                ),
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      description,
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+              Icon(
+                Icons.chevron_right,
+                color: Colors.grey[400],
+              ),
+            ],
+          ),
         ),
       ),
     );

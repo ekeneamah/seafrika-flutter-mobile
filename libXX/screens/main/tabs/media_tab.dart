@@ -124,7 +124,9 @@ class _MediaTabState extends State<MediaTab> {
                     );
                   }
 
-                  if (snapshot.hasError || !snapshot.hasData || snapshot.data == null) {
+                  if (snapshot.hasError ||
+                      !snapshot.hasData ||
+                      snapshot.data == null) {
                     return Container(
                       color: AppTheme.earthLight.withOpacity(0.3),
                       child: Center(
@@ -139,7 +141,8 @@ class _MediaTabState extends State<MediaTab> {
 
                   return Image.memory(
                     snapshot.data!,
-                    fit: BoxFit.cover, // Ensures proper scaling without distortion
+                    fit: BoxFit
+                        .cover, // Ensures proper scaling without distortion
                     width: double.infinity,
                     height: double.infinity,
                     gaplessPlayback: true,
@@ -166,7 +169,8 @@ class _MediaTabState extends State<MediaTab> {
                 top: 8,
                 right: 8,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.black.withOpacity(0.7),
                     borderRadius: BorderRadius.circular(8),
@@ -355,7 +359,8 @@ class _MediaTabState extends State<MediaTab> {
               ),
               if (_hasMoreToLoad)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: AppTheme.accent.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
@@ -371,7 +376,6 @@ class _MediaTabState extends State<MediaTab> {
                 ),
             ],
           ),
-          
           if (_media.isNotEmpty) ...[
             const SizedBox(height: 12),
             Row(
@@ -509,23 +513,27 @@ class _MediaTabState extends State<MediaTab> {
                         SliverPadding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           sliver: SliverGrid(
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: 3,
                               crossAxisSpacing: 8,
                               mainAxisSpacing: 8,
-                              childAspectRatio: 1.0, // Perfect squares prevent skewing
+                              childAspectRatio:
+                                  1.0, // Perfect squares prevent skewing
                             ),
                             delegate: SliverChildBuilderDelegate(
                               (context, index) {
                                 final media = _media[index];
-                                
+
                                 // Trigger loading more items when near the end
-                                if (_hasMoreToLoad && index == _media.length - 10) {
-                                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (_hasMoreToLoad &&
+                                    index == _media.length - 10) {
+                                  WidgetsBinding.instance
+                                      .addPostFrameCallback((_) {
                                     _loadMedia();
                                   });
                                 }
-                                
+
                                 return _buildMediaItem(media, index);
                               },
                               childCount: _media.length,

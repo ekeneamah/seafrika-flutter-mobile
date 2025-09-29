@@ -73,4 +73,4 @@ class Team {
       lastUpdatedAt: lastUpdatedAt ?? this.lastUpdatedAt,
     );
   }
-} 
+}

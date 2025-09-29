@@ -20,7 +20,8 @@ class IntegrationSettingsScreen extends ConsumerStatefulWidget {
       _IntegrationSettingsScreenState();
 }
 
-class _IntegrationSettingsScreenState extends ConsumerState<IntegrationSettingsScreen> {
+class _IntegrationSettingsScreenState
+    extends ConsumerState<IntegrationSettingsScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = true;
   String? _error;

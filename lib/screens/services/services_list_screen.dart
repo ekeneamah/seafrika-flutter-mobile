@@ -22,14 +22,14 @@ class _ServicesListScreenState extends ConsumerState<ServicesListScreen>
     with TickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  
+
   ServiceFilter _selectedFilter = ServiceFilter.all;
   String _searchQuery = '';
   List<Service> _filteredServices = [];
   List<Service> _allServices = [];
   bool _isLoading = true;
   String? _errorMessage;
-  
+
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
 
@@ -43,9 +43,9 @@ class _ServicesListScreenState extends ConsumerState<ServicesListScreen>
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _fadeController, curve: Curves.easeOut),
     );
-    
+
     _searchController.addListener(_onSearchChanged);
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadServices();
     });
@@ -70,7 +70,7 @@ class _ServicesListScreenState extends ConsumerState<ServicesListScreen>
 
   Future<void> _validateBusinessContext() async {
     final businessContext = ref.read(businessContextProvider);
-    
+
     if (businessContext == null) {
       NavigationService.navigateToAndClearStack(AppRoutes.businessList);
       return;
@@ -79,7 +79,7 @@ class _ServicesListScreenState extends ConsumerState<ServicesListScreen>
 
   Future<void> _loadServices({bool isRefresh = false}) async {
     await _validateBusinessContext();
-    
+
     if (isRefresh) {
       setState(() {
         _isLoading = true;
@@ -94,7 +94,7 @@ class _ServicesListScreenState extends ConsumerState<ServicesListScreen>
 
     try {
       final businessContext = ref.read(businessContextProvider);
-      
+
       if (businessContext == null) return;
 
       // For now, we'll use a placeholder list since ServiceService is basic
@@ -110,7 +110,6 @@ class _ServicesListScreenState extends ConsumerState<ServicesListScreen>
       if (!_fadeController.isCompleted) {
         _fadeController.forward();
       }
-
     } catch (error) {
       setState(() {
         _isLoading = false;
@@ -121,14 +120,14 @@ class _ServicesListScreenState extends ConsumerState<ServicesListScreen>
 
   void _filterServices() {
     List<Service> filtered = List.from(_allServices);
-    
+
     // Apply search filter
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((service) {
         return service.name.toLowerCase().contains(_searchQuery.toLowerCase());
       }).toList();
     }
-    
+
     // For now, we don't have active/inactive status on Service model
     // This would need to be added to the Service model later
     setState(() {
@@ -176,7 +175,7 @@ class _ServicesListScreenState extends ConsumerState<ServicesListScreen>
         children: ServiceFilter.values.map((filter) {
           final isSelected = _selectedFilter == filter;
           String label;
-          
+
           switch (filter) {
             case ServiceFilter.all:
               label = 'All Services';
@@ -248,8 +247,9 @@ class _ServicesListScreenState extends ConsumerState<ServicesListScreen>
     if (_filteredServices.isEmpty) {
       return empty.EmptyView(
         icon: Icons.room_service_outlined,
-        title: _searchQuery.isNotEmpty ? 'No services found' : 'No services yet',
-        message: _searchQuery.isNotEmpty 
+        title:
+            _searchQuery.isNotEmpty ? 'No services found' : 'No services yet',
+        message: _searchQuery.isNotEmpty
             ? 'Try adjusting your search criteria.'
             : 'Create your first service to get started with your service catalog.',
         action: ElevatedButton(
@@ -303,7 +303,7 @@ class _ServicesListScreenState extends ConsumerState<ServicesListScreen>
                 ),
               ),
               const SizedBox(width: 16),
-              
+
               // Service Details
               Expanded(
                 child: Column(
@@ -338,7 +338,7 @@ class _ServicesListScreenState extends ConsumerState<ServicesListScreen>
                   ],
                 ),
               ),
-              
+
               // Actions
               PopupMenuButton(
                 itemBuilder: (context) => [

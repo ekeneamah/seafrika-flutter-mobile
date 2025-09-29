@@ -15,7 +15,11 @@ enum PermissionCategory {
   notifications,
   bookings,
   expenses,
-  customers, analytics, product, user, order,
+  customers,
+  analytics,
+  product,
+  user,
+  order,
 }
 
 class Permission {
@@ -71,13 +75,13 @@ class Permission {
           map['lastUpdatedAt'] != null ? parseDate(map['lastUpdatedAt']) : null,
     );
   }
-factory Permission.fromDoc(DocumentSnapshot doc) {
-  final map = doc.data() as Map<String, dynamic>;
-  return Permission.fromMap({
-    ...map,
-    'id': doc.id,
-  });
-}
+  factory Permission.fromDoc(DocumentSnapshot doc) {
+    final map = doc.data() as Map<String, dynamic>;
+    return Permission.fromMap({
+      ...map,
+      'id': doc.id,
+    });
+  }
   Permission copyWith({
     String? id,
     String? name,

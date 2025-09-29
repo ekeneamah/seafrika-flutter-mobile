@@ -41,7 +41,8 @@ class ShareService {
     String? imageUrl,
   }) async {
     try {
-      final text = Uri.encodeComponent('Check out $productName on our app!\n\n$description');
+      final text = Uri.encodeComponent(
+          'Check out $productName on our app!\n\n$description');
       final url = 'https://www.facebook.com/sharer/sharer.php?u=$text';
       if (await canLaunchUrl(Uri.parse(url))) {
         await launchUrl(Uri.parse(url));
@@ -66,7 +67,8 @@ class ShareService {
     String? imageUrl,
   }) async {
     try {
-      final text = Uri.encodeComponent('Check out $productName on our app!\n\n$description');
+      final text = Uri.encodeComponent(
+          'Check out $productName on our app!\n\n$description');
       final url = 'https://twitter.com/intent/tweet?text=$text';
       if (await canLaunchUrl(Uri.parse(url))) {
         await launchUrl(Uri.parse(url));
@@ -91,7 +93,8 @@ class ShareService {
     String? imageUrl,
   }) async {
     try {
-      final text = Uri.encodeComponent('Check out $productName on our app!\n\n$description');
+      final text = Uri.encodeComponent(
+          'Check out $productName on our app!\n\n$description');
       final url = 'whatsapp://send?text=$text';
       if (await canLaunchUrl(Uri.parse(url))) {
         await launchUrl(Uri.parse(url));
@@ -117,7 +120,8 @@ class ShareService {
   }) async {
     try {
       final subject = Uri.encodeComponent('Check out $productName');
-      final body = Uri.encodeComponent('Check out $productName on our app!\n\n$description');
+      final body = Uri.encodeComponent(
+          'Check out $productName on our app!\n\n$description');
       final url = 'mailto:?subject=$subject&body=$body';
       if (await canLaunchUrl(Uri.parse(url))) {
         await launchUrl(Uri.parse(url));
@@ -142,7 +146,8 @@ class ShareService {
     String? imageUrl,
   }) async {
     try {
-      final text = Uri.encodeComponent('Check out $productName on our app!\n\n$description');
+      final text = Uri.encodeComponent(
+          'Check out $productName on our app!\n\n$description');
       final url = 'https://t.me/share/url?url=$text';
       if (await canLaunchUrl(Uri.parse(url))) {
         await launchUrl(Uri.parse(url));
@@ -159,4 +164,4 @@ class ShareService {
       debugPrint('Share on Telegram error: $e');
     }
   }
-} 
+}

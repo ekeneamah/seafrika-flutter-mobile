@@ -93,4 +93,4 @@ class Sale {
       createdAt: createdAt ?? this.createdAt,
     );
   }
-} 
+}
