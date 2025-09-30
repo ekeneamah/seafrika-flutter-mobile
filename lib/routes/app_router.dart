@@ -10,6 +10,7 @@ import 'package:vendor_app/screens/main/main_screen.dart';
 import 'package:vendor_app/screens/main/media_detail_screen.dart';
 import 'package:vendor_app/screens/integrations/meta_integration_screen.dart';
 import 'package:vendor_app/screens/integrations/tiktok_integration_screen.dart';
+import 'package:vendor_app/screens/integrations/youtube_integration_screen.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:vendor_app/models/store.dart';
 
@@ -27,6 +28,7 @@ class AppRouter {
   static const String mediaDetail = '/media-detail';
   static const String metaIntegration = '/meta-integration';
   static const String tikTokIntegration = '/tiktok-integration';
+  static const String youTubeIntegration = '/youtube-integration';
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -66,6 +68,10 @@ class AppRouter {
       case tikTokIntegration:
         return MaterialPageRoute(
             builder: (_) => const TikTokIntegrationScreen());
+      case youTubeIntegration:
+        return MaterialPageRoute(
+            builder: (_) =>
+                const YouTubeIntegrationScreen(integrationId: null));
       default:
         return MaterialPageRoute(
           builder: (_) => Scaffold(

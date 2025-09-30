@@ -10,6 +10,8 @@ import { WhatsAppWebhookController } from './whatsapp/whatsapp-webhook.controlle
 import { WhatsAppWebhookService } from './whatsapp/whatsapp-webhook.service';
 import { FirestoreModule } from '../firestore/firestore.module';
 import { CacheModule } from '@nestjs/cache-manager';
+import { YouTubeConfigController } from './youtube/youtube-config.controller';
+import { YouTubeService } from './youtube/youtube.service';
 
 
 /**
@@ -30,18 +32,21 @@ import { CacheModule } from '@nestjs/cache-manager';
     TikTokConfigController,            // TikTok OAuth configuration and management
     WebhookManagementController,       // General webhook management
     WhatsAppWebhookController,         // WhatsApp Business webhooks
+    YouTubeConfigController,          // YouTube OAuth configuration and management
   ],
   providers: [
     MetaService,                       // Unified Meta service
     InstagramMetricsService,           // Instagram metrics sync service
     TikTokService,                     // TikTok Business service
     WhatsAppWebhookService,           // WhatsApp Business service
+    YouTubeService,                   // YouTube service
   ],
   exports: [
     MetaService,                      // Export for use in other modules
     InstagramMetricsService,          // Export Instagram metrics service
     TikTokService,                    // Export TikTok service
     WhatsAppWebhookService,           // Export WhatsApp service
+    YouTubeService,                   // Export YouTube service
   ],
 })
 export class WebhooksModule {}

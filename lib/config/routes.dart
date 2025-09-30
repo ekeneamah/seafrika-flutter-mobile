@@ -9,6 +9,7 @@ import 'package:vendor_app/screens/admin/teams_screen.dart';
 import 'package:vendor_app/screens/admin/user_management_screen.dart';
 import 'package:vendor_app/screens/auth/BusinessSelectionScreen.dart';
 import 'package:vendor_app/screens/auth/signup_screen.dart';
+import 'package:vendor_app/screens/integrations/youtube_integration_screen.dart';
 import 'package:vendor_app/screens/main/staff_navigation_screen.dart';
 import 'package:vendor_app/screens/products/product_detail_screen.dart' as pd;
 import 'package:vendor_app/screens/profile/profile_screen.dart';
@@ -129,6 +130,7 @@ class AppRoutes {
   static const String tiktokIntegration = '/integrations/tiktok';
   static const String tiktokIntegrationAlt =
       '/tiktok-integration'; // Alternative route for TikTok
+  static const String youTubeIntegration = '/youtube-integration';
   static const String genericIntegrationDashboard = '/integrations/generic';
   static const String metaIntegration = '/meta-integration';
   static const String instagramAnalytics = '/integrations/instagram/analytics';
@@ -383,6 +385,13 @@ class AppRoutes {
         final args = settings.arguments as Map<String, dynamic>?;
         return MaterialPageRoute(
           builder: (context) => TikTokIntegrationScreen(
+            integrationId: args?['integrationId'],
+          ),
+        );
+      case youTubeIntegration:
+        final args = settings.arguments as Map<String, dynamic>?;
+        return MaterialPageRoute(
+          builder: (context) => YouTubeIntegrationScreen(
             integrationId: args?['integrationId'],
           ),
         );

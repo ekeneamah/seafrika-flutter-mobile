@@ -145,7 +145,26 @@ export class MetaController {
     // Handle OAuth errors
     if (error) {
       this.logger.error(`OAuth authorization failed: ${error} - ${errorDescription}`);
-      return this.renderErrorPage(error, errorDescription);
+      
+      // Redirect to error page
+      const redirectUrl = `https://sme-afrika.web.app/integrations?status=error&platform=meta&message=${encodeURIComponent(errorDescription || 'Authorization failed')}&error=${encodeURIComponent(error)}`;
+      
+      return `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Redirecting...</title>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <script>
+              window.location.href = '${redirectUrl}';
+            </script>
+          </head>
+          <body>
+            <p>Redirecting...</p>
+          </body>
+        </html>
+      `;
     }
 
     if (!code || !state) {
@@ -183,12 +202,56 @@ export class MetaController {
 
       this.logger.log(`Successfully completed OAuth for business ${businessId}, created ${integrations.length} integrations`);
 
-      // Return success page
-      return this.renderSuccessPage(integrations);
+      // Determine platforms for success message
+      const platforms = integrations.map(integration => {
+        if (integration.platformName.toLowerCase().includes('facebook')) return 'facebook';
+        if (integration.platformName.toLowerCase().includes('instagram')) return 'instagram';
+        if (integration.platformName.toLowerCase().includes('messenger')) return 'messenger';
+        return 'meta';
+      }).join(',');
+
+      // Redirect to success page
+      const redirectUrl = `https://sme-afrika.web.app/integrations?status=success&platform=${platforms}&message=${encodeURIComponent('Meta platforms connected successfully')}&integrations=${integrations.length}`;
+      
+      return `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Redirecting...</title>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <script>
+              window.location.href = '${redirectUrl}';
+            </script>
+          </head>
+          <body>
+            <p>Redirecting...</p>
+          </body>
+        </html>
+      `;
 
     } catch (error) {
       this.logger.error('OAuth callback processing failed:', error);
-      return this.renderErrorPage('processing_failed', error.message);
+      
+      // Redirect to error page
+      const redirectUrl = `https://sme-afrika.web.app/integrations?status=error&platform=meta&message=${encodeURIComponent('Authentication failed')}&error=${encodeURIComponent(error.message)}`;
+      
+      return `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Redirecting...</title>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <script>
+              window.location.href = '${redirectUrl}';
+            </script>
+          </head>
+          <body>
+            <p>Redirecting...</p>
+          </body>
+        </html>
+      `;
     }
   }
 
@@ -291,105 +354,6 @@ export class MetaController {
         // Continue with other pages even if one fails
       }
     }
-  }
-
-  /**
-   * Render success page after successful OAuth
-   */
-  private renderSuccessPage(integrations: any[]): string {
-    const platformNames = integrations.map(i => i.platformName).join(', ');
-    
-    return `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Integration Successful</title>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1">
-          <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
-            .container { max-width: 500px; margin: 50px auto; background: white; border-radius: 12px; padding: 40px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-            .success-icon { width: 60px; height: 60px; background: #10B981; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; }
-            .check { color: white; font-size: 30px; font-weight: bold; }
-            h1 { color: #065F46; margin: 0 0 10px; font-size: 24px; }
-            p { color: #6B7280; margin: 0 0 20px; line-height: 1.5; }
-            .platforms { background: #F3F4F6; padding: 15px; border-radius: 8px; margin: 20px 0; }
-            .close-btn { background: #10B981; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 16px; }
-            .close-btn:hover { background: #059669; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="success-icon">
-              <span class="check">✓</span>
-            </div>
-            <h1>Integration Successful!</h1>
-            <p>Your Meta platforms have been successfully connected to your business account.</p>
-            <div class="platforms">
-              <strong>Connected Platforms:</strong><br>
-              ${platformNames}
-            </div>
-            <p>You can now close this window and return to your app to start managing your social media presence.</p>
-            <button class="close-btn" onclick="window.close()">Close Window</button>
-          </div>
-          <script>
-            // Auto-close after 5 seconds if not manually closed
-            setTimeout(() => {
-              if (window.opener) {
-                window.close();
-              }
-            }, 5000);
-          </script>
-        </body>
-      </html>
-    `;
-  }
-
-  /**
-   * Render error page for OAuth failures
-   */
-  private renderErrorPage(error: string, description?: string): string {
-    return `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Integration Failed</title>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1">
-          <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
-            .container { max-width: 500px; margin: 50px auto; background: white; border-radius: 12px; padding: 40px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-            .error-icon { width: 60px; height: 60px; background: #EF4444; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; }
-            .x { color: white; font-size: 30px; font-weight: bold; }
-            h1 { color: #DC2626; margin: 0 0 10px; font-size: 24px; }
-            p { color: #6B7280; margin: 0 0 20px; line-height: 1.5; }
-            .error-details { background: #FEF2F2; border: 1px solid #FECACA; padding: 15px; border-radius: 8px; margin: 20px 0; text-align: left; }
-            .retry-btn { background: #3B82F6; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 16px; margin-right: 10px; }
-            .close-btn { background: #6B7280; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 16px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="error-icon">
-              <span class="x">✕</span>
-            </div>
-            <h1>Integration Failed</h1>
-            <p>There was an issue connecting your Meta platforms. This could be due to:</p>
-            <div class="error-details">
-              <strong>Error:</strong> ${error}<br>
-              ${description ? `<strong>Details:</strong> ${description}` : ''}
-            </div>
-            <p>
-              • Network connectivity issues<br>
-              • Permissions not granted<br>
-              • Temporary service problems
-            </p>
-            <button class="retry-btn" onclick="history.back()">Try Again</button>
-            <button class="close-btn" onclick="window.close()">Close Window</button>
-          </div>
-        </body>
-      </html>
-    `;
   }
 
   /**

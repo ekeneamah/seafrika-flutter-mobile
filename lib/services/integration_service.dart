@@ -165,6 +165,7 @@ class IntegrationService {
   }
 
   Future<List<Integration>> fetchIntegrations() async {
+    debugPrint('[IntegrationService] === fetchIntegrations START ===');
     _validateBusinessId();
     debugPrint(
         '[IntegrationService] fetchIntegrations called for businessId=$_businessId');
@@ -172,26 +173,47 @@ class IntegrationService {
       final query = CollectionReferences.integrationsForBusiness(_businessId)
           .where('status', isNotEqualTo: 'deleted')
           .orderBy('createdAt', descending: true);
-      debugPrint('[IntegrationService] Firestore query: $query');
+      debugPrint('[IntegrationService] Firestore query built successfully');
+      debugPrint('[IntegrationService] About to execute query...');
       final snapshot = await query.get();
       debugPrint(
           '[IntegrationService] Query returned ${snapshot.docs.length} docs');
-      final integrations = snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        data['id'] = doc.id;
+      debugPrint(
+          '[IntegrationService] Query metadata: pending=${snapshot.metadata.hasPendingWrites}, fromCache=${snapshot.metadata.isFromCache}');
+
+      final integrations = <Integration>[];
+      for (int i = 0; i < snapshot.docs.length; i++) {
+        final doc = snapshot.docs[i];
         debugPrint(
-            '[IntegrationService] Integration doc: id=${doc.id}, data=$data');
-        return Integration.fromMap(data);
-      }).toList();
+            '[IntegrationService] Processing doc ${i + 1}/${snapshot.docs.length}: ${doc.id}');
+        try {
+          final data = doc.data() as Map<String, dynamic>;
+          data['id'] = doc.id;
+          debugPrint(
+              '[IntegrationService] Integration doc: id=${doc.id}, data=$data');
+          final integration = Integration.fromMap(data);
+          integrations.add(integration);
+          debugPrint(
+              '[IntegrationService] Successfully created Integration object for ${doc.id}');
+        } catch (e, stackTrace) {
+          debugPrint('[IntegrationService] ERROR processing doc ${doc.id}: $e');
+          debugPrint('[IntegrationService] Stack trace: $stackTrace');
+          // Continue processing other docs
+        }
+      }
+
       debugPrint(
           '[IntegrationService] Returning ${integrations.length} integrations');
+      debugPrint('[IntegrationService] === fetchIntegrations END ===');
       return integrations;
     } on FirebaseException catch (e) {
       debugPrint('[IntegrationService] FirebaseException: ${e.message}');
+      debugPrint('[IntegrationService] FirebaseException code: ${e.code}');
       throw IntegrationException(
           'Failed to fetch integrations: ${e.message}', 'FIRESTORE_ERROR');
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('[IntegrationService] Unexpected error: $e');
+      debugPrint('[IntegrationService] Stack trace: $stackTrace');
       throw IntegrationException(
           'Unexpected error while fetching integrations', 'UNKNOWN_ERROR');
     }

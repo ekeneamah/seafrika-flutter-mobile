@@ -45,6 +45,17 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>seafrika.oauth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>seafrika</string>
+			</array>
+		</dict>
+	</array>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>We need access to your photo library to display media.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

@@ -8,6 +8,7 @@ import 'package:vendor_app/widgets/loading_view.dart';
 import 'package:vendor_app/widgets/integration_app_bar.dart';
 import 'package:vendor_app/screens/integrations/whatsapp_integration_screen.dart';
 import 'package:vendor_app/utils/business_preferences_helper.dart';
+import 'package:vendor_app/config/routes.dart';
 
 class AddIntegrationScreen extends ConsumerStatefulWidget {
   const AddIntegrationScreen({super.key});
@@ -151,6 +152,13 @@ class _AddIntegrationScreenState extends ConsumerState<AddIntegrationScreen> {
         'icon': 'assets/icons/tiktok.png',
         'fields': ['appId', 'appSecret', 'accessToken'],
         'description': 'Reach younger audiences through TikTok marketing',
+      },
+      {
+        'id': 'youtube',
+        'name': 'YouTube',
+        'icon': 'assets/icons/youtube.png',
+        'fields': ['clientId', 'clientSecret', 'accessToken'],
+        'description': 'Manage YouTube channel content and analytics',
       },
       {
         'id': 'whatsapp_business',
@@ -1048,13 +1056,16 @@ class _AddIntegrationScreenState extends ConsumerState<AddIntegrationScreen> {
     // Navigate to specific integration screens
     switch (platformId) {
       case 'instagram':
-        Navigator.pushNamed(context, '/meta-integration');
+        Navigator.pushNamed(context, AppRoutes.metaIntegration);
         break;
       case 'facebook':
-        Navigator.pushNamed(context, '/meta-integration');
+        Navigator.pushNamed(context, AppRoutes.metaIntegration);
         break;
       case 'tiktok':
-        Navigator.pushNamed(context, '/tiktok-integration');
+        Navigator.pushNamed(context, AppRoutes.tiktokIntegrationAlt);
+        break;
+      case 'youtube':
+        Navigator.pushNamed(context, AppRoutes.youTubeIntegration);
         break;
       case 'whatsapp_business':
         Navigator.push(

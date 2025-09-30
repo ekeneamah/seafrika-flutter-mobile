@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SeaFrika Vendor - Integration Success</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 90%;
+        }
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: #4CAF50;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            color: white;
+            font-size: 40px;
+        }
+        .error-icon {
+            width: 80px;
+            height: 80px;
+            background: #f44336;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            color: white;
+            font-size: 40px;
+        }
+        h1 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        .platform-badge {
+            display: inline-block;
+            background: #FF0050;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .close-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .close-btn:hover {
+            background: #764ba2;
+        }
+        .details {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: left;
+            font-size: 14px;
+        }
+        .details strong {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="content">
+            <!-- Content will be populated by JavaScript -->
+        </div>
+        <button class="close-btn" onclick="closeWindow()">Close Window</button>
+    </div>
+
+    <script>
+        function getQueryParams() {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                platform: params.get('platform'),
+                status: params.get('status'),
+                integrations: params.get('integrations'),
+                open_id: params.get('open_id'),
+                display_name: params.get('display_name'),
+                error: params.get('error'),
+                error_description: params.get('error_description'),
+                source: params.get('source')
+            };
+        }
+
+        function renderContent() {
+            const params = getQueryParams();
+            const content = document.getElementById('content');
+            
+            if (params.status === 'success') {
+                content.innerHTML = `
+                    <div class="success-icon">✓</div>
+                    <h1>Integration Successful!</h1>
+                    <div class="platform-badge">${params.platform?.toUpperCase() || 'PLATFORM'}</div>
+                    <p>Your ${params.platform || 'platform'} account has been successfully connected to SeaFrika Vendor.</p>
+                    ${params.display_name ? `<div class="details">
+                        <strong>Account:</strong> ${params.display_name}<br>
+                        <strong>Integrations Created:</strong> ${params.integrations || '0'}
+                    </div>` : ''}
+                    <p>You can now close this window and return to the SeaFrika Vendor app.</p>
+                `;
+            } else {
+                content.innerHTML = `
+                    <div class="error-icon">✕</div>
+                    <h1>Integration Failed</h1>
+                    <div class="platform-badge">${params.platform?.toUpperCase() || 'PLATFORM'}</div>
+                    <p>There was an error connecting your ${params.platform || 'platform'} account.</p>
+                    ${params.error_description ? `<div class="details">
+                        <strong>Error:</strong> ${decodeURIComponent(params.error_description)}
+                    </div>` : ''}
+                    <p>Please try again or contact support if the problem persists.</p>
+                `;
+            }
+            
+            // Auto-close for mobile after 3 seconds
+            if (params.source === 'mobile') {
+                setTimeout(() => {
+                    closeWindow();
+                }, 3000);
+            }
+        }
+
+        function closeWindow() {
+            try {
+                window.close();
+            } catch (e) {
+                // If can't close window, redirect back to app
+                window.location.href = 'https://app.seafrika.com';
+            }
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', renderContent);
+    </script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:vendor_app/services/meta_integration_service.dart';
 import 'package:vendor_app/widgets/integration_app_bar.dart';
 import 'package:vendor_app/providers/business_context_provider.dart';
@@ -122,44 +122,63 @@ class _MetaIntegrationScreenState extends ConsumerState<MetaIntegrationScreen> {
         _lastResponse = response;
       });
 
-      // Launch the OAuth URL in browser
-      debugPrint('Attempting to launch URL: ${response.authUrl}');
-
-      // Add simple diagnostic test
-      debugPrint('Device info - Testing URL launch capability...');
+      debugPrint('Starting Meta OAuth flow with URL: ${response.authUrl}');
 
       try {
-        // First try to launch in external browser
-        final uri = Uri.parse(response.authUrl);
+        // Use flutter_web_auth_2 for modern OAuth flow with HTTPS redirects
+        final result = await FlutterWebAuth2.authenticate(
+          url: response.authUrl,
+          callbackUrlScheme: 'https',
+          options: const FlutterWebAuth2Options(
+            timeout: 120000, // 2 minutes timeout
+            preferEphemeral: false,
+          ),
+        );
 
-        if (await canLaunchUrl(uri)) {
-          debugPrint('Launching URL in external application...');
-          // Try external application first (Instagram app if available)
-          await launchUrl(
-            uri,
-            mode: LaunchMode.inAppWebView,
-          );
+        debugPrint('Meta OAuth result received: $result');
+
+        // Parse the callback URL to check for success/error
+        final uri = Uri.parse(result);
+        final status = uri.queryParameters['status'];
+        final message = uri.queryParameters['message'];
+        final error = uri.queryParameters['error'];
+
+        if (status == 'success') {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content:
+                    Text(message ?? 'Meta platforms connected successfully!'),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+            // Navigate back to integrations list
+            Navigator.of(context).pop();
+          }
         } else {
-          debugPrint('Cannot launch URL in external application.');
-          // Fallback to in-app web view
-          await launchUrl(
-            uri,
-            mode: LaunchMode.inAppWebView,
-          );
+          // Handle error case
+          final errorMessage = error ?? message ?? 'Authentication failed';
+          setState(() {
+            _errorMessage = 'Meta OAuth failed: $errorMessage';
+          });
         }
+      } on Exception catch (e) {
+        debugPrint('Meta OAuth authentication failed: $e');
 
-        // Show instructions to user
-        if (mounted) {
-          await _showAuthInstructions();
+        // Check if it's a user cancellation
+        if (e.toString().contains('CANCELED') ||
+            e.toString().contains('User closed')) {
+          debugPrint('User cancelled Meta OAuth');
+          // Don't show error for user cancellation
+        } else {
+          setState(() {
+            _errorMessage = 'Meta authentication failed. Please try again.';
+          });
         }
-      } catch (launchError) {
-        debugPrint('Error launching URL: $launchError');
-        if (mounted) {
-          await _handleUrlLaunchFailure(response.authUrl);
-        }
-        throw Exception('Could not launch OAuth URL: $launchError');
       }
     } catch (e) {
+      debugPrint('Error in Meta OAuth flow: $e');
       setState(() {
         _errorMessage = e.toString();
       });
@@ -168,117 +187,6 @@ class _MetaIntegrationScreenState extends ConsumerState<MetaIntegrationScreen> {
         _isLoading = false;
       });
     }
-  }
-
-  Future<void> _showAuthInstructions() async {
-    await showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Authorization Required'),
-          content: const SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Please complete the authorization process in your browser:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 16),
-                Text('1. Log into your Facebook/Instagram account if prompted'),
-                SizedBox(height: 8),
-                Text('2. Review the permissions being requested'),
-                SizedBox(height: 8),
-                Text('3. Click "Continue" or "Allow" to grant access'),
-                SizedBox(height: 8),
-                Text('4. Return to this app once completed'),
-                SizedBox(height: 16),
-                Text(
-                  'Note: If you see the Facebook homepage instead of an authorization dialog, please try again or contact support.',
-                  style: TextStyle(
-                    fontStyle: FontStyle.italic,
-                    color: Colors.orange,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Got it'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<void> _handleUrlLaunchFailure(String authUrl) async {
-    await showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Unable to Open Browser'),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'We couldn\'t automatically open your browser. You can still complete the authorization manually:',
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Option 1: Copy the URL below and paste it into your browser',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    border: Border.all(color: Colors.grey[300]!),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: SelectableText(
-                    authUrl,
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Option 2: Try again with a different browser',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () async {
-                await Clipboard.setData(ClipboardData(text: authUrl));
-                if (mounted) {
-                  Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('URL copied to clipboard'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                }
-              },
-              child: const Text('Copy URL'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   @override

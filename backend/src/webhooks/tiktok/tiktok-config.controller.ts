@@ -1,6 +1,6 @@
-import { Controller, Get, Post, Put, Delete, Query, Body, Headers, Res, Logger, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Query, Body, Headers, Res, Req, Param, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBody } from '@nestjs/swagger';
-import { Response } from 'express';
+import { Response, Request } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { TikTokService } from './tiktok.service';
 
@@ -33,27 +33,73 @@ export class TikTokConfigController {
 
     try {
       const authUrl = this.tikTokService.generateAuthUrl({
-        scopes: ['user.info.basic', 'video.list', 'video.upload'],
+        scopes: ['user.info.basic', 'user.info.profile', 'user.info.stats', 'video.list', 'video.upload'],
         redirectUri,
         state
       });
       
-      this.logger.log('TikTok auth URL generated', {
+      // Store PKCE code verifier in Firestore for later retrieval during token exchange
+      await this.tikTokService.storePKCEVerifier(authUrl.state, authUrl.codeVerifier);
+      
+      this.logger.log('TikTok auth URL generated with PKCE', {
         businessId,
         redirectUri,
-        state,
+        state: authUrl.state,
+        codeChallenge: authUrl.codeChallenge,
       });
 
       return {
         auth_url: authUrl,
         client_key: this.configService.get('TIKTOK_CLIENT_KEY'),
         redirect_uri: redirectUri,
-        state: state,
+        state: authUrl.state,
       };
     } catch (error) {
       this.logger.error('Failed to generate TikTok auth URL:', error);
       throw new HttpException(
         'Failed to generate authorization URL',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Get('mobile-auth-url')
+  @ApiOperation({ summary: 'Generate TikTok authorization URL for mobile apps' })
+  @ApiResponse({ status: 200, description: 'Mobile authorization URL generated successfully' })
+  @ApiQuery({ name: 'state', description: 'Optional state parameter', required: false })
+  async getMobileTikTokAuthUrl(
+    @Query('state') state?: string,
+    @Headers('Business-ID') businessId?: string,
+  ) {
+    try {
+      // Use the same HTTPS redirect URI as web, but we'll detect mobile requests
+      const baseUrl = process.env.BASE_URL || 'https://seafrikaapi-u53tcgosiq-uc.a.run.app';
+      const mobileRedirectUri = `${baseUrl}/api/config/tiktok/oauth/redirect`;
+      
+      const authUrl = this.tikTokService.generateAuthUrl({
+        scopes: ['user.info.basic', 'user.info.profile', 'user.info.stats', 'video.list', 'video.upload'],
+        redirectUri: mobileRedirectUri,
+        state: `mobile_${businessId}_${Date.now()}`  // Always use mobile_ prefix for mobile requests
+      });
+      
+      // Store PKCE code verifier in Firestore for later retrieval during token exchange
+      await this.tikTokService.storePKCEVerifier(authUrl.state, authUrl.codeVerifier);
+      
+      this.logger.log('TikTok mobile auth URL generated with PKCE', {
+        businessId,
+        redirectUri: mobileRedirectUri,
+        state: authUrl.state,
+        codeChallenge: authUrl.codeChallenge,
+      });
+
+      return {
+        authUrl: authUrl.authUrl,
+        state: authUrl.state,
+      };
+    } catch (error) {
+      this.logger.error('Failed to generate TikTok mobile auth URL:', error);
+      throw new HttpException(
+        'Failed to generate mobile authorization URL',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -67,6 +113,7 @@ export class TikTokConfigController {
   @ApiQuery({ name: 'error', description: 'Error code if authentication failed', required: false })
   @ApiQuery({ name: 'error_description', description: 'Error description', required: false })
   async handleTikTokOAuthRedirect(
+    @Req() req: Request,
     @Query('code') code?: string,
     @Query('state') state?: string,
     @Query('error') error?: string,
@@ -78,24 +125,50 @@ export class TikTokConfigController {
       state,
       error,
       errorDescription,
+      fullQuery: JSON.stringify(req.query),
+      userAgent: req.headers['user-agent']
     });
 
     // Parse business ID and requested channels from state
     let businessId: string | undefined;
     let requestedChannels: string[] = ['tiktok'];
+    let isMobileRequest = false;
 
     if (state) {
       try {
-        // State format: "businessId:channel1,channel2" or just "businessId"
-        const [stateBusinessId, channelsString] = state.split(':');
-        businessId = stateBusinessId;
-        if (channelsString) {
-          requestedChannels = channelsString.split(',');
+        this.logger.log('Parsing state parameter:', state);
+        
+        // Check if this is a mobile request (state starts with "mobile_")
+        if (state.startsWith('mobile_')) {
+          isMobileRequest = true;
+          this.logger.log('Mobile request detected from state:', state);
+          // State format: "mobile_businessId_timestamp" 
+          const parts = state.split('_');
+          if (parts.length >= 2) {
+            businessId = parts[1];
+            this.logger.log('Extracted businessId from mobile state:', businessId);
+          }
+        } else {
+          this.logger.log('Web request detected from state:', state);
+          // For legacy states or web requests
+          // State format: "businessId:channel1,channel2" or just "businessId"
+          const [stateBusinessId, channelsString] = state.split(':');
+          businessId = stateBusinessId;
+          if (channelsString) {
+            requestedChannels = channelsString.split(',');
+          }
         }
       } catch (e) {
         this.logger.warn('Failed to parse state parameter:', state);
       }
     }
+
+    this.logger.log('Request detection results:', {
+      businessId,
+      requestedChannels,
+      isMobileRequest,
+      originalState: state
+    });
 
     // Handle OAuth error
     if (error) {
@@ -103,6 +176,7 @@ export class TikTokConfigController {
         error,
         errorDescription,
         businessId,
+        isMobileRequest,
       });
 
       if (businessId) {
@@ -113,11 +187,19 @@ export class TikTokConfigController {
         );
       }
 
-      const errorMessage = encodeURIComponent(
-        errorDescription || 'TikTok authorization failed'
-      );
-      const redirectUrl = `https://seafrikavendorapp.web.app/integrations?error=${errorMessage}`;
-      return res?.redirect(redirectUrl);
+      // Handle OAuth errors with web app redirects
+      if (isMobileRequest) {
+        const errorMessage = encodeURIComponent(errorDescription || 'TikTok authorization failed');
+        const redirectUrl = `https://sme-afrika.web.app/integrations?error=${error}&error_description=${errorMessage}&platform=tiktok&source=mobile&state=${state}`;
+        this.logger.log(`Redirecting mobile OAuth error to web app: ${redirectUrl}`);
+        return res?.redirect(redirectUrl);
+      } else {
+        const errorMessage = encodeURIComponent(
+          errorDescription || 'TikTok authorization failed'
+        );
+        const redirectUrl = `https://sme-afrika.web.app/integrations?error=${errorMessage}`;
+        return res?.redirect(redirectUrl);
+      }
     }
 
     // Handle missing authorization code
@@ -132,9 +214,17 @@ export class TikTokConfigController {
         );
       }
 
-      const errorMessage = encodeURIComponent('Authorization failed: No code received');
-      const redirectUrl = `https://seafrikavendorapp.web.app/integrations?error=${errorMessage}`;
-      return res?.redirect(redirectUrl);
+      // Handle missing code with web app redirects
+      if (isMobileRequest) {
+        const errorMessage = encodeURIComponent('Authorization failed: No code received');
+        const redirectUrl = `https://sme-afrika.web.app/integrations?error=no_code&error_description=${errorMessage}&platform=tiktok&source=mobile&state=${state}`;
+        this.logger.log(`Redirecting mobile no-code error to web app: ${redirectUrl}`);
+        return res?.redirect(redirectUrl);
+      } else {
+        const errorMessage = encodeURIComponent('Authorization failed: No code received');
+        const redirectUrl = `https://sme-afrika.web.app/integrations?error=${errorMessage}`;
+        return res?.redirect(redirectUrl);
+      }
     }
 
     this.logger.log('Processing TikTok OAuth callback', {
@@ -148,10 +238,14 @@ export class TikTokConfigController {
       const baseUrl = process.env.BASE_URL || 'https://seafrikaapi-u53tcgosiq-uc.a.run.app';
       const redirectUri = `${baseUrl}/api/config/tiktok/oauth/redirect`;
       
+      // Retrieve and delete PKCE code verifier from Firestore
+      const codeVerifier = await this.tikTokService.retrieveAndDeletePKCEVerifier(state);
+      
       const authData = await this.tikTokService.exchangeCodeForTokens(
         code,
         redirectUri,
-        ['user.info.basic', 'video.publish']
+        codeVerifier,
+        ['user.info.basic', 'user.info.profile', 'user.info.stats', 'video.list', 'video.upload']
       );
 
       this.logger.log('TikTok OAuth exchange successful', {
@@ -164,11 +258,27 @@ export class TikTokConfigController {
       let createdIntegrations: any[] = [];
       
       if (businessId && requestedChannels.includes('tiktok')) {
-        const tikTokIntegration = await this.createTikTokIntegration(businessId, authData);
-        if (tikTokIntegration) {
-          createdIntegrations.push(tikTokIntegration);
+        this.logger.log(`Creating TikTok integration for business: ${businessId}`);
+        try {
+          const tikTokIntegration = await this.createTikTokIntegration(businessId, authData);
+          if (tikTokIntegration) {
+            createdIntegrations.push(tikTokIntegration);
+            this.logger.log(`TikTok integration created successfully: ${tikTokIntegration.id}`);
+          }
+        } catch (integrationError) {
+          this.logger.error(`Failed to create TikTok integration for business ${businessId}:`, integrationError);
+          // Continue with redirect even if integration creation fails
         }
+      } else {
+        this.logger.warn(`Skipping TikTok integration creation:`, {
+          businessId,
+          requestedChannels,
+          hasBusinessId: !!businessId,
+          includesTikTok: requestedChannels.includes('tiktok')
+        });
       }
+
+      this.logger.log(`Created ${createdIntegrations.length} integrations for business ${businessId}`);
 
       // Trigger completion notification
       if (businessId) {
@@ -182,15 +292,26 @@ export class TikTokConfigController {
         });
       }
 
-      // Redirect to success page
+      // Redirect to success page (use web app hosted on Firebase)
       const successParams = new URLSearchParams({
         platform: 'tiktok',
         status: 'success',
         integrations: createdIntegrations.length.toString(),
       });
-
-      const redirectUrl = `https://seafrikavendorapp.web.app/integrations?${successParams.toString()}`;
-      return res?.redirect(redirectUrl);
+      
+      if (isMobileRequest) {
+        // For mobile, add additional data as query parameters
+        successParams.append('open_id', authData.userInfo.openId);
+        successParams.append('display_name', authData.userInfo.displayName || '');
+        // Redirect to web app with mobile detection
+        const redirectUrl = `https://sme-afrika.web.app/integrations?${successParams.toString()}&source=mobile`;
+        this.logger.log(`Redirecting mobile success to web app: ${redirectUrl}`);
+        return res?.redirect(redirectUrl);
+      } else {
+        // Web redirect as before
+        const redirectUrl = `https://sme-afrika.web.app/integrations?${successParams.toString()}`;
+        return res?.redirect(redirectUrl);
+      }
 
     } catch (error) {
       this.logger.error('TikTok OAuth exchange failed:', error);
@@ -203,11 +324,19 @@ export class TikTokConfigController {
         );
       }
 
-      const errorMessage = encodeURIComponent(
-        `TikTok authorization failed: ${error.message}`
-      );
-      const redirectUrl = `https://seafrikavendorapp.web.app/integrations?error=${errorMessage}`;
-      return res?.redirect(redirectUrl);
+      // Handle errors with web redirects for all requests
+      if (isMobileRequest) {
+        const errorMessage = encodeURIComponent(`TikTok authorization failed: ${error.message}`);
+        const redirectUrl = `https://sme-afrika.web.app/integrations?error=${errorMessage}&platform=tiktok&source=mobile&state=${state}`;
+        this.logger.log(`Redirecting mobile OAuth exchange error to web app: ${redirectUrl}`);
+        return res?.redirect(redirectUrl);
+      } else {
+        const errorMessage = encodeURIComponent(
+          `TikTok authorization failed: ${error.message}`
+        );
+        const redirectUrl = `https://sme-afrika.web.app/integrations?error=${errorMessage}`;
+        return res?.redirect(redirectUrl);
+      }
     }
   }
 
@@ -417,7 +546,7 @@ export class TikTokConfigController {
     const tikTokClientSecret = this.configService.get('TIKTOK_CLIENT_SECRET');
 
     const authUrl = this.tikTokService.generateAuthUrl({
-      scopes: ['user.info.basic', 'video.list', 'video.upload'],
+      scopes: ['user.info.basic', 'user.info.profile', 'user.info.stats', 'video.list', 'video.upload'],
       redirectUri,
       state: 'debug_test'
     });
@@ -431,7 +560,7 @@ export class TikTokConfigController {
       oauth_urls: {
         auth_url: authUrl,
         description: 'TikTok for Business OAuth 2.0 authorization URL',
-        scopes: ['user.info.basic', 'video.list', 'video.upload'],
+        scopes: ['user.info.basic', 'user.info.profile', 'user.info.stats', 'video.list', 'video.upload'],
       },
       test_steps: [
         'Copy the auth_url above',
@@ -505,6 +634,73 @@ export class TikTokConfigController {
     } catch (error) {
       this.logger.error(`Failed to create TikTok integration for business ${businessId}:`, error);
       throw error;
+    }
+  }
+
+  /**
+   * Get integration errors for a business
+   */
+  @Get('/errors/:businessId')
+  async getIntegrationErrors(
+    @Param('businessId') businessId: string,
+    @Query('platformId') platformId?: string
+  ): Promise<any> {
+    try {
+      const errors = await this.tikTokService.getIntegrationErrors(businessId, platformId);
+      
+      return {
+        success: true,
+        errors: errors,
+        count: errors.length
+      };
+    } catch (error) {
+      this.logger.error('Failed to retrieve integration errors:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Mark integration error as resolved
+   */
+  @Post('/errors/:errorId/resolve')
+  async resolveIntegrationError(@Param('errorId') errorId: string): Promise<any> {
+    try {
+      await this.tikTokService.markErrorAsResolved(errorId);
+      
+      return {
+        success: true,
+        message: 'Error marked as resolved'
+      };
+    } catch (error) {
+      this.logger.error('Failed to resolve integration error:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Cleanup incomplete integrations (migrate to integration_errors collection)
+   */
+  @Post('/cleanup/incomplete-integrations')
+  async cleanupIncompleteIntegrations(): Promise<any> {
+    try {
+      await this.tikTokService.cleanupIncompleteIntegrations();
+      
+      return {
+        success: true,
+        message: 'Incomplete integrations cleanup completed'
+      };
+    } catch (error) {
+      this.logger.error('Failed to cleanup incomplete integrations:', error);
+      return {
+        success: false,
+        error: error.message
+      };
     }
   }
 }

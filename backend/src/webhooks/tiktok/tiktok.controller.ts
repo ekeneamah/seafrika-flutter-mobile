@@ -179,9 +179,11 @@ export class TikTokController {
       this.logger.log(`Processing TikTok OAuth callback for business: ${business_id}`);
 
       // Exchange authorization code for tokens
+      // Note: This is legacy OAuth flow without PKCE - consider using the new mobile-auth-url endpoint instead
       const { credentials, userInfo } = await this.tiktokService.exchangeCodeForTokens(
         code,
         redirect_uri,
+        '', // Empty codeVerifier for legacy flow - PKCE not used here
         scopeArray,
       );
 

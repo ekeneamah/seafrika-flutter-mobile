@@ -14,6 +14,9 @@ export default () => {
     TIKTOK_CLIENT_KEY: process.env.TIKTOK_CLIENT_KEY,
     TIKTOK_CLIENT_SECRET: process.env.TIKTOK_CLIENT_SECRET,
     TIKTOK_API_VERSION: process.env.TIKTOK_API_VERSION || 'v2',
+    YOUTUBE_CLIENT_ID: process.env.YOUTUBE_CLIENT_ID,
+    YOUTUBE_CLIENT_SECRET: process.env.YOUTUBE_CLIENT_SECRET,
+    YOUTUBE_REDIRECT_URI: process.env.YOUTUBE_REDIRECT_URI,
     // Add all other environment variables as needed
     API_PREFIX: process.env.API_PREFIX,
     CORS_ORIGIN: process.env.CORS_ORIGIN,

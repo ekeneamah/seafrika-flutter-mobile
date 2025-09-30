@@ -34,6 +34,13 @@ class ApiConfig {
   static const String tiktokOAuthRedirectPath =
       '$tiktokConfigBasePath/oauth/redirect';
 
+  // YouTube Integration endpoints
+  static const String youtubeBasePath = '$integrationsBasePath/youtube';
+  static const String youtubeConfigBasePath = '/api/config/youtube';
+  static const String youtubeAuthPath = '$youtubeConfigBasePath/auth-url';
+  static const String youtubeOAuthRedirectPath =
+      '$youtubeConfigBasePath/oauth/redirect';
+
   // WhatsApp Integration endpoints
   static const String whatsappBasePath = '$integrationsBasePath/whatsapp';
 
@@ -154,6 +161,25 @@ class ApiConfig {
       '${tiktokConfigBasePath.replaceFirst('/config/', '/webhooks/')}/subscribe');
   static String getTikTokIntegrationLogs() =>
       getFullUrl('$tiktokConfigBasePath/integration/logs');
+
+  // YouTube specific URLs
+  static String getYouTubeAuthUrl({String? businessId}) {
+    final url = getFullUrl(youtubeAuthPath);
+    if (businessId != null) {
+      return '$url?businessId=$businessId';
+    }
+    return url;
+  }
+
+  static String getYouTubeRedirectUrl() => getFullUrl(youtubeOAuthRedirectPath);
+  static String getYouTubeIntegrationStatus() =>
+      getFullUrl('$youtubeConfigBasePath/integration/status');
+  static String getYouTubeUserInfo() =>
+      getFullUrl('$youtubeConfigBasePath/user-info');
+  static String getYouTubeIntegrationSettings() =>
+      getFullUrl('$youtubeConfigBasePath/integration/settings');
+  static String getYouTubeIntegrationDisconnect() =>
+      getFullUrl('$youtubeConfigBasePath/integration/disconnect');
 
   // WhatsApp specific URLs
   static String getWhatsAppBusinessProfile(String integrationId) =>

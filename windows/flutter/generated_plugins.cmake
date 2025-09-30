@@ -7,6 +7,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   awesome_notifications
   cloud_firestore
   connectivity_plus
+  desktop_webview_window
   file_selector_windows
   firebase_auth
   firebase_core
@@ -16,6 +17,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   printing
   share_plus
   url_launcher_windows
+  window_to_front
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 class Integration {
   final String id;
@@ -86,6 +87,32 @@ class Integration {
 
   // Helper method to get Instagram username from accountInfo
   String? get instagramUsername => accountInfo?['instagramUsername'] as String?;
+
+  // Helper method to get TikTok display name from accountInfo
+  String? get tikTokDisplayName => accountInfo?['displayName'] as String?;
+
+  // Helper method to get TikTok username from accountInfo
+  String? get tikTokUsername => accountInfo?['username'] as String?;
+
+  // Helper method to get YouTube channel title from accountInfo
+  String? get youTubeTitle {
+    try {
+      return accountInfo?['title'] as String?;
+    } catch (e) {
+      debugPrint('Error accessing youTubeTitle: $e');
+      return null;
+    }
+  }
+
+  // Helper method to get YouTube custom URL from accountInfo
+  String? get youTubeCustomUrl {
+    try {
+      return accountInfo?['customUrl'] as String?;
+    } catch (e) {
+      debugPrint('Error accessing youTubeCustomUrl: $e');
+      return null;
+    }
+  }
 }
 
 class IntegrationSettings {

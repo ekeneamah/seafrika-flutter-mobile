@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:vendor_app/models/integration.dart';
 import 'package:vendor_app/models/tiktok_models.dart';
 import 'package:vendor_app/providers/service_providers.dart';
@@ -13,6 +13,7 @@ import 'package:vendor_app/widgets/integration_app_bar.dart';
 import 'package:vendor_app/theme/app_theme.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:async';
 
 class TikTokIntegrationScreen extends ConsumerStatefulWidget {
   final String? integrationId;
@@ -151,13 +152,13 @@ class _TikTokIntegrationScreenState
     });
 
     try {
-      // Get TikTok auth URL from backend
+      // Get TikTok auth URL from backend using mobile endpoint
       final authService = ref.read(authServiceProvider);
+      final state = 'vendor_${DateTime.now().millisecondsSinceEpoch}';
       final response = await http.get(
         Uri.parse(
-          'https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/config/tiktok/auth-url'
-          '?redirect_uri=${Uri.encodeComponent('https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/config/tiktok/oauth/redirect')}'
-          '&state=${Uri.encodeComponent('vendor_${DateTime.now().millisecondsSinceEpoch}')}',
+          'https://seafrikaapi-u53tcgosiq-uc.a.run.app/api/config/tiktok/mobile-auth-url'
+          '?state=${Uri.encodeComponent(state)}',
         ),
         headers: {
           'Business-ID': businessId,
@@ -172,21 +173,100 @@ class _TikTokIntegrationScreenState
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
-        final authUrl = responseData['authUrl'] as String;
+
+        // Mobile endpoint returns authUrl directly
+        final authUrl = responseData['authUrl'] as String?;
+        final responseState = responseData['state'] as String?;
+
+        if (authUrl == null) {
+          setState(() {
+            _error = 'Invalid response: Missing auth URL';
+            _isLoading = false;
+          });
+          return;
+        }
 
         debugPrint('TikTok Auth URL: $authUrl');
+        debugPrint('TikTok State: $responseState');
 
-        // Launch the URL in the browser
-        final Uri url = Uri.parse(authUrl);
-        if (await canLaunchUrl(url)) {
-          await launchUrl(
-            url,
-            mode: LaunchMode.externalApplication,
+        // Use flutter_web_auth_2 for secure OAuth flow with web redirects (no custom URL scheme)
+        try {
+          final result = await FlutterWebAuth2.authenticate(
+            url: authUrl,
+            callbackUrlScheme: 'https', // Use HTTPS instead of custom scheme
+          ).timeout(
+            const Duration(minutes: 5), // 5 minute timeout
+            onTimeout: () {
+              throw TimeoutException(
+                  'TikTok OAuth process timed out', const Duration(minutes: 5));
+            },
           );
-          _showReturnDialog();
-        } else {
+
+          debugPrint('TikTok OAuth result: $result');
+
+          // Parse the callback URL to extract parameters
+          final uri = Uri.parse(result);
+          final code = uri.queryParameters['code'];
+          final state = uri.queryParameters['state'];
+          final error = uri.queryParameters['error'];
+          final errorDescription = uri.queryParameters['error_description'];
+          final status = uri.queryParameters['status'];
+
+          if (error != null) {
+            setState(() {
+              _error = 'TikTok OAuth error: ${errorDescription ?? error}';
+              _isLoading = false;
+            });
+            return;
+          }
+
+          // Check for success status from mobile redirect
+          if (status == 'success') {
+            setState(() {
+              _isLoading = false;
+            });
+            // Refresh the integration status to show the new connection
+            await _checkForNewIntegration();
+            return;
+          }
+
+          if (code == null || state == null) {
+            setState(() {
+              _error =
+                  'TikTok OAuth failed: Missing authorization code or state';
+              _isLoading = false;
+            });
+            return;
+          }
+
+          // For the new approach, the integration is already created by the redirect handler
+          // We just need to check for the integration
           setState(() {
-            _error = 'Could not launch TikTok authorization URL';
+            _isLoading = false;
+          });
+
+          // Refresh the integration status to show the new connection
+          await _checkForNewIntegration();
+        } on TimeoutException catch (e) {
+          debugPrint('TikTok OAuth timeout: $e');
+          setState(() {
+            _error = 'TikTok OAuth timed out. Please try again.';
+            _isLoading = false;
+          });
+        } on PlatformException catch (e) {
+          debugPrint('TikTok OAuth platform error: $e');
+          setState(() {
+            if (e.code == 'CANCELED') {
+              _error = 'TikTok OAuth was cancelled by user';
+            } else {
+              _error = 'TikTok OAuth failed: ${e.message ?? e.code}';
+            }
+            _isLoading = false;
+          });
+        } catch (e) {
+          debugPrint('TikTok OAuth error: $e');
+          setState(() {
+            _error = 'TikTok OAuth failed: ${e.toString()}';
             _isLoading = false;
           });
         }
@@ -204,41 +284,6 @@ class _TikTokIntegrationScreenState
         _isLoading = false;
       });
     }
-  }
-
-  void _showReturnDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Complete TikTok Authorization'),
-          content: const Text(
-            'You\'ve been redirected to TikTok to authorize access. '
-            'Please complete the authorization process in your browser, '
-            'then return here and tap "I\'ve Completed Authorization" to continue.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                setState(() {
-                  _isLoading = false;
-                });
-              },
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _checkForNewIntegration();
-              },
-              child: const Text('I\'ve Completed Authorization'),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   Future<void> _checkForNewIntegration() async {
@@ -639,8 +684,15 @@ class _TikTokIntegrationScreenState
                   _buildInfoRow('Status', 'Active'),
                   _buildInfoRow(
                     'Connected',
-                    _currentIntegration?.createdAt.toString().split(' ')[0] ??
-                        'N/A',
+                    () {
+                      final createdAt =
+                          _currentIntegration?.createdAt.toString();
+                      if (createdAt != null && createdAt.isNotEmpty) {
+                        final parts = createdAt.split(' ');
+                        return parts.isNotEmpty ? parts[0] : 'N/A';
+                      }
+                      return 'N/A';
+                    }(),
                   ),
                   _buildInfoRow(
                     'Integration ID',
