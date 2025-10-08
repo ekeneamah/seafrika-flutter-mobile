@@ -1,0 +1,83 @@
+// Firestore Security Rules for Message Collections
+// Add these rules to your existing firestore.rules file
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Messages collection - business scoped
+    match /businesses/{businessId}/messages/{messageId} {
+      // Only allow access to users who are members of the business
+      allow read, write: if isBusinessMember(businessId);
+      
+      // Allow webhook service to write (server-side)
+      allow write: if request.auth != null && 
+        request.auth.token.role == 'service' && 
+        request.auth.token.service == 'webhook';
+    }
+    
+    // Conversations collection - business scoped
+    match /businesses/{businessId}/conversations/{conversationId} {
+      allow read, write: if isBusinessMember(businessId);
+      
+      // Allow webhook service to write
+      allow write: if request.auth != null && 
+        request.auth.token.role == 'service' && 
+        request.auth.token.service == 'webhook';
+    }
+    
+    // Notification logs - business scoped, read-only for users
+    match /businesses/{businessId}/notification_logs/{logId} {
+      allow read: if isBusinessMember(businessId);
+      
+      // Only allow system writes
+      allow write: if request.auth != null && 
+        request.auth.token.role == 'service';
+    }
+    
+    // Notification preferences - business scoped
+    match /businesses/{businessId}/settings/notifications {
+      allow read, write: if isBusinessMember(businessId);
+    }
+    
+    // FCM tokens for push notifications
+    match /businesses/{businessId}/fcm_tokens/{tokenId} {
+      allow read, write: if isBusinessMember(businessId);
+    }
+    
+    // Helper function to check business membership
+    function isBusinessMember(businessId) {
+      return request.auth != null && 
+        (
+          // User is owner of the business
+          request.auth.uid in get(/databases/$(database)/documents/businesses/$(businessId)).data.members ||
+          // User has explicit access
+          exists(/databases/$(database)/documents/businesses/$(businessId)/members/$(request.auth.uid))
+        );
+    }
+    
+    // Existing rules for other collections...
+    // (Your existing rules should continue here)
+  }
+}
+
+// Example indexes you should create in Firestore:
+/*
+Collection: businesses/{businessId}/messages
+Indexes needed:
+1. integrationId (Ascending), createdAt (Descending)
+2. metadata.isRead (Ascending), createdAt (Descending) 
+3. platform (Ascending), createdAt (Descending)
+4. conversation.threadId (Ascending), createdAt (Descending)
+
+Collection: businesses/{businessId}/conversations  
+Indexes needed:
+1. lastMessageAt (Descending)
+2. unreadCount (Descending), lastMessageAt (Descending)
+
+To create these indexes, run:
+firebase firestore:indexes
+
+Or create them in the Firebase Console under Firestore > Indexes
+*/

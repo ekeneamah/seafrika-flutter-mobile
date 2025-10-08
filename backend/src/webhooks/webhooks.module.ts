@@ -11,7 +11,10 @@ import { WhatsAppWebhookService } from './whatsapp/whatsapp-webhook.service';
 import { FirestoreModule } from '../firestore/firestore.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { YouTubeConfigController } from './youtube/youtube-config.controller';
+import { YouTubeWebhookController } from './youtube/youtube-webhook.controller';
 import { YouTubeService } from './youtube/youtube.service';
+import { MessageService } from './shared/services/message.service';
+import { NotificationService } from './shared/services/notification.service';
 
 
 /**
@@ -33,6 +36,7 @@ import { YouTubeService } from './youtube/youtube.service';
     WebhookManagementController,       // General webhook management
     WhatsAppWebhookController,         // WhatsApp Business webhooks
     YouTubeConfigController,          // YouTube OAuth configuration and management
+    YouTubeWebhookController,         // YouTube webhook events handler
   ],
   providers: [
     MetaService,                       // Unified Meta service
@@ -40,6 +44,8 @@ import { YouTubeService } from './youtube/youtube.service';
     TikTokService,                     // TikTok Business service
     WhatsAppWebhookService,           // WhatsApp Business service
     YouTubeService,                   // YouTube service
+    MessageService,                   // Enhanced messaging service with customer details
+    NotificationService,              // Vendor notification service
   ],
   exports: [
     MetaService,                      // Export for use in other modules
@@ -47,6 +53,8 @@ import { YouTubeService } from './youtube/youtube.service';
     TikTokService,                    // Export TikTok service
     WhatsAppWebhookService,           // Export WhatsApp service
     YouTubeService,                   // Export YouTube service
+    MessageService,                   // Export enhanced messaging service
+    NotificationService,              // Export notification service
   ],
 })
 export class WebhooksModule {}

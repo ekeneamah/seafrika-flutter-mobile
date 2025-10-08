@@ -7,6 +7,7 @@ import 'package:vendor_app/providers/service_providers.dart';
 import 'package:vendor_app/providers/business_context_provider.dart';
 import 'package:vendor_app/utils/business_preferences_helper.dart';
 import 'package:vendor_app/widgets/search_widget.dart';
+import 'package:vendor_app/widgets/integrations_card.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 
@@ -1403,6 +1404,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               // Action Shortcuts
               SliverToBoxAdapter(
                 child: _buildActionShortcuts(),
+              ),
+
+              // Integrations
+              const SliverToBoxAdapter(
+                child: IntegrationsCard(),
               ),
 
               // Today's Bookings

@@ -1,6 +1,55 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
+// Messaging statistics for integration (Tier 1 in 3-tier structure)
+class MessagingStats {
+  final int totalNewMessages;
+  final int totalMessageCount;
+  final DateTime? lastMessageDate;
+  final String? lastMessageId;
+  final String? lastMessagePreview;
+  final int totalConversations;
+  final int activeConversations;
+
+  MessagingStats({
+    this.totalNewMessages = 0,
+    this.totalMessageCount = 0,
+    this.lastMessageDate,
+    this.lastMessageId,
+    this.lastMessagePreview,
+    this.totalConversations = 0,
+    this.activeConversations = 0,
+  });
+
+  factory MessagingStats.fromMap(Map<String, dynamic> map) {
+    return MessagingStats(
+      totalNewMessages: map['totalNewMessages'] as int? ?? 0,
+      totalMessageCount: map['totalMessageCount'] as int? ?? 0,
+      lastMessageDate: map['lastMessageDate'] is Timestamp
+          ? (map['lastMessageDate'] as Timestamp).toDate()
+          : map['lastMessageDate'] != null
+              ? DateTime.parse(map['lastMessageDate'] as String)
+              : null,
+      lastMessageId: map['lastMessageId'] as String?,
+      lastMessagePreview: map['lastMessagePreview'] as String?,
+      totalConversations: map['totalConversations'] as int? ?? 0,
+      activeConversations: map['activeConversations'] as int? ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'totalNewMessages': totalNewMessages,
+      'totalMessageCount': totalMessageCount,
+      'lastMessageDate': lastMessageDate,
+      'lastMessageId': lastMessageId,
+      'lastMessagePreview': lastMessagePreview,
+      'totalConversations': totalConversations,
+      'activeConversations': activeConversations,
+    };
+  }
+}
+
 class Integration {
   final String id;
   final String platformId;
@@ -13,6 +62,7 @@ class Integration {
   final Map<String, dynamic>? credentials;
   final String? errorMessage;
   final Map<String, dynamic>? accountInfo;
+  final MessagingStats? messagingStats; // NEW: Messaging statistics
 
   Integration({
     required this.id,
@@ -26,6 +76,7 @@ class Integration {
     this.credentials,
     this.errorMessage,
     this.accountInfo,
+    this.messagingStats, // NEW: Optional messaging stats
   });
 
   factory Integration.fromMap(Map<String, dynamic> map) {
@@ -44,6 +95,10 @@ class Integration {
       credentials: map['credentials'] as Map<String, dynamic>?,
       errorMessage: map['error_message'] as String?,
       accountInfo: map['accountInfo'] as Map<String, dynamic>?,
+      messagingStats: map['messagingStats'] != null
+          ? MessagingStats.fromMap(
+              map['messagingStats'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -63,6 +118,10 @@ class Integration {
       credentials: json['credentials'] as Map<String, dynamic>?,
       errorMessage: json['error_message'] as String?,
       accountInfo: json['accountInfo'] as Map<String, dynamic>?,
+      messagingStats: json['messagingStats'] != null
+          ? MessagingStats.fromMap(
+              json['messagingStats'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -79,6 +138,7 @@ class Integration {
       'credentials': credentials,
       'error_message': errorMessage,
       'accountInfo': accountInfo,
+      'messagingStats': messagingStats?.toMap(),
     };
   }
 

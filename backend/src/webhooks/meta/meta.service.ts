@@ -880,16 +880,43 @@ const userAccessToken = (longRes.data.access_token as string) || shortUserToken;
    * Verify webhook signature
    */
   verifyWebhookSignature(payload: string, signature: string): boolean {
-    const expectedSignature = crypto
-      .createHmac('sha256', this.configService.get('META_WEBHOOK_VERIFY_TOKEN'))
-      .update(payload)
-      .digest('hex');
-    
-    const receivedSignature = signature.replace('sha256=', '');
-    return crypto.timingSafeEqual(
-      Buffer.from(expectedSignature, 'hex'),
-      Buffer.from(receivedSignature, 'hex')
-    );
+    try {
+      if (!signature) {
+        this.logger.warn('No signature provided for webhook verification');
+        return false;
+      }
+
+      // Use APP_SECRET for signature verification, not verify token
+      const appSecret = this.configService.get('META_APP_SECRET');
+      if (!appSecret) {
+        this.logger.error('META_APP_SECRET not configured for webhook signature verification');
+        return false;
+      }
+
+      const expectedSignature = crypto
+        .createHmac('sha256', appSecret)
+        .update(payload, 'utf8')
+        .digest('hex');
+      
+      const receivedSignature = signature.replace('sha256=', '');
+      
+      this.logger.debug(`Expected signature: ${expectedSignature.substring(0, 20)}...`);
+      this.logger.debug(`Received signature: ${receivedSignature.substring(0, 20)}...`);
+      
+      const isValid = crypto.timingSafeEqual(
+        Buffer.from(expectedSignature, 'hex'),
+        Buffer.from(receivedSignature, 'hex')
+      );
+
+      if (!isValid) {
+        this.logger.warn('Webhook signature verification failed');
+      }
+
+      return isValid;
+    } catch (error) {
+      this.logger.error('Error during webhook signature verification:', error);
+      return false;
+    }
   }
 
   /**

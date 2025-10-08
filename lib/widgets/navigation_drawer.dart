@@ -195,6 +195,15 @@ class NavigationDrawer extends ConsumerWidget {
             isSelected: currentRoute == Routes.customers,
           ),
           _buildDrawerItem(
+            icon: Icons.message,
+            title: 'Messages',
+            onTap: () {
+              Navigator.of(context).pop(); // Close drawer first
+              NavigationService.navigateToMessages();
+            },
+            isSelected: currentRoute == AppRoutes.messages,
+          ),
+          _buildDrawerItem(
             icon: Icons.add_shopping_cart,
             title: 'Create Order',
             onTap: () => NavigationService.navigateToCreateOrder(),

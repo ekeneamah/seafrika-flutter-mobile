@@ -41,6 +41,9 @@ import 'package:vendor_app/screens/integrations/tiktok_integration_screen.dart';
 import 'package:vendor_app/screens/integrations/generic_integration_dashboard.dart';
 import 'package:vendor_app/screens/integrations/instagram_analytics_screen.dart';
 import 'package:vendor_app/screens/integrations/instagram_posts_screen.dart';
+import 'package:vendor_app/screens/modern_messages_screen.dart';
+import 'package:vendor_app/screens/conversation_screen.dart';
+import 'package:vendor_app/models/message.dart';
 import 'package:vendor_app/screens/tasks/task_list_screen.dart';
 import 'package:vendor_app/screens/tasks/create_task_screen.dart';
 import 'package:vendor_app/screens/tasks/task_detail_screen.dart';
@@ -206,6 +209,10 @@ class AppRoutes {
   static const String businessManagement = '/businesses/management';
   static const String businessOnboarding = '/businesses/onboarding';
   static const String passwordReset = '/auth/password-reset';
+
+  // Messages routes
+  static const String messages = '/messages';
+  static const String conversation = '/messages/conversation';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -741,6 +748,23 @@ class AppRoutes {
         final businessId = settings.arguments as String?;
         return MaterialPageRoute(
           builder: (_) => BusinessManagementScreen(businessId: businessId),
+        );
+      case messages:
+        final args = settings.arguments as Map<String, dynamic>?;
+        final platform = args?['platform'] as String?;
+        final integrationId = args?['integrationId'] as String?;
+        debugPrint(
+            'Navigating to messages with platform: $platform, integrationId: $integrationId');
+        return MaterialPageRoute(
+          builder: (_) => ModernMessagesScreen(
+            initialPlatform: platform,
+            integrationId: integrationId,
+          ),
+        );
+      case conversation:
+        final conversation = settings.arguments as Conversation;
+        return MaterialPageRoute(
+          builder: (_) => ConversationScreen(conversation: conversation),
         );
       default:
         return MaterialPageRoute(

@@ -150,6 +150,43 @@ class NavigationService {
         arguments: {'integrationId': integrationId, 'initialTab': 2});
   }
 
+  static Future<dynamic> navigateToMessages(
+      {String? platform, String? integrationId}) {
+    return navigateTo(AppRoutes.messages, arguments: {
+      if (platform != null) 'platform': platform,
+      if (integrationId != null) 'integrationId': integrationId,
+    });
+  }
+
+  static Future<dynamic> navigateToIntegrationDashboard(
+      String integrationId, String platformName) {
+    // Route to specific platform integration screens based on platform
+    debugPrint('Navigating to $platformName integration');
+    switch (platformName.toLowerCase()) {
+      case 'instagram business':
+        return navigateTo(AppRoutes.instagramIntegration,
+            arguments: {'integrationId': integrationId});
+      case 'whatsapp':
+        return navigateTo(AppRoutes.whatsappIntegration,
+            arguments: {'integrationId': integrationId});
+      case 'tiktok':
+        return navigateTo(AppRoutes.tiktokIntegration,
+            arguments: {'integrationId': integrationId});
+      case 'messenger':
+        return navigateTo(AppRoutes.messengerIntegration,
+            arguments: {'integrationId': integrationId});
+      case 'youtube':
+        return navigateTo(AppRoutes.youTubeIntegration,
+            arguments: {'integrationId': integrationId});
+      case 'facebook pages':
+        return navigateTo(AppRoutes.facebookPagesIntegration,
+            arguments: {'integrationId': integrationId});
+      // For platforms without specific screens, navigate to integration settings
+      default:
+        return navigateToIntegrationSettings(integrationId);
+    }
+  }
+
   // Profile and Settings Navigation Methods
   static Future<dynamic> navigateToProfile() {
     return navigateTo(AppRoutes.profile);

@@ -100,5 +100,11 @@ class CollectionNames {
   static const String knowledgeBase = 'knowledge_base';
   static const String knowledgeCategories = 'knowledge_categories';
 
+  // Messaging collections (3-tier flat structure)
+  static const String conversations =
+      'conversations'; // Conversation headers (by integrationId)
+  static const String messages =
+      'messages'; // Individual messages (by conversationId)
+
   static const String teams = 'teams';
 }

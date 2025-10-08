@@ -39,6 +39,10 @@ async function bootstrap() {
 
   // Conditional middleware to prevent raw body parsing on file upload routes
   app.use((req, res, next) => {
+    this.logger = app.get('NestApplication').getLogger();
+    this.logger.log(`Incoming request: ${req.method} ${req.path}`);
+    this.logger.log(`Headers: ${JSON.stringify(req.headers)}`);
+    this.logger.log(`Body: ${JSON.stringify(req.body)}`);
     // Skip raw body parsing for multipart file upload routes
     if (req.path === '/api/v1/webhooks/tiktok/upload-verification') {
       return next();

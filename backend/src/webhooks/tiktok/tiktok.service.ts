@@ -1126,6 +1126,39 @@ export class TikTokService {
   }
 
   /**
+   * Find business integration from platform ID
+   * Uses the same Firestore collection structure as Meta integration
+   */
+  async findBusinessIntegrationFromPlatformId(platformId: string, platform: string = 'tiktok'): Promise<{ businessId: string; integrationId: string } | null> {
+    try {
+      // Query the integrations collection (same as Meta uses)
+      const integrationsCollection = this.firestoreService.collection('integrations');
+      const query = await integrationsCollection
+        .where('platformId', '==', platformId)
+        .where('platform', '==', platform)
+        .where('status', '==', 'active')
+        .limit(1)
+        .get();
+
+      if (query.empty) {
+        this.logger.warn(`No active integration found for TikTok platform ID: ${platformId}`);
+        return null;
+      }
+
+      const integrationDoc = query.docs[0];
+      const integrationData = integrationDoc.data();
+
+      return {
+        businessId: integrationData.businessId,
+        integrationId: integrationDoc.id,
+      };
+    } catch (error) {
+      this.logger.error('Failed to find business integration from platform ID:', error);
+      return null;
+    }
+  }
+
+  /**
    * Trigger authorization completion notification
    */
   async triggerAuthorizationComplete(businessId: string, authData: any): Promise<void> {

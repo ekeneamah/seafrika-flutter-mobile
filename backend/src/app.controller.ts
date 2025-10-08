@@ -30,7 +30,7 @@ export class AppController {
     };
   }
 
-  @Get('env')
+ /*  @Get('env')
   @ApiOperation({ summary: 'Environment variables' })
   @ApiResponse({ status: 200, description: 'Environment variables and configuration' })
   getEnvironmentVariables() {
@@ -48,12 +48,12 @@ export class AppController {
       INSTAGRAM_APP_SECRET: this.configService.get<string>('INSTAGRAM_APP_SECRET') ? 'SET' : 'NOT SET',
       JWT_SECRET: this.configService.get<string>('JWT_SECRET') ? 'SET' : 'NOT SET',
       // Add other environment variables as needed
-    };
+    }; 
 
     return {
       timestamp: new Date().toISOString(),
       environment: envVars,
       note: 'Sensitive values are masked for security',
     };
-  }
+  }*/
 }

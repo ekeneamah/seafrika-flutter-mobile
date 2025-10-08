@@ -14,6 +14,8 @@ import {
 import { MetaService } from './meta.service';
 import { InstagramMetricsService } from './instagram-metrics.service';
 import { FirestoreService } from '../../firestore/firestore.service';
+import { MessageService } from '../shared/services/message.service';
+import { NotificationService } from '../shared/services/notification.service';
 
 /**
  * Meta Integration Controller
@@ -35,6 +37,8 @@ export class MetaController {
     private readonly metaService: MetaService,
     private readonly instagramMetricsService: InstagramMetricsService,
     private readonly firestoreService: FirestoreService,
+    private readonly messageService: MessageService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   /**
@@ -53,6 +57,47 @@ export class MetaController {
         'GET /api/webhooks/meta/webhook'
       ]
     };
+  }
+
+  /**
+   * Debug endpoint to check integration lookup
+   */
+  @Get('config/meta/debug-integration/:platformId')
+  async debugIntegration(@Param('platformId') platformId: string) {
+    this.logger.log(`🔍 Debug integration lookup for platformId: ${platformId}`);
+    
+    try {
+      // Test integration lookup using MessagingService
+      const result = await this.messageService.findBusinessIntegrationFromPlatformId(
+        platformId, 
+        'messenger'
+      );
+
+      if (result) {
+        return {
+          success: true,
+          platformId,
+          businessId: result.businessId,
+          integrationId: result.integrationId,
+          timestamp: new Date().toISOString()
+        };
+      } else {
+        return {
+          success: false,
+          platformId,
+          message: 'No integration found',
+          timestamp: new Date().toISOString()
+        };
+      }
+    } catch (error) {
+      this.logger.error(`Error in debug integration lookup: ${error.message}`);
+      return {
+        success: false,
+        platformId,
+        error: error.message,
+        timestamp: new Date().toISOString()
+      };
+    }
   }
 
   /**
@@ -365,14 +410,21 @@ export class MetaController {
     @Query('hub.challenge') challenge: string,
     @Query('hub.verify_token') verifyToken: string,
   ) {
+    this.logger.log(`🔐 Webhook verification attempt - mode: ${mode}, challenge: ${challenge?.substring(0, 20)}..., verifyToken: ${verifyToken?.substring(0, 10)}...`);
+    
     const expectedToken = process.env.META_WEBHOOK_VERIFY_TOKEN;
+    
+    if (!expectedToken) {
+      this.logger.error('❌ META_WEBHOOK_VERIFY_TOKEN not configured in environment');
+      throw new BadRequestException('Webhook verification not configured');
+    }
 
     if (mode === 'subscribe' && verifyToken === expectedToken) {
-      this.logger.log('Webhook verified successfully');
+      this.logger.log('✅ Webhook verified successfully, returning challenge');
       return challenge;
     }
 
-    this.logger.error('Webhook verification failed');
+    this.logger.error(`❌ Webhook verification failed - mode: ${mode}, token match: ${verifyToken === expectedToken}`);
     throw new BadRequestException('Webhook verification failed');
   }
 
@@ -385,27 +437,42 @@ export class MetaController {
     @Body() body: any,
     @Headers('x-hub-signature-256') signature: string,
   ) {
-    this.logger.log('Received webhook event');
+    const requestStartTime = Date.now();
+    this.logger.log(`🔄 Webhook received - Object: ${body.object}, Entries: ${body.entry?.length || 0}`);
+    this.logger.debug(`📋 Webhook body: ${JSON.stringify(body, null, 2)}`);
+    this.logger.debug(`🔐 Signature header: ${signature?.substring(0, 30)}...`);
 
     // Verify webhook signature
-    if (!this.metaService.verifyWebhookSignature(JSON.stringify(body), signature)) {
-      this.logger.error('Invalid webhook signature');
+    const payloadString = JSON.stringify(body);
+    const isSignatureValid = this.metaService.verifyWebhookSignature(payloadString, signature);
+    
+    if (!isSignatureValid) {
+      this.logger.error('❌ Invalid webhook signature - rejecting request');
+      this.logger.error(`❌ Payload length: ${payloadString.length}, Signature: ${signature}`);
+      this.logger.error(`❌ Environment check - META_APP_SECRET configured: ${!!process.env.META_APP_SECRET}`);
       throw new BadRequestException('Invalid signature');
     }
+    this.logger.log('✅ Webhook signature verified successfully');
 
     try {
       // Process webhook events
       if (body.object === 'page') {
+        this.logger.log(`📄 Processing Facebook Page webhook with ${body.entry.length} entries`);
         await this.handlePageWebhookEvents(body.entry);
       } else if (body.object === 'instagram') {
+        this.logger.log(`📷 Processing Instagram webhook with ${body.entry.length} entries`);
         await this.handleInstagramWebhookEvents(body.entry);
       } else {
-        this.logger.warn(`Unknown webhook object type: ${body.object}`);
+        this.logger.warn(`⚠️ Unknown webhook object type: ${body.object} - skipping processing`);
       }
 
+      const processingTime = Date.now() - requestStartTime;
+      this.logger.log(`✅ Webhook processed successfully in ${processingTime}ms`);
       return { success: true };
     } catch (error) {
-      this.logger.error('Webhook processing failed:', error);
+      const processingTime = Date.now() - requestStartTime;
+      this.logger.error(`❌ Webhook processing failed after ${processingTime}ms:`, error);
+      this.logger.error(`📋 Failed webhook body: ${JSON.stringify(body, null, 2)}`);
       return { success: false, error: error.message };
     }
   }
@@ -414,39 +481,69 @@ export class MetaController {
    * Handle Facebook Page webhook events (including Messenger)
    */
   private async handlePageWebhookEvents(entries: any[]): Promise<void> {
-    for (const entry of entries) {
+    this.logger.log(`📄 Processing ${entries.length} page webhook entries`);
+    
+    for (const [index, entry] of entries.entries()) {
       const pageId = entry.id;
+      this.logger.log(`📄 [${index + 1}/${entries.length}] Processing page entry for pageId: ${pageId}`);
+      this.logger.debug(`📄 Entry data: ${JSON.stringify(entry, null, 2)}`);
       
-      // Handle different event types
-      if (entry.messaging) {
-        // Messenger events
-        await this.handleMessengerEvents(pageId, entry.messaging);
-      }
-      
-      if (entry.changes) {
-        // Page changes (posts, mentions, etc.)
-        await this.handlePageChanges(pageId, entry.changes);
+      try {
+        // Handle different event types
+        if (entry.messaging) {
+          this.logger.log(`💬 Found ${entry.messaging.length} Messenger events for page ${pageId}`);
+          await this.handleMessengerEvents(pageId, entry.messaging);
+        }
+        
+        if (entry.changes) {
+          this.logger.log(`🔄 Found ${entry.changes.length} page changes for page ${pageId}`);
+          await this.handlePageChanges(pageId, entry.changes);
+        }
+
+        if (!entry.messaging && !entry.changes) {
+          this.logger.warn(`⚠️ Page entry ${pageId} has no messaging or changes - skipping`);
+        }
+      } catch (error) {
+        this.logger.error(`❌ Failed to process page entry ${pageId}:`, error);
+        // Continue processing other entries even if one fails
       }
     }
+    
+    this.logger.log(`✅ Completed processing ${entries.length} page webhook entries`);
   }
 
   /**
    * Handle Instagram webhook events
    */
   private async handleInstagramWebhookEvents(entries: any[]): Promise<void> {
-    for (const entry of entries) {
+    this.logger.log(`📷 Processing ${entries.length} Instagram webhook entries`);
+    
+    for (const [index, entry] of entries.entries()) {
       const instagramId = entry.id;
+      this.logger.log(`📷 [${index + 1}/${entries.length}] Processing Instagram entry for ID: ${instagramId}`);
+      this.logger.debug(`📷 Entry data: ${JSON.stringify(entry, null, 2)}`);
       
-      if (entry.messaging) {
-        // Instagram DM events
-        await this.handleInstagramMessages(instagramId, entry.messaging);
-      }
-      
-      if (entry.changes) {
-        // Instagram changes (comments, mentions, etc.)
-        await this.handleInstagramChanges(instagramId, entry.changes);
+      try {
+        if (entry.messaging) {
+          this.logger.log(`💬 Found ${entry.messaging.length} Instagram DM events for account ${instagramId}`);
+          await this.handleInstagramMessages(instagramId, entry.messaging);
+        }
+        
+        if (entry.changes) {
+          this.logger.log(`🔄 Found ${entry.changes.length} Instagram changes for account ${instagramId}`);
+          await this.handleInstagramChanges(instagramId, entry.changes);
+        }
+
+        if (!entry.messaging && !entry.changes) {
+          this.logger.warn(`⚠️ Instagram entry ${instagramId} has no messaging or changes - skipping`);
+        }
+      } catch (error) {
+        this.logger.error(`❌ Failed to process Instagram entry ${instagramId}:`, error);
+        // Continue processing other entries even if one fails
       }
     }
+    
+    this.logger.log(`✅ Completed processing ${entries.length} Instagram webhook entries`);
   }
 
   /**
@@ -454,14 +551,126 @@ export class MetaController {
    */
   private async handleMessengerEvents(pageId: string, messages: any[]): Promise<void> {
     for (const message of messages) {
-      if (message.message) {
-        this.logger.log(`Messenger message received for page ${pageId}: ${message.message.text}`);
-        // Process message - implement your business logic here
-      }
-      
-      if (message.postback) {
-        this.logger.log(`Messenger postback received for page ${pageId}: ${message.postback.payload}`);
-        // Process postback - implement your business logic here
+      try {
+        // Find business and integration from page ID
+        const businessIntegration = await this.messageService.findBusinessIntegrationFromPlatformId(
+          pageId, 
+          'messenger'
+        );
+
+        if (!businessIntegration) {
+          this.logger.warn(`No business integration found for Messenger page ${pageId}`);
+          continue;
+        }
+
+        const { businessId, integrationId } = businessIntegration;
+
+        if (message.message) {
+          this.logger.log(`Messenger message received for page ${pageId}: ${message.message.text || '[Media]'}`);
+          
+          // Prepare message data for MessagingService (3-tier flat structure)
+          const webhookData = {
+            messageId: message.message.mid || `msg_${Date.now()}`,
+            businessId,
+            integrationId,
+            platform: 'messenger',
+            messageType: message.message.text ? 'text' : 'media',
+            content: {
+              text: message.message.text,
+              attachments: message.message.attachments?.map(att => ({
+                type: att.type,
+                url: att.payload?.url,
+                payload: att.payload,
+              })),
+            },
+            sender: {
+              id: message.sender.id,
+              name: message.sender.name,
+            },
+            recipient: {
+              id: message.recipient.id,
+              name: 'Business',
+            },
+            conversation: {
+              threadId: `messenger_${message.sender.id}_${pageId}`,
+              pageId: pageId,
+            },
+            metadata: {
+              timestamp: message.timestamp,
+              source: 'webhook',
+              rawPayload: message,
+              isRead: false,
+              isReplied: false,
+            },
+          };
+
+          this.logger.log(`💾 Saving Messenger message to MessagingService with messageId: ${webhookData.messageId}`);
+          const messageId = await this.messageService.saveWebhookMessage(webhookData);
+
+          // Send notification to vendor
+          await this.notificationService.notifyVendorOfNewMessage({
+            businessId,
+            integrationId,
+            messageId,
+            platform: 'messenger',
+            senderName: message.sender.name || 'Customer',
+            preview: message.message.text || '[Media message]',
+            timestamp: new Date(message.timestamp),
+          });
+        }
+        
+        if (message.postback) {
+          this.logger.log(`Messenger postback received for page ${pageId}: ${message.postback.payload}`);
+          
+          // Prepare postback data for MessagingService
+          const postbackData = {
+            messageId: `postback_${Date.now()}`,
+            businessId,
+            integrationId,
+            platform: 'messenger',
+            messageType: 'postback',
+            content: {
+              text: message.postback.title,
+              attachments: [],
+            },
+            sender: {
+              id: message.sender.id,
+              name: message.sender.name,
+            },
+            recipient: {
+              id: message.recipient.id,
+              name: 'Business',
+            },
+            conversation: {
+              threadId: `messenger_${message.sender.id}_${pageId}`,
+              pageId: pageId,
+            },
+            metadata: {
+              timestamp: message.timestamp,
+              source: 'webhook',
+              rawPayload: message,
+              isRead: false,
+              isReplied: false,
+            },
+          };
+
+          this.logger.log(`💾 Saving Messenger postback to MessagingService`);
+          const messageId = await this.messageService.saveWebhookMessage(postbackData);
+
+          // Send notification
+          await this.notificationService.notifyVendorOfNewMessage({
+            businessId,
+            integrationId,
+            messageId,
+            platform: 'messenger',
+            senderName: message.sender.name || 'Customer',
+            preview: `Clicked: ${message.postback.title}`,
+            timestamp: new Date(message.timestamp),
+          });
+        }
+      } catch (error) {
+        this.logger.error(`Failed to process Messenger event for page ${pageId}:`, error);
+        // Continue processing other messages
       }
     }
   }
@@ -471,17 +680,43 @@ export class MetaController {
    */
   private async handlePageChanges(pageId: string, changes: any[]): Promise<void> {
     for (const change of changes) {
-      this.logger.log(`Page change received for ${pageId}: ${change.field}`);
-      
-      switch (change.field) {
-        case 'feed':
-          // New post or post update
-          break;
-        case 'mention':
-          // Page was mentioned
-          break;
-        default:
-          this.logger.log(`Unhandled page change type: ${change.field}`);
+      try {
+        this.logger.log(`Page change received for ${pageId}: ${change.field}`);
+        
+        // Find business and integration from page ID
+        const businessIntegration = await this.messageService.findBusinessIntegrationFromPlatformId(
+          pageId, 
+          'facebook'
+        );
+
+        if (!businessIntegration) {
+          this.logger.warn(`No business integration found for Facebook page ${pageId}`);
+          continue;
+        }
+
+        const { businessId, integrationId } = businessIntegration;
+        
+        switch (change.field) {
+          case 'feed':
+            // New post or post update - could implement post tracking here
+            this.logger.log(`Feed change for page ${pageId}: ${JSON.stringify(change.value)}`);
+            break;
+          case 'mention':
+            // Page was mentioned - TODO: Implement mention tracking with MessagingService
+            this.logger.log(`Mention detected for page ${pageId}: ${JSON.stringify(change.value)}`);
+            // TODO: Convert to MessagingService format when mention tracking is needed
+            /*
+            if (change.value?.item === 'comment' && change.value?.comment_id) {
+              // Mention tracking implementation needed
+            }
+            */
+            break;
+          default:
+            this.logger.log(`Unhandled page change type: ${change.field}`);
+        }
+      } catch (error) {
+        this.logger.error(`Failed to process page change for ${pageId}:`, error);
+        // Continue processing other changes
       }
     }
   }
@@ -490,32 +725,267 @@ export class MetaController {
    * Handle Instagram messages
    */
   private async handleInstagramMessages(instagramId: string, messages: any[]): Promise<void> {
-    for (const message of messages) {
-      if (message.message) {
-        this.logger.log(`Instagram DM received for ${instagramId}: ${message.message.text}`);
-        // Process Instagram DM - implement your business logic here
+    this.logger.log(`📷💬 Processing ${messages.length} Instagram messages for account ${instagramId}`);
+    
+    for (const [index, message] of messages.entries()) {
+      const messageStartTime = Date.now();
+      this.logger.log(`📷💬 [${index + 1}/${messages.length}] Processing Instagram message`);
+      this.logger.debug(`📷💬 Message data: ${JSON.stringify(message, null, 2)}`);
+      
+      try {
+        // Find business and integration from Instagram account ID
+        this.logger.log(`🔍 Looking up business integration for Instagram ID: ${instagramId}`);
+        const businessIntegration = await this.messageService.findBusinessIntegrationFromPlatformId(
+          instagramId, 
+          'instagram'
+        );
+
+        if (!businessIntegration) {
+          this.logger.warn(`⚠️ No business integration found for Instagram account ${instagramId} - skipping message`);
+          continue;
+        }
+
+        const { businessId, integrationId } = businessIntegration;
+        this.logger.log(`✅ Found integration: businessId=${businessId}, integrationId=${integrationId}`);
+
+        if (message.message) {
+          const messageText = message.message.text || '[Media]';
+          this.logger.log(`📷💬 Instagram DM received for ${instagramId}: ${messageText.substring(0, 100)}...`);
+          
+          // Prepare message data for MessagingService
+          const webhookData = {
+            messageId: message.message.mid || `ig_msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            businessId,
+            integrationId,
+            platform: 'instagram',
+            messageType: message.message.text ? 'text' : 'image',
+            content: {
+              text: message.message.text || '',
+              attachments: message.message.attachments?.map((att: any) => ({
+                type: att.type || 'unknown',
+                url: att.payload?.url || '',
+                payload: att.payload
+              })) || []
+            },
+            sender: {
+              id: message.sender?.id || 'unknown',
+              name: message.sender?.name || message.sender?.username || 'Instagram User',
+              username: message.sender?.username
+            },
+            recipient: {
+              id: message.recipient?.id || instagramId,
+              name: 'Business'
+            },
+            conversation: {
+              threadId: `ig_thread_${instagramId}_${message.sender?.id || 'unknown'}`,
+              pageId: instagramId
+            },
+            metadata: {
+              timestamp: message.timestamp || Date.now(),
+              source: 'instagram_webhook',
+              rawPayload: message,
+              isRead: false,
+              isReplied: false,
+            },
+          };
+
+          this.logger.log(`💾 Saving Instagram DM to MessagingService with messageId: ${webhookData.messageId}`);
+          this.logger.debug(`💾 Webhook data: ${JSON.stringify(webhookData, null, 2)}`);
+          
+          // Save message using messaging service
+          const messageId = await this.messageService.saveWebhookMessage(webhookData);
+          
+          const messageProcessTime = Date.now() - messageStartTime;
+          this.logger.log(`✅ Instagram DM saved successfully as messageId: ${messageId} in ${messageProcessTime}ms`);
+
+          // Send notification
+          this.logger.log(`🔔 Sending notification for Instagram DM`);
+          await this.notificationService.notifyVendorOfNewMessage({
+            businessId,
+            integrationId,
+            messageId,
+            platform: 'instagram',
+            senderName: message.sender?.username || message.sender?.name || 'Instagram User',
+            preview: messageText.substring(0, 100),
+            timestamp: new Date(message.timestamp || Date.now()),
+          });
+          this.logger.log(`✅ Notification sent for Instagram DM`);
+        } else {
+          this.logger.warn(`⚠️ Instagram message has no message content - skipping`);
+        }
+      } catch (error) {
+        const messageProcessTime = Date.now() - messageStartTime;
+        this.logger.error(`❌ Failed to process Instagram message after ${messageProcessTime}ms:`, error);
+        this.logger.error(`📋 Failed message data: ${JSON.stringify(message, null, 2)}`);
+        // Continue processing other messages even if one fails
       }
     }
+    
+    this.logger.log(`✅ Completed processing ${messages.length} Instagram messages for account ${instagramId}`);
   }
 
   /**
    * Handle Instagram changes
    */
   private async handleInstagramChanges(instagramId: string, changes: any[]): Promise<void> {
-    for (const change of changes) {
-      this.logger.log(`Instagram change received for ${instagramId}: ${change.field}`);
+    this.logger.log(`📷🔄 Processing ${changes.length} Instagram changes for account ${instagramId}`);
+    
+    for (const [index, change] of changes.entries()) {
+      const changeStartTime = Date.now();
+      this.logger.log(`📷🔄 [${index + 1}/${changes.length}] Processing Instagram change: ${change.field}`);
+      this.logger.debug(`📷🔄 Change data: ${JSON.stringify(change, null, 2)}`);
       
-      switch (change.field) {
-        case 'comments':
-          // New comment
-          break;
-        case 'mentions':
-          // Account was mentioned
-          break;
-        default:
-          this.logger.log(`Unhandled Instagram change type: ${change.field}`);
+      try {
+        // Find business and integration from Instagram account ID
+        this.logger.log(`🔍 Looking up business integration for Instagram ID: ${instagramId}`);
+        const businessIntegration = await this.messageService.findBusinessIntegrationFromPlatformId(
+          instagramId, 
+          'instagram'
+        );
+
+        if (!businessIntegration) {
+          this.logger.warn(`⚠️ No business integration found for Instagram account ${instagramId} - skipping change`);
+          continue;
+        }
+
+        const { businessId, integrationId } = businessIntegration;
+        this.logger.log(`✅ Found integration: businessId=${businessId}, integrationId=${integrationId}`);
+        
+        switch (change.field) {
+          case 'comments':
+            this.logger.log(`💬 Processing Instagram comment for account ${instagramId}`);
+            // New comment on Instagram post
+            if (change.value?.text) {
+              this.logger.log(`💬 Comment text: ${change.value.text.substring(0, 100)}...`);
+              
+              const webhookData = {
+                messageId: change.value.id || `ig_comment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                businessId,
+                integrationId,
+                platform: 'instagram',
+                messageType: 'text',
+                content: {
+                  text: change.value.text,
+                  attachments: []
+                },
+                sender: {
+                  id: change.value.from?.id || 'unknown',
+                  name: change.value.from?.username || 'Instagram User',
+                  username: change.value.from?.username
+                },
+                recipient: {
+                  id: instagramId,
+                  name: 'Business'
+                },
+                conversation: {
+                  threadId: `ig_comment_${change.value.media?.id || 'unknown'}_${change.value.from?.id || 'unknown'}`,
+                  pageId: instagramId,
+                  postId: change.value.media?.id
+                },
+                metadata: {
+                  timestamp: Date.now(),
+                  source: 'instagram_webhook_comment',
+                  rawPayload: change,
+                  isRead: false,
+                  isReplied: false,
+                },
+              };
+
+              this.logger.log(`💾 Saving Instagram comment to MessagingService`);
+              const messageId = await this.messageService.saveWebhookMessage(webhookData);
+              
+              const changeProcessTime = Date.now() - changeStartTime;
+              this.logger.log(`✅ Instagram comment saved successfully as messageId: ${messageId} in ${changeProcessTime}ms`);
+
+              // Send notification
+              this.logger.log(`🔔 Sending notification for Instagram comment`);
+              await this.notificationService.notifyVendorOfNewMessage({
+                businessId,
+                integrationId,
+                messageId,
+                platform: 'instagram',
+                senderName: change.value.from?.username || 'Someone',
+                preview: `Commented: ${change.value.text.substring(0, 100)}`,
+                timestamp: new Date(),
+              });
+              this.logger.log(`✅ Notification sent for Instagram comment`);
+            } else {
+              this.logger.warn(`⚠️ Instagram comment has no text - skipping`);
+            }
+            break;
+          case 'mentions':
+            this.logger.log(`🏷️ Processing Instagram mention for account ${instagramId}`);
+            // Account was mentioned in story or post
+            if (change.value?.comment_id || change.value?.media_id) {
+              this.logger.log(`🏷️ Mention in ${change.value.media_id ? 'media' : 'comment'}`);
+              
+              const webhookData = {
+                messageId: change.value.comment_id || `ig_mention_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                businessId,
+                integrationId,
+                platform: 'instagram',
+                messageType: 'text',
+                content: {
+                  text: '[Mentioned in Instagram content]',
+                  attachments: []
+                },
+                sender: {
+                  id: change.value.from?.id || 'unknown',
+                  name: change.value.from?.username || 'Instagram User',
+                  username: change.value.from?.username
+                },
+                recipient: {
+                  id: instagramId,
+                  name: 'Business'
+                },
+                conversation: {
+                  threadId: `ig_mention_${change.value.media_id || Date.now()}_${change.value.from?.id || 'unknown'}`,
+                  pageId: instagramId,
+                  postId: change.value.media_id
+                },
+                metadata: {
+                  timestamp: Date.now(),
+                  source: 'instagram_webhook_mention',
+                  rawPayload: change,
+                  isRead: false,
+                  isReplied: false,
+                },
+              };
+
+              this.logger.log(`💾 Saving Instagram mention to MessagingService`);
+              const messageId = await this.messageService.saveWebhookMessage(webhookData);
+              
+              const changeProcessTime = Date.now() - changeStartTime;
+              this.logger.log(`✅ Instagram mention saved successfully as messageId: ${messageId} in ${changeProcessTime}ms`);
+
+              // Send notification
+              this.logger.log(`🔔 Sending notification for Instagram mention`);
+              await this.notificationService.notifyVendorOfNewMessage({
+                businessId,
+                integrationId,
+                messageId,
+                platform: 'instagram',
+                senderName: change.value.from?.username || 'Someone',
+                preview: 'Mentioned you in Instagram content',
+                timestamp: new Date(),
+              });
+              this.logger.log(`✅ Notification sent for Instagram mention`);
+            } else {
+              this.logger.warn(`⚠️ Instagram mention has no identifiable content - skipping`);
+            }
+            break;
+          default:
+            this.logger.log(`⚠️ Unhandled Instagram change type: ${change.field} - skipping`);
+        }
+      } catch (error) {
+        const changeProcessTime = Date.now() - changeStartTime;
+        this.logger.error(`❌ Failed to process Instagram change after ${changeProcessTime}ms:`, error);
+        this.logger.error(`📋 Failed change data: ${JSON.stringify(change, null, 2)}`);
+        // Continue processing other changes even if one fails
       }
     }
+    
+    this.logger.log(`✅ Completed processing ${changes.length} Instagram changes for account ${instagramId}`);
   }
 
   /**
@@ -586,6 +1056,132 @@ export class MetaController {
     } catch (error) {
       this.logger.error('Failed to start bulk Instagram metrics sync:', error);
       throw new BadRequestException('Failed to start bulk sync');
+    }
+  }
+
+  /**
+   * Get messages for a business
+   */
+  @Get('messages/:businessId')
+  async getMessages(
+    @Param('businessId') businessId: string,
+    @Query('integrationId') integrationId?: string,
+    @Query('limit') limit?: string,
+    @Query('cursor') cursor?: string,
+    @Query('unreadOnly') unreadOnly?: string,
+    @Headers('Business-ID') headerBusinessId?: string,
+  ) {
+    try {
+      // Validate business access
+      if (headerBusinessId && headerBusinessId !== businessId) {
+        throw new BadRequestException('Access denied to this business');
+      }
+
+      const options = {
+        integrationId,
+        limit: limit ? parseInt(limit, 10) : 50,
+        cursor,
+        unreadOnly: unreadOnly === 'true',
+      };
+
+      const result = await this.messageService.getMessages(businessId, options);
+      
+      return {
+        success: true,
+        data: result,
+      };
+    } catch (error) {
+      this.logger.error(`Failed to get messages for business ${businessId}:`, error);
+      throw new BadRequestException('Failed to get messages');
+    }
+  }
+
+  /**
+   * Mark messages as read
+   */
+  @Post('messages/:businessId/mark-read')
+  async markMessagesAsRead(
+    @Param('businessId') businessId: string,
+    @Body() body: { messageIds: string[]; readAt?: string },
+    @Headers('Business-ID') headerBusinessId?: string,
+  ) {
+    try {
+      // Validate business access
+      if (headerBusinessId && headerBusinessId !== businessId) {
+        throw new BadRequestException('Access denied to this business');
+      }
+
+      // Use messaging service with readAt support
+      const requests = body.messageIds.map(messageId => ({
+        messageId,
+        isRead: true,
+        readAt: body.readAt,
+      }));
+
+      await this.messageService.markMessagesAsRead(businessId, requests);
+      
+      return {
+        success: true,
+        message: `Marked ${body.messageIds.length} messages as read`,
+        readAt: body.readAt || new Date().toISOString(),
+      };
+    } catch (error) {
+      this.logger.error(`Failed to mark messages as read for business ${businessId}:`, error);
+      throw new BadRequestException('Failed to mark messages as read');
+    }
+  }
+
+  /**
+   * Get unread message count
+   */
+  @Get('messages/:businessId/unread-count')
+  async getUnreadCount(
+    @Param('businessId') businessId: string,
+    @Query('integrationId') integrationId?: string,
+    @Headers('Business-ID') headerBusinessId?: string,
+  ) {
+    try {
+      // Validate business access
+      if (headerBusinessId && headerBusinessId !== businessId) {
+        throw new BadRequestException('Access denied to this business');
+      }
+
+      const count = await this.messageService.getUnreadCount(businessId, integrationId);
+      
+      return {
+        success: true,
+        data: { unreadCount: count },
+      };
+    } catch (error) {
+      this.logger.error(`Failed to get unread count for business ${businessId}:`, error);
+      throw new BadRequestException('Failed to get unread count');
+    }
+  }
+
+  /**
+   * Update notification preferences
+   */
+  @Post('notifications/:businessId/preferences')
+  async updateNotificationPreferences(
+    @Param('businessId') businessId: string,
+    @Body() preferences: any,
+    @Headers('Business-ID') headerBusinessId?: string,
+  ) {
+    try {
+      // Validate business access
+      if (headerBusinessId && headerBusinessId !== businessId) {
+        throw new BadRequestException('Access denied to this business');
+      }
+
+      await this.notificationService.updateNotificationPreferences(businessId, preferences);
+      
+      return {
+        success: true,
+        message: 'Notification preferences updated successfully',
+      };
+    } catch (error) {
+      this.logger.error(`Failed to update notification preferences for business ${businessId}:`, error);
+      throw new BadRequestException('Failed to update notification preferences');
     }
   }
 }
