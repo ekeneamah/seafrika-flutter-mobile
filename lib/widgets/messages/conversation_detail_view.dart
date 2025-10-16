@@ -372,7 +372,7 @@ class _ConversationDetailViewState
     final authService = ref.read(authServiceProvider);
     final currentUserId = authService.currentUser?.id ?? 'unknown_user';
     final currentUserName = authService.currentUser?.fullName ?? 'User';
-    
+
     return MessageReactionHandler(
       messageId: message.id,
       userId: currentUserId,
@@ -398,10 +398,12 @@ class _ConversationDetailViewState
               decoration: BoxDecoration(
                 color: isFromUser ? AppTheme.primary : Colors.grey[100],
                 borderRadius: BorderRadius.circular(12).copyWith(
-                  bottomLeft:
-                      !isFromUser && showAvatar ? const Radius.circular(4) : null,
-                  bottomRight:
-                      isFromUser && showAvatar ? const Radius.circular(4) : null,
+                  bottomLeft: !isFromUser && showAvatar
+                      ? const Radius.circular(4)
+                      : null,
+                  bottomRight: isFromUser && showAvatar
+                      ? const Radius.circular(4)
+                      : null,
                 ),
               ),
               child: Column(

@@ -7,9 +7,8 @@ final reactionsApiServiceProvider = Provider<ReactionsApiService>((ref) {
 });
 
 /// Provider to add a reaction to a message
-final addReactionProvider = FutureProvider.family.autoDispose<
-    Map<String, dynamic>,
-    AddReactionParams>((ref, params) async {
+final addReactionProvider = FutureProvider.family
+    .autoDispose<Map<String, dynamic>, AddReactionParams>((ref, params) async {
   final service = ref.read(reactionsApiServiceProvider);
   return await service.addReaction(
     messageId: params.messageId,
@@ -22,9 +21,8 @@ final addReactionProvider = FutureProvider.family.autoDispose<
 });
 
 /// Provider to remove a reaction from a message
-final removeReactionProvider = FutureProvider.family.autoDispose<
-    void,
-    RemoveReactionParams>((ref, params) async {
+final removeReactionProvider = FutureProvider.family
+    .autoDispose<void, RemoveReactionParams>((ref, params) async {
   final service = ref.read(reactionsApiServiceProvider);
   await service.removeReaction(
     messageId: params.messageId,
@@ -33,9 +31,8 @@ final removeReactionProvider = FutureProvider.family.autoDispose<
 });
 
 /// Provider to get all reactions for a message
-final messageReactionsProvider = FutureProvider.family.autoDispose<
-    List<Map<String, dynamic>>,
-    String>((ref, messageId) async {
+final messageReactionsProvider = FutureProvider.family
+    .autoDispose<List<Map<String, dynamic>>, String>((ref, messageId) async {
   final service = ref.read(reactionsApiServiceProvider);
   return await service.getReactions(messageId: messageId);
 });

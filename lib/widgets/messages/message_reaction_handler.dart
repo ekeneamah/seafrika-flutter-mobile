@@ -5,7 +5,7 @@ import 'reactions_display.dart';
 import '../../services/reactions_api_service.dart';
 
 /// Example widget showing how to integrate reactions with a message bubble
-/// 
+///
 /// Usage in your message bubble widget:
 /// ```dart
 /// MessageReactionHandler(
@@ -109,7 +109,7 @@ class _MessageReactionHandlerState
         userName: widget.userName,
         platform: 'app',
       );
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -136,7 +136,7 @@ class _MessageReactionHandlerState
         messageId: widget.messageId,
         reactionId: reactionId,
       );
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -183,7 +183,7 @@ class _MessageReactionHandlerState
 }
 
 /// Simple example of how to use reactions in a message list
-/// 
+///
 /// ```dart
 /// ListView.builder(
 ///   itemCount: messages.length,

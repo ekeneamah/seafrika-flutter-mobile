@@ -129,9 +129,7 @@ class OptimizedAvatar extends StatelessWidget {
             : null,
         child: imageUrl == null || imageUrl!.isEmpty
             ? Text(
-                fallbackText.isNotEmpty
-                    ? fallbackText[0].toUpperCase()
-                    : '?',
+                fallbackText.isNotEmpty ? fallbackText[0].toUpperCase() : '?',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: radius * 0.75,

@@ -111,7 +111,8 @@ class _ReactionsDisplayState extends State<ReactionsDisplay> {
                     widget.onAddReaction(emoji);
                   }
                 },
-                onLongPress: () => _showReactionDetails(context, emoji, reactionList),
+                onLongPress: () =>
+                    _showReactionDetails(context, emoji, reactionList),
               );
             }).toList(),
           ),

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/message.dart';
 
 /// Optimized message list item with performance enhancements
-/// 
+///
 /// Features:
 /// - RepaintBoundary to isolate repaints
 /// - AutomaticKeepAlive to preserve scroll state
@@ -133,9 +133,7 @@ class MessageListMetrics {
       'rebuilds': _rebuildCount,
       'fps': fps,
       'avgFrameTime': _frameTimes.isNotEmpty
-          ? _frameTimes
-                  .map((d) => d.inMicroseconds)
-                  .reduce((a, b) => a + b) ~/
+          ? _frameTimes.map((d) => d.inMicroseconds).reduce((a, b) => a + b) ~/
               _frameTimes.length
           : 0,
     };
@@ -187,7 +185,7 @@ class _OptimizedMessageListViewState extends State<OptimizedMessageListView> {
   @override
   void didUpdateWidget(OptimizedMessageListView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
+
     // Clear cache if messages changed
     if (oldWidget.messages.length != widget.messages.length) {
       _avatarCache.clear();
@@ -224,7 +222,7 @@ class _OptimizedMessageListViewState extends State<OptimizedMessageListView> {
       addAutomaticKeepAlives: true, // Keep offscreen items alive
       addRepaintBoundaries: true, // Add repaint boundaries automatically
       cacheExtent: 500, // Cache 500 pixels above/below viewport
-      
+
       itemBuilder: (context, index) {
         final message = widget.messages[index];
         final isFromUser = message.sender.id == widget.currentUserId;
@@ -289,8 +287,7 @@ class OptimizedSliverMessageList extends StatelessWidget {
               key: ValueKey(message.id),
               children: [
                 if (showTimestamp && timestamp != null)
-                  timestampBuilder?.call(timestamp) ??
-                      const SizedBox.shrink(),
+                  timestampBuilder?.call(timestamp) ?? const SizedBox.shrink(),
                 messageBuilder(message, isFromUser, showAvatar),
                 const SizedBox(height: 8),
               ],

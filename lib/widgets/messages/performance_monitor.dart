@@ -3,7 +3,7 @@ import 'package:flutter/scheduler.dart';
 import 'dart:ui' as ui;
 
 /// Performance monitor overlay for debugging message list performance
-/// 
+///
 /// Usage:
 /// ```dart
 /// PerformanceMonitor(
@@ -63,10 +63,9 @@ class _PerformanceMonitorState extends State<PerformanceMonitor>
 
       // Calculate FPS
       if (_frameTimes.isNotEmpty) {
-        final avgFrameTime = _frameTimes
-                .map((d) => d.inMicroseconds)
-                .reduce((a, b) => a + b) ~/
-            _frameTimes.length;
+        final avgFrameTime =
+            _frameTimes.map((d) => d.inMicroseconds).reduce((a, b) => a + b) ~/
+                _frameTimes.length;
         _currentFPS = 1000000 / avgFrameTime;
       }
 
@@ -199,8 +198,7 @@ class _RebuildCounterState extends State<RebuildCounter> {
   Widget build(BuildContext context) {
     if (widget.enabled) {
       _rebuildCount++;
-      debugPrint(
-          '🔄 ${widget.name ?? 'Widget'} rebuilt $_rebuildCount times');
+      debugPrint('🔄 ${widget.name ?? 'Widget'} rebuilt $_rebuildCount times');
     }
     return widget.child;
   }
@@ -326,7 +324,7 @@ class MemoryTracker {
     // Note: This requires dart:developer which may not be available in release mode
     try {
       final info = await ui.MemoryAllocations.getMemoryUsage();
-      
+
       _lastHeapSize = info.heapUsage ?? 0;
       _lastRssSize = info.rssSize ?? 0;
 
