@@ -37,6 +37,10 @@ dependencies:
   riverpod_annotation: ^2.3.3
   connectivity_plus: ^5.0.2
   crypto: ^3.0.3
+  
+  # ✅ Attachment handling
+  file_picker: ^8.1.2
+  geolocator: ^13.0.1
 
   # ✅ Firebase: aligned versions
   firebase_core: ^3.10.0

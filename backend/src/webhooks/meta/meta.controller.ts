@@ -565,6 +565,43 @@ export class MetaController {
 
         const { businessId, integrationId } = businessIntegration;
 
+        // Handle typing indicators (sender_action: typing_on / typing_off)
+        if (message.sender_action) {
+          await this.handleTypingIndicator(
+            businessId,
+            integrationId,
+            message.sender.id,
+            message.sender.name || 'User',
+            'messenger',
+            message.sender_action === 'typing_on',
+            `messenger_${message.sender.id}_${pageId}`
+          );
+          continue; // Don't process as message
+        }
+
+        // Handle message delivery receipts
+        if (message.delivery) {
+          await this.handleMessageDelivery(
+            businessId,
+            integrationId,
+            message.delivery.mids || [],
+            message.delivery.watermark,
+            'messenger'
+          );
+          continue;
+        }
+
+        // Handle message read receipts
+        if (message.read) {
+          await this.handleMessageRead(
+            businessId,
+            integrationId,
+            message.read.watermark,
+            'messenger'
+          );
+          continue;
+        }
+
         if (message.message) {
           this.logger.log(`Messenger message received for page ${pageId}: ${message.message.text || '[Media]'}`);
           
@@ -747,6 +784,43 @@ export class MetaController {
 
         const { businessId, integrationId } = businessIntegration;
         this.logger.log(`✅ Found integration: businessId=${businessId}, integrationId=${integrationId}`);
+
+        // Handle typing indicators for Instagram DMs
+        if (message.sender_action) {
+          await this.handleTypingIndicator(
+            businessId,
+            integrationId,
+            message.sender?.id || 'unknown',
+            message.sender?.username || message.sender?.name || 'Instagram User',
+            'instagram',
+            message.sender_action === 'typing_on',
+            `ig_thread_${instagramId}_${message.sender?.id || 'unknown'}`
+          );
+          continue; // Don't process as message
+        }
+
+        // Handle message delivery receipts
+        if (message.delivery) {
+          await this.handleMessageDelivery(
+            businessId,
+            integrationId,
+            message.delivery.mids || [],
+            message.delivery.watermark,
+            'instagram'
+          );
+          continue;
+        }
+
+        // Handle message read receipts
+        if (message.read) {
+          await this.handleMessageRead(
+            businessId,
+            integrationId,
+            message.read.watermark,
+            'instagram'
+          );
+          continue;
+        }
 
         if (message.message) {
           const messageText = message.message.text || '[Media]';
@@ -1182,6 +1256,140 @@ export class MetaController {
     } catch (error) {
       this.logger.error(`Failed to update notification preferences for business ${businessId}:`, error);
       throw new BadRequestException('Failed to update notification preferences');
+    }
+  }
+
+  /**
+   * Handle typing indicators from Meta platforms
+   * 
+   * Writes typing status to Firestore for real-time display in Flutter app.
+   * Auto-expires after 5 seconds using Firestore TTL.
+   * 
+   * @param businessId - Business ID
+   * @param integrationId - Integration ID
+   * @param userId - User who is typing (platform-specific ID)
+   * @param userName - User's display name
+   * @param platform - Platform (messenger, instagram, whatsapp)
+   * @param isTyping - true = typing_on, false = typing_off
+   * @param conversationId - Conversation thread ID
+   */
+  private async handleTypingIndicator(
+    businessId: string,
+    integrationId: string,
+    userId: string,
+    userName: string,
+    platform: string,
+    isTyping: boolean,
+    conversationId: string,
+  ): Promise<void> {
+    try {
+      this.logger.log(`⌨️ ${platform} typing indicator: ${userName} (${userId}) is ${isTyping ? 'typing' : 'stopped typing'} in ${conversationId}`);
+
+      // Path: businesses/{businessId}/integrations/{integrationId}/conversations/{conversationId}/typing
+      const typingCollection = `businesses/${businessId}/integrations/${integrationId}/conversations/${conversationId}/typing`;
+
+      if (isTyping) {
+        // Write typing status with auto-expire timestamp
+        await this.firestoreService.createDocument(typingCollection, {
+          userId,
+          userName,
+          platform,
+          isTyping: true,
+          startedAt: new Date(),
+          expiresAt: new Date(Date.now() + 5000), // Auto-expire after 5 seconds
+          conversationId,
+        }, userId); // Use userId as document ID
+        
+        this.logger.log(`✅ Typing indicator saved to Firestore: ${typingCollection}/${userId}`);
+      } else {
+        // Delete typing status when user stops typing
+        await this.firestoreService.deleteDocument(typingCollection, userId);
+        this.logger.log(`✅ Typing indicator removed from Firestore: ${typingCollection}/${userId}`);
+      }
+    } catch (error) {
+      this.logger.error(`❌ Failed to handle typing indicator for ${userName} (${userId}):`, error);
+      // Don't throw - typing indicators are non-critical
+    }
+  }
+
+  /**
+   * Handle message delivery receipts
+   * Updates message status to 'delivered' when platform confirms delivery
+   */
+  private async handleMessageDelivery(
+    businessId: string,
+    integrationId: string,
+    messageIds: string[],
+    watermark: number,
+    platform: string,
+  ): Promise<void> {
+    try {
+      this.logger.log(`📬 ${platform} delivery receipt: ${messageIds.length} messages delivered (watermark: ${watermark})`);
+
+      const messagesCollection = `businesses/${businessId}/integrations/${integrationId}/messages`;
+
+      // Update each delivered message
+      for (const messageId of messageIds) {
+        try {
+          await this.firestoreService.updateDocument(messagesCollection, messageId, {
+            'metadata.status': 'delivered',
+            'metadata.deliveredAt': new Date(),
+            'metadata.deliveryWatermark': watermark,
+          });
+          
+          this.logger.log(`✅ Message ${messageId} marked as delivered`);
+        } catch (error) {
+          this.logger.warn(`⚠️ Could not update delivery status for message ${messageId}:`, error.message);
+        }
+      }
+    } catch (error) {
+      this.logger.error(`❌ Failed to handle delivery receipt:`, error);
+    }
+  }
+
+  /**
+   * Handle message read receipts
+   * Updates message status to 'read' when user opens the message
+   */
+  private async handleMessageRead(
+    businessId: string,
+    integrationId: string,
+    watermark: number,
+    platform: string,
+  ): Promise<void> {
+    try {
+      this.logger.log(`👁️ ${platform} read receipt: Messages up to watermark ${watermark} have been read`);
+
+      const messagesCollection = `businesses/${businessId}/integrations/${integrationId}/messages`;
+
+      // Query messages with timestamp <= watermark and update to 'read'
+      const db = this.firestoreService['db']; // Access Firestore admin instance
+      const messagesRef = db.collection(messagesCollection);
+      
+      const snapshot = await messagesRef
+        .where('metadata.timestamp', '<=', watermark)
+        .where('sender.isCustomer', '==', false) // Only update business-sent messages
+        .where('metadata.status', 'in', ['sent', 'delivered'])
+        .get();
+
+      const batch = db.batch();
+      let count = 0;
+
+      snapshot.docs.forEach((doc) => {
+        batch.update(doc.ref, {
+          'metadata.status': 'read',
+          'metadata.readAt': new Date(),
+          'metadata.readWatermark': watermark,
+        });
+        count++;
+      });
+
+      if (count > 0) {
+        await batch.commit();
+        this.logger.log(`✅ Marked ${count} messages as read (watermark: ${watermark})`);
+      }
+    } catch (error) {
+      this.logger.error(`❌ Failed to handle read receipt:`, error);
     }
   }
 }

@@ -417,6 +417,26 @@ class MessageContent {
       'metadata': metadata,
     };
   }
+
+  MessageContent copyWith({
+    String? text,
+    List<MessageAttachment>? attachments,
+    MessageLocation? location,
+    MessageContact? contact,
+    MessagePostback? postback,
+    MessageQuickReply? quickReply,
+    Map<String, dynamic>? metadata,
+  }) {
+    return MessageContent(
+      text: text ?? this.text,
+      attachments: attachments ?? this.attachments,
+      location: location ?? this.location,
+      contact: contact ?? this.contact,
+      postback: postback ?? this.postback,
+      quickReply: quickReply ?? this.quickReply,
+      metadata: metadata ?? this.metadata,
+    );
+  }
 }
 
 /// Message attachment model
@@ -429,6 +449,11 @@ class MessageAttachment {
   final String? thumbnailUrl;
   final Map<String, dynamic>? metadata;
 
+  // Progress tracking fields for upload
+  final double? uploadProgress; // 0.0 to 1.0
+  final bool isUploading;
+  final String? localPath; // Local file path for preview before upload
+
   MessageAttachment({
     required this.type,
     required this.url,
@@ -437,6 +462,9 @@ class MessageAttachment {
     this.mimeType,
     this.thumbnailUrl,
     this.metadata,
+    this.uploadProgress,
+    this.isUploading = false,
+    this.localPath,
   });
 
   factory MessageAttachment.fromMap(Map<String, dynamic> map) {
@@ -448,6 +476,10 @@ class MessageAttachment {
       mimeType: map['mimeType'] as String?,
       thumbnailUrl: map['thumbnailUrl'] as String?,
       metadata: map['metadata'] as Map<String, dynamic>?,
+      // These fields are not stored in Firestore
+      uploadProgress: null,
+      isUploading: false,
+      localPath: null,
     );
   }
 
@@ -460,7 +492,34 @@ class MessageAttachment {
       'mimeType': mimeType,
       'thumbnailUrl': thumbnailUrl,
       'metadata': metadata,
+      // Don't include upload progress in Firestore
     };
+  }
+
+  MessageAttachment copyWith({
+    String? type,
+    String? url,
+    String? filename,
+    int? size,
+    String? mimeType,
+    String? thumbnailUrl,
+    Map<String, dynamic>? metadata,
+    double? uploadProgress,
+    bool? isUploading,
+    String? localPath,
+  }) {
+    return MessageAttachment(
+      type: type ?? this.type,
+      url: url ?? this.url,
+      filename: filename ?? this.filename,
+      size: size ?? this.size,
+      mimeType: mimeType ?? this.mimeType,
+      thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
+      metadata: metadata ?? this.metadata,
+      uploadProgress: uploadProgress ?? this.uploadProgress,
+      isUploading: isUploading ?? this.isUploading,
+      localPath: localPath ?? this.localPath,
+    );
   }
 }
 
@@ -563,6 +622,7 @@ class MessageMetadata {
   final List<String> tags;
   final String? externalId;
   final Map<String, dynamic>? rawPayload;
+  final MessageStatus status; // NEW FIELD - message delivery status
 
   MessageMetadata({
     required this.timestamp,
@@ -574,6 +634,7 @@ class MessageMetadata {
     this.tags = const [],
     this.externalId,
     this.rawPayload,
+    this.status = MessageStatus.sent, // Default to sent for existing messages
   });
 
   factory MessageMetadata.fromMap(Map<String, dynamic> map) {
@@ -616,6 +677,7 @@ class MessageMetadata {
       externalId: map['externalId'] as String? ??
           map['platformMessageId'] as String?, // Backend uses platformMessageId
       rawPayload: rawPayload,
+      status: MessageStatus.fromString(map['status'] as String? ?? 'sent'),
     );
   }
 
@@ -626,11 +688,38 @@ class MessageMetadata {
       'isRead': isRead,
       'readAt': readAt?.toIso8601String(),
       'isReplied': isReplied,
+      'status': status.value,
       'priority': priority.value,
       'tags': tags,
       'externalId': externalId,
       'rawPayload': rawPayload,
     };
+  }
+
+  MessageMetadata copyWith({
+    int? timestamp,
+    String? source,
+    bool? isRead,
+    DateTime? readAt,
+    bool? isReplied,
+    MessagePriority? priority,
+    List<String>? tags,
+    String? externalId,
+    Map<String, dynamic>? rawPayload,
+    MessageStatus? status,
+  }) {
+    return MessageMetadata(
+      timestamp: timestamp ?? this.timestamp,
+      source: source ?? this.source,
+      isRead: isRead ?? this.isRead,
+      readAt: readAt ?? this.readAt,
+      isReplied: isReplied ?? this.isReplied,
+      priority: priority ?? this.priority,
+      tags: tags ?? this.tags,
+      externalId: externalId ?? this.externalId,
+      rawPayload: rawPayload ?? this.rawPayload,
+      status: status ?? this.status,
+    );
   }
 }
 
@@ -650,6 +739,28 @@ enum MessagePriority {
     return MessagePriority.values.firstWhere(
       (priority) => priority.value == value,
       orElse: () => MessagePriority.normal,
+    );
+  }
+}
+
+/// Message status enumeration for delivery tracking
+enum MessageStatus {
+  sending('sending', 'Sending', 'Message is being sent'),
+  sent('sent', 'Sent', 'Message sent to server'),
+  delivered('delivered', 'Delivered', 'Message delivered to recipient'),
+  read('read', 'Read', 'Message read by recipient'),
+  failed('failed', 'Failed', 'Failed to send message');
+
+  const MessageStatus(this.value, this.displayName, this.description);
+
+  final String value;
+  final String displayName;
+  final String description;
+
+  static MessageStatus fromString(String value) {
+    return MessageStatus.values.firstWhere(
+      (status) => status.value == value,
+      orElse: () => MessageStatus.sent,
     );
   }
 }

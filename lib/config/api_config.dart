@@ -106,6 +106,8 @@ class ApiConfig {
       getFullUrl('$instagramConfigBasePath/business-profile');
   static String getInstagramIntegrationLogs() =>
       getFullUrl('$instagramConfigBasePath/integration-logs');
+  static String getInstagramSendMessage(String integrationId) =>
+      getFullUrl('$instagramBasePath/$integrationId/send-message');
 
   // Facebook config URLs
   static String getFacebookConfigPageInfo() =>
@@ -122,6 +124,8 @@ class ApiConfig {
       getFullUrl('$messengerBasePath/$integrationId/analytics');
   static String getMessengerConversations(String integrationId) =>
       getFullUrl('$messengerBasePath/$integrationId/conversations');
+  static String getMessengerSendMessage(String integrationId) =>
+      getFullUrl('$messengerBasePath/$integrationId/send');
 
   // TikTok specific URLs
   static String getTikTokAuthUrl() => getFullUrl(tiktokAuthPath);

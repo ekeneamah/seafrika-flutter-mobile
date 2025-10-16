@@ -104,6 +104,7 @@ class _ModernMessagesScreenState extends ConsumerState<ModernMessagesScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
+      resizeToAvoidBottomInset: true,
       body: Consumer(
         builder: (context, ref, child) {
           // Check if business is selected
@@ -268,6 +269,8 @@ class _ModernMessagesScreenState extends ConsumerState<ModernMessagesScreen> {
                       unreadCount: unreadCount,
                       isSelected: selectedIntegrationId == null,
                       onTap: () {
+                        print(
+                            '🔄 Switching to "All" tab - should show GROUPED conversations');
                         setState(() {
                           selectedIntegrationId = null;
                           selectedIntegrationName = null;
@@ -547,47 +550,89 @@ class _ModernMessagesScreenState extends ConsumerState<ModernMessagesScreen> {
         : ref.watch(messagesProvider);
 
     return conversationsAsync.when(
-      data: (conversations) => Row(
-        children: [
-          // Conversations List
-          SizedBox(
-            width: 380,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border(
-                  right: BorderSide(
-                    color: AppTheme.primary.withOpacity(0.1),
-                    width: 1,
+      data: (conversations) {
+        final showGroupedValue = selectedIntegrationId == null;
+        print(
+            '🖥️ Desktop layout: showGrouped=$showGroupedValue, selectedIntegrationId=$selectedIntegrationId, conversations=${conversations.length}');
+
+        return Row(
+          children: [
+            // Conversations List
+            SizedBox(
+              width: 380,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border(
+                    right: BorderSide(
+                      color: AppTheme.primary.withOpacity(0.1),
+                      width: 1,
+                    ),
                   ),
                 ),
-              ),
-              child: ConversationMasterList(
-                selectedChannel: selectedIntegrationName,
-                selectedConversationId: selectedConversation?.id,
-                onConversationSelected: (conversation) {
-                  setState(() {
-                    selectedConversation = conversation;
-                  });
-                },
-                skipPlatformFiltering: selectedIntegrationId != null,
+                child: ConversationMasterList(
+                  conversations: conversations, // Pass filtered conversations
+                  selectedChannel: selectedIntegrationName,
+                  selectedConversationId: selectedConversation?.id,
+                  onConversationSelected: (conversation) async {
+                    print(
+                        '💬 Desktop: Conversation selected: ${conversation.id}, unreadCount: ${conversation.unreadCount}');
+
+                    // Mark conversation as read if it has unread messages
+                    if (conversation.unreadCount > 0) {
+                      try {
+                        final messagesService =
+                            ref.read(messagesServiceProvider);
+                        await messagesService
+                            .markConversationAsRead(conversation.id);
+                        print(
+                            '✅ Desktop: Marked conversation ${conversation.id} as read');
+
+                        // Refresh conversations to update UI
+                        ref.invalidate(messagesProvider);
+                        if (selectedIntegrationId != null) {
+                          ref.invalidate(
+                              messagesProviderFiltered(selectedIntegrationId!));
+                        }
+                        // Also refresh integration unread counts
+                        ref.invalidate(integrationUnreadCountsProvider(null));
+                        ref.invalidate(integrationUnreadCountsProvider(
+                            selectedIntegrationId));
+                        // Also refresh integration unread counts
+                        ref.invalidate(integrationUnreadCountsProvider(null));
+                        ref.invalidate(integrationUnreadCountsProvider(
+                            selectedIntegrationId));
+                      } catch (e) {
+                        print(
+                            '❌ Desktop: Error marking conversation as read: $e');
+                      }
+                    }
+
+                    setState(() {
+                      selectedConversation = conversation;
+                    });
+                  },
+                  skipPlatformFiltering: selectedIntegrationId != null,
+                  showGrouped: selectedIntegrationId ==
+                      null, // Group only when showing "All"
+                ),
               ),
             ),
-          ),
 
-          // Detail View
-          Expanded(
-            child: selectedConversation != null
-                ? ConversationDetailView(
-                    conversation: selectedConversation!,
-                    showBackButton: false,
-                    onBackPressed: () =>
-                        setState(() => selectedConversation = null),
-                  )
-                : _buildEmptyDetailView(),
-          ),
-        ],
-      ),
+            // Detail View
+            Expanded(
+              child: selectedConversation != null
+                  ? ConversationDetailView(
+                      conversation: selectedConversation!,
+                      showBackButton: false,
+                      onBackPressed: () =>
+                          setState(() => selectedConversation = null),
+                    )
+                  : _buildEmptyDetailView(),
+            ),
+          ],
+        );
+      },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stackTrace) => Center(
         child: Text('Error: $error'),
@@ -609,16 +654,50 @@ class _ModernMessagesScreenState extends ConsumerState<ModernMessagesScreen> {
         : ref.watch(messagesProvider);
 
     return conversationsAsync.when(
-      data: (conversations) => ConversationMasterList(
-        selectedChannel: selectedIntegrationName,
-        selectedConversationId: selectedConversation?.id,
-        onConversationSelected: (conversation) {
-          setState(() {
-            selectedConversation = conversation;
-          });
-        },
-        skipPlatformFiltering: selectedIntegrationId != null,
-      ),
+      data: (conversations) {
+        final showGroupedValue = selectedIntegrationId == null;
+        print(
+            '📱 Mobile layout: showGrouped=$showGroupedValue, selectedIntegrationId=$selectedIntegrationId, conversations=${conversations.length}');
+
+        return ConversationMasterList(
+          conversations: conversations, // Pass filtered conversations
+          selectedChannel: selectedIntegrationName,
+          selectedConversationId: selectedConversation?.id,
+          onConversationSelected: (conversation) async {
+            print(
+                '💬 Conversation selected: ${conversation.id}, unreadCount: ${conversation.unreadCount}');
+
+            // Mark conversation as read if it has unread messages
+            if (conversation.unreadCount > 0) {
+              try {
+                final messagesService = ref.read(messagesServiceProvider);
+                await messagesService.markConversationAsRead(conversation.id);
+                print('✅ Marked conversation ${conversation.id} as read');
+
+                // Refresh conversations to update UI
+                ref.invalidate(messagesProvider);
+                if (selectedIntegrationId != null) {
+                  ref.invalidate(
+                      messagesProviderFiltered(selectedIntegrationId!));
+                }
+                // Also refresh integration unread counts
+                ref.invalidate(integrationUnreadCountsProvider(null));
+                ref.invalidate(
+                    integrationUnreadCountsProvider(selectedIntegrationId));
+              } catch (e) {
+                print('❌ Error marking conversation as read: $e');
+              }
+            }
+
+            setState(() {
+              selectedConversation = conversation;
+            });
+          },
+          skipPlatformFiltering: selectedIntegrationId != null,
+          showGrouped:
+              selectedIntegrationId == null, // Group only when showing "All"
+        );
+      },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stackTrace) => Center(
         child: Text('Error: $error'),

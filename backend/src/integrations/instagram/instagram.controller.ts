@@ -10,8 +10,10 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { MetaIntegrationService } from '../shared/meta-integration.service';
+import { FacebookService } from '../facebook/facebook.service';
+import { FirestoreService } from '../../firebase/firestore.service';
 
 @ApiTags('Instagram Integration')
 @Controller('integrations/instagram')
@@ -19,7 +21,11 @@ import { MetaIntegrationService } from '../shared/meta-integration.service';
 export class InstagramController {
   private readonly logger = new Logger(InstagramController.name);
 
-  constructor(private readonly metaIntegrationService: MetaIntegrationService) {}
+  constructor(
+    private readonly metaIntegrationService: MetaIntegrationService,
+    private readonly facebookService: FacebookService,
+    private readonly firestoreService: FirestoreService,
+  ) {}
 
   @Get(':integrationId/media')
   @ApiOperation({ 
@@ -635,4 +641,201 @@ export class InstagramController {
       );
     }
   }
+  /**
+   * Send a direct message via Instagram
+   * Sends a message to a recipient on Instagram and updates Firestore with the sent status
+   */
+  @Post(':integrationId/send-message')
+  @ApiOperation({ 
+    summary: 'Send Instagram direct message',
+    description: 'Send a direct message to a recipient on Instagram. Supports text, images, and videos. Uses the same Facebook Graph API endpoint.'
+  })
+  @ApiParam({ 
+    name: 'integrationId', 
+    description: 'The integration ID from Firestore' 
+  })
+  @ApiBody({
+    description: 'Message data to send',
+    schema: {
+      type: 'object',
+      required: ['messageId', 'conversationId', 'recipientId', 'message'],
+      properties: {
+        messageId: { 
+          type: 'string', 
+          description: 'The Firestore message document ID',
+          example: 'msg_abc123'
+        },
+        conversationId: { 
+          type: 'string', 
+          description: 'The Firestore conversation ID',
+          example: 'conv_xyz789'
+        },
+        recipientId: { 
+          type: 'string', 
+          description: 'The recipient\'s Instagram Scoped ID (IGSID)',
+          example: '1234567890'
+        },
+        message: { 
+          type: 'string', 
+          description: 'The message text content',
+          example: 'Hello! How can I help you today?'
+        },
+        messageType: { 
+          type: 'string', 
+          enum: ['text', 'image', 'video'],
+          default: 'text',
+          description: 'Type of message being sent'
+        },
+        attachmentUrl: { 
+          type: 'string', 
+          description: 'URL of attachment (required for non-text messages)',
+          example: 'https://example.com/image.jpg'
+        }
+      }
+    }
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Message sent successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        message_id: { type: 'string', description: 'Platform message ID from Instagram' },
+        recipient_id: { type: 'string', description: 'Recipient IGSID' },
+        messageId: { type: 'string', description: 'Firestore message ID' }
+      }
+    }
+  })
+  @ApiResponse({ status: 400, description: 'Bad request - missing required fields' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - invalid or missing auth token' })
+  @ApiResponse({ status: 404, description: 'Integration not found' })
+  @ApiResponse({ status: 500, description: 'Failed to send message' })
+  async sendDirectMessage(
+    @Param('integrationId') integrationId: string,
+    @Body() body: {
+      messageId: string;
+      conversationId: string;
+      recipientId: string;
+      message: string;
+      messageType?: 'text' | 'image' | 'video';
+      attachmentUrl?: string;
+    },
+    @Headers('authorization') authHeader?: string,
+  ): Promise<any> {
+    // Validate auth header
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new HttpException(
+        'Missing or invalid Authorization header',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    // Validate required fields
+    if (!integrationId || !body.messageId || !body.conversationId || !body.recipientId || !body.message) {
+      throw new HttpException(
+        'Missing required fields: integrationId, messageId, conversationId, recipientId, and message are required',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    // Validate attachment URL for non-text messages
+    if (body.messageType && body.messageType !== 'text' && !body.attachmentUrl) {
+      throw new HttpException(
+        'attachmentUrl is required for non-text messages',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    try {
+      this.logger.log(`Sending Instagram DM for integration: ${integrationId}, recipient: ${body.recipientId}`);
+
+      // 1. Call FacebookService to send message via Meta Graph API
+      // Instagram uses the same /me/messages endpoint as Messenger
+      const result = await this.facebookService.sendMessage(
+        integrationId,
+        body.recipientId,
+        body.message,
+        body.messageType || 'text',
+        body.attachmentUrl
+      );
+
+      this.logger.log(`Instagram DM sent successfully. Platform message_id: ${result.message_id}`);
+
+      // 2. Update Firestore with sent status and platform message ID
+      try {
+        await this.firestoreService.updateDocument(
+          'messages',
+          body.messageId,
+          {
+            'metadata.status': 'sent',
+            'metadata.platformMessageId': result.message_id,
+            'metadata.sentAt': new Date(),
+          }
+        );
+        this.logger.log(`Firestore updated for message: ${body.messageId}`);
+      } catch (firestoreError) {
+        // Log but don't fail the request if Firestore update fails
+        this.logger.error(`Failed to update Firestore for message ${body.messageId}:`, firestoreError.message);
+      }
+
+      // 3. Return success response
+      return {
+        success: true,
+        message_id: result.message_id,
+        recipient_id: result.recipient_id,
+        messageId: body.messageId,
+      };
+
+    } catch (error) {
+      this.logger.error(`Failed to send Instagram DM: ${error.message}`, error.stack);
+
+      // Update Firestore with failed status
+      try {
+        await this.firestoreService.updateDocument(
+          'messages',
+          body.messageId,
+          {
+            'metadata.status': 'failed',
+            'metadata.error': error.message,
+            'metadata.failedAt': new Date(),
+          }
+        );
+      } catch (firestoreError) {
+        this.logger.error(`Failed to update Firestore with error status:`, firestoreError.message);
+      }
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      // Map common Instagram/Facebook API errors
+      if (error.message.includes('not found')) {
+        throw new HttpException(
+          'Integration or recipient not found',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      if (error.message.includes('unauthorized') || error.message.includes('invalid token')) {
+        throw new HttpException(
+          'Invalid or expired access token',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+
+      if (error.message.includes('rate limit')) {
+        throw new HttpException(
+          'Instagram API rate limit exceeded. Please try again later.',
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+
+      throw new HttpException(
+        `Failed to send Instagram DM: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 }
+

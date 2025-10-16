@@ -11,6 +11,8 @@ class ConversationMasterList extends ConsumerWidget {
   final Function(Conversation) onConversationSelected;
   final bool isCompact;
   final bool skipPlatformFiltering;
+  final List<Conversation>? conversations; // NEW: Accept filtered conversations
+  final bool showGrouped; // NEW: Show conversations grouped by integration
 
   const ConversationMasterList({
     Key? key,
@@ -19,10 +21,39 @@ class ConversationMasterList extends ConsumerWidget {
     required this.onConversationSelected,
     this.isCompact = false,
     this.skipPlatformFiltering = false,
+    this.conversations, // NEW: Optional filtered conversations
+    this.showGrouped = false, // NEW: Default to ungrouped
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    print(
+        '🔄 ConversationMasterList.build: showGrouped=$showGrouped, conversations=${conversations?.length ?? 'provider'}');
+
+    // Use provided conversations if available, otherwise fetch from provider
+    if (conversations != null) {
+      final filteredConversations = _filterConversations(conversations!);
+      final sortedConversations = _sortConversations(filteredConversations);
+
+      print(
+          '📊 Conversations: total=${conversations!.length}, filtered=${filteredConversations.length}, sorted=${sortedConversations.length}');
+
+      if (sortedConversations.isEmpty) {
+        print('❌ No conversations to display');
+        return _buildEmptyState();
+      }
+
+      // Show grouped or ungrouped based on parameter
+      if (showGrouped) {
+        print('📑 Rendering GROUPED conversations');
+        return _buildGroupedConversations(sortedConversations);
+      } else {
+        print('📋 Rendering UNGROUPED conversations');
+        return _buildUngroupedConversations(sortedConversations);
+      }
+    }
+
+    // Fallback to provider if no conversations provided
     final conversationsAsync = ref.watch(messagesProvider);
 
     return conversationsAsync.when(
@@ -34,21 +65,12 @@ class ConversationMasterList extends ConsumerWidget {
           return _buildEmptyState();
         }
 
-        return ListView.separated(
-          padding: EdgeInsets.zero,
-          itemCount: sortedConversations.length,
-          separatorBuilder: (context, index) => Divider(
-            height: 1,
-            color: AppTheme.primary.withOpacity(0.1),
-            indent: isCompact ? 8 : 72,
-          ),
-          itemBuilder: (context, index) {
-            final conversation = sortedConversations[index];
-            final isSelected = conversation.id == selectedConversationId;
-
-            return _buildConversationTile(conversation, isSelected);
-          },
-        );
+        // Show grouped or ungrouped based on parameter
+        if (showGrouped) {
+          return _buildGroupedConversations(sortedConversations);
+        } else {
+          return _buildUngroupedConversations(sortedConversations);
+        }
       },
       loading: () => _buildLoadingState(),
       error: (error, stackTrace) => _buildErrorState(error),
@@ -56,15 +78,28 @@ class ConversationMasterList extends ConsumerWidget {
   }
 
   List<Conversation> _filterConversations(List<Conversation> conversations) {
+    print(
+        '🔍 Filtering conversations: skipPlatformFiltering=$skipPlatformFiltering, selectedChannel=$selectedChannel');
+
     // Skip platform filtering if already filtered by integrationId at database level
-    if (skipPlatformFiltering) return conversations;
+    if (skipPlatformFiltering) {
+      print('   ⏭️ Skipping platform filtering - already filtered at DB level');
+      return conversations;
+    }
 
-    if (selectedChannel == null) return conversations;
+    if (selectedChannel == null) {
+      print('   🌐 No channel selected - returning all conversations');
+      return conversations;
+    }
 
-    return conversations.where((conversation) {
+    final filtered = conversations.where((conversation) {
       return conversation.platform.value.toLowerCase() ==
           selectedChannel?.toLowerCase();
     }).toList();
+
+    print(
+        '   🎯 Filtered ${conversations.length} → ${filtered.length} conversations for channel: $selectedChannel');
+    return filtered;
   }
 
   List<Conversation> _sortConversations(List<Conversation> conversations) {
@@ -97,7 +132,11 @@ class ConversationMasterList extends ConsumerWidget {
       color:
           isSelected ? AppTheme.primary.withOpacity(0.08) : Colors.transparent,
       child: InkWell(
-        onTap: () => onConversationSelected(conversation),
+        onTap: () {
+          print(
+              '🖱️ Conversation tile tapped: ${conversation.id}, unreadCount: ${conversation.unreadCount}');
+          onConversationSelected(conversation);
+        },
         child: Container(
           padding: EdgeInsets.symmetric(
             horizontal: isCompact ? 12 : 16,
@@ -527,5 +566,165 @@ class ConversationMasterList extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildUngroupedConversations(List<Conversation> conversations) {
+    print(
+        '📋 Building ungrouped conversations for ${conversations.length} total conversations');
+
+    return ListView.separated(
+      padding: EdgeInsets.zero,
+      itemCount: conversations.length,
+      separatorBuilder: (context, index) => Divider(
+        height: 1,
+        color: AppTheme.primary.withOpacity(0.1),
+        indent: isCompact ? 8 : 72,
+      ),
+      itemBuilder: (context, index) {
+        final conversation = conversations[index];
+        final isSelected = conversation.id == selectedConversationId;
+        return _buildConversationTile(conversation, isSelected);
+      },
+    );
+  }
+
+  Widget _buildGroupedConversations(List<Conversation> conversations) {
+    print(
+        '🏗️ Building grouped conversations for ${conversations.length} total conversations');
+
+    // Group conversations by platform/integration
+    final groupedConversations = <String, List<Conversation>>{};
+
+    for (final conversation in conversations) {
+      final platformName = conversation.platform.value;
+      groupedConversations
+          .putIfAbsent(platformName, () => [])
+          .add(conversation);
+    }
+
+    print('📊 Grouped by platforms: ${groupedConversations.keys.toList()}');
+    for (final entry in groupedConversations.entries) {
+      print('   ${entry.key}: ${entry.value.length} conversations');
+    }
+
+    return ListView.builder(
+      padding: EdgeInsets.zero,
+      itemCount: groupedConversations.length,
+      itemBuilder: (context, index) {
+        final platform = groupedConversations.keys.elementAt(index);
+        final platformConversations = groupedConversations[platform]!;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Platform header
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Row(
+                children: [
+                  Icon(
+                    _getPlatformIcon(platform),
+                    size: 20,
+                    color: _getPlatformColor(platform),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _formatPlatformName(platform),
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: _getPlatformColor(platform).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${platformConversations.length}',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: _getPlatformColor(platform),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Platform conversations
+            ...platformConversations.map((conversation) {
+              final isSelected = conversation.id == selectedConversationId;
+              return Column(
+                children: [
+                  _buildConversationTile(conversation, isSelected),
+                  if (conversation != platformConversations.last)
+                    Divider(
+                      height: 1,
+                      color: AppTheme.primary.withOpacity(0.1),
+                      indent: isCompact ? 8 : 72,
+                    ),
+                ],
+              );
+            }).toList(),
+
+            // Spacing between platform groups
+            if (index < groupedConversations.length - 1)
+              const SizedBox(height: 16),
+          ],
+        );
+      },
+    );
+  }
+
+  IconData _getPlatformIcon(String platform) {
+    switch (platform.toLowerCase()) {
+      case 'instagram':
+        return Icons.camera_alt;
+      case 'facebook':
+        return Icons.facebook;
+      case 'whatsapp':
+        return Icons.chat;
+      case 'messenger':
+        return Icons.message;
+      case 'telegram':
+        return Icons.telegram;
+      case 'twitter':
+        return Icons.alternate_email;
+      case 'email':
+        return Icons.email;
+      case 'sms':
+        return Icons.sms;
+      default:
+        return Icons.chat_bubble_outline;
+    }
+  }
+
+  String _formatPlatformName(String platform) {
+    switch (platform.toLowerCase()) {
+      case 'instagram':
+        return 'Instagram';
+      case 'facebook':
+        return 'Facebook';
+      case 'whatsapp':
+        return 'WhatsApp';
+      case 'messenger':
+        return 'Messenger';
+      case 'telegram':
+        return 'Telegram';
+      case 'twitter':
+        return 'Twitter';
+      case 'email':
+        return 'Email';
+      case 'sms':
+        return 'SMS';
+      default:
+        return platform.toUpperCase();
+    }
   }
 }

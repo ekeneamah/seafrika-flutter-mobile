@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/message.dart';
+import '../services/messages_api_service.dart';
 import 'business_context_provider.dart';
 
 // Message filters state
@@ -209,6 +211,33 @@ class MessagesService {
             .toList());
   }
 
+  // Get messages with pagination
+  Stream<List<Message>> getMessagesPaginated(
+    String conversationId, {
+    int limit = 50,
+    Message? startAfter,
+  }) {
+    Query query = _firestore
+        .collection('messages')
+        .where('conversationId', isEqualTo: conversationId)
+        .orderBy('createdAt', descending: true);
+
+    // Apply pagination cursor if provided
+    if (startAfter != null) {
+      query = query.startAfter([Timestamp.fromDate(startAfter.createdAt)]);
+    }
+
+    query = query.limit(limit);
+
+    return query.snapshots().map((snapshot) => snapshot.docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          return Message.fromMap({
+            'id': doc.id,
+            ...data,
+          });
+        }).toList());
+  }
+
   // Get conversation by ID (flat structure)
   Future<Conversation?> getConversation(String conversationId) async {
     final doc =
@@ -249,48 +278,97 @@ class MessagesService {
         .update({'isArchived': isArchived});
   }
 
-  // Send message (3-tier flat structure)
-  Future<void> sendMessage(Message message) async {
-    final batch = _firestore.batch();
+  // Send message (3-tier flat structure with backend API call)
+  Future<void> sendMessage(
+    Message message, {
+    required MessagesApiService apiService,
+  }) async {
+    // Get conversation to find integrationId and recipientId
+    final conversationRef =
+        _firestore.collection('conversations').doc(message.conversationId);
+    final conversationDoc = await conversationRef.get();
 
-    // Add message to flat messages collection
+    if (!conversationDoc.exists) {
+      throw Exception('Conversation not found: ${message.conversationId}');
+    }
+
+    final conversationData = conversationDoc.data()!;
+    final integrationId = conversationData['integrationId'] as String?;
+    final recipientId = conversationData['recipientId'] as String?;
+    final platform = conversationData['platform'] as String?;
+
+    if (integrationId == null || recipientId == null || platform == null) {
+      throw Exception(
+          'Missing required conversation data: integrationId=$integrationId, recipientId=$recipientId, platform=$platform');
+    }
+
+    // Create message document ID
     final messageRef = _firestore.collection('messages').doc();
-    final messageData = message.copyWith(id: messageRef.id).toMap();
+    final messageId = messageRef.id;
+
+    // Step 1: Write message to Firestore with status='sending'
+    final batch = _firestore.batch();
+    final messageData = message
+        .copyWith(
+          id: messageId,
+          metadata: message.metadata.copyWith(status: MessageStatus.sending),
+        )
+        .toMap();
     batch.set(messageRef, messageData);
 
     // Update conversation in flat conversations collection
-    final conversationRef =
-        _firestore.collection('conversations').doc(message.conversationId);
-
     batch.update(conversationRef, {
       'lastMessageAt': Timestamp.fromDate(message.createdAt),
-      'lastMessageId': messageRef.id,
+      'lastMessageId': messageId,
       'lastMessagePreview': message.content.text ?? 'Media message',
       'updatedAt': Timestamp.fromDate(DateTime.now()),
       'unreadCount': FieldValue.increment(1),
     });
 
     // Update integration messaging stats
-    // Get conversation to find integrationId
-    final conversationDoc = await conversationRef.get();
-    if (conversationDoc.exists) {
-      final integrationId = conversationDoc.data()?['integrationId'];
-      if (integrationId != null) {
-        final integrationRef =
-            _firestore.collection('integrations').doc(integrationId);
-        batch.update(integrationRef, {
-          'messagingStats.totalNewMessages': FieldValue.increment(1),
-          'messagingStats.totalMessageCount': FieldValue.increment(1),
-          'messagingStats.lastMessageDate':
-              Timestamp.fromDate(message.createdAt),
-          'messagingStats.lastMessageId': messageRef.id,
-          'messagingStats.lastMessagePreview':
-              message.content.text ?? 'Media message',
-        });
-      }
-    }
+    final integrationRef =
+        _firestore.collection('integrations').doc(integrationId);
+    batch.update(integrationRef, {
+      'messagingStats.totalNewMessages': FieldValue.increment(1),
+      'messagingStats.totalMessageCount': FieldValue.increment(1),
+      'messagingStats.lastMessageDate': Timestamp.fromDate(message.createdAt),
+      'messagingStats.lastMessageId': messageId,
+      'messagingStats.lastMessagePreview':
+          message.content.text ?? 'Media message',
+    });
 
     await batch.commit();
+
+    // Step 2: Call backend API to send message
+    try {
+      // Get first attachment URL if available (API supports single attachment)
+      final attachmentUrl = message.content.attachments.isNotEmpty
+          ? message.content.attachments.first.url
+          : null;
+
+      final response = await apiService.sendMessage(
+        platform: platform.toLowerCase(),
+        integrationId: integrationId,
+        messageId: messageId,
+        conversationId: message.conversationId,
+        recipientId: recipientId,
+        message: message.content.text ?? '',
+        attachmentUrl: attachmentUrl,
+      );
+
+      // Backend will update message status to 'sent' in Firestore
+      // Real-time listeners will automatically pick up this change
+      debugPrint('✅ Message sent via backend API: $response');
+    } catch (e) {
+      // If API call fails, update status to 'failed' in Firestore
+      debugPrint('❌ Backend API call failed: $e');
+      await messageRef.update({
+        'metadata.status': 'failed',
+        'metadata.error': e.toString(),
+        'updatedAt': Timestamp.now(),
+      });
+      rethrow;
+    }
   }
 
   // Get message statistics (3-tier structure - get from integrations)
@@ -347,6 +425,9 @@ class MessagesService {
 // Providers
 final messagesServiceProvider =
     Provider<MessagesService>((ref) => MessagesService());
+
+final messagesApiServiceProvider =
+    Provider<MessagesApiService>((ref) => MessagesApiService());
 
 final messageFiltersProvider =
     StateNotifierProvider<MessageFiltersNotifier, MessageFilters>(

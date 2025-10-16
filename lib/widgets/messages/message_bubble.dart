@@ -1,18 +1,24 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../models/message.dart';
+import 'message_status_icon.dart';
 
 class MessageBubble extends StatelessWidget {
   final Message message;
   final bool showAvatar;
   final bool showTimestamp;
+  final VoidCallback? onRetry;
 
   const MessageBubble({
     Key? key,
     required this.message,
     this.showAvatar = true,
     this.showTimestamp = true,
+    this.onRetry,
   }) : super(key: key);
 
   @override
@@ -213,13 +219,30 @@ class MessageBubble extends StatelessWidget {
             color: theme.colorScheme.onSurfaceVariant.withOpacity(0.6),
           ),
         ),
-        if (message.metadata.isRead && !message.sender.isCustomer) ...[
+        // Show status icon for business messages (not from customer)
+        if (!message.sender.isCustomer) ...[
           const SizedBox(width: 4),
-          Icon(
-            Icons.done_all,
-            size: 12,
-            color: theme.colorScheme.primary,
-          ),
+          _buildStatusIcon(theme),
+          // Show retry button for failed messages
+          if (message.metadata.status == MessageStatus.failed &&
+              onRetry != null) ...[
+            const SizedBox(width: 8),
+            InkWell(
+              onTap: onRetry,
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Text(
+                  'Retry',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.red,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
         if (message.metadata.priority != MessagePriority.normal) ...[
           const SizedBox(width: 4),
@@ -233,48 +256,273 @@ class MessageBubble extends StatelessWidget {
     );
   }
 
+  Widget _buildStatusIcon(ThemeData theme) {
+    return MessageStatusIcon(
+      status: message.metadata.status,
+      size: 12,
+    );
+  }
+
   Widget _buildAttachment(
+      BuildContext context, MessageAttachment attachment, Color textColor) {
+    if (attachment.type.toLowerCase() == 'image') {
+      return _buildImageAttachment(context, attachment, textColor);
+    } else if (attachment.type.toLowerCase() == 'video') {
+      return _buildVideoAttachment(context, attachment, textColor);
+    } else {
+      return _buildDocumentAttachment(context, attachment, textColor);
+    }
+  }
+
+  Widget _buildImageAttachment(
+      BuildContext context, MessageAttachment attachment, Color textColor) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: GestureDetector(
+          onTap:
+              attachment.isUploading ? null : () => _openAttachment(attachment),
+          child: Stack(
+            children: [
+              // Show local file preview if uploading, otherwise show network image
+              if (attachment.isUploading && attachment.localPath != null)
+                Image.file(
+                  File(attachment.localPath!),
+                  height: 200,
+                  width: 250,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) =>
+                      _buildPlaceholder(),
+                )
+              else if (attachment.url.isNotEmpty)
+                CachedNetworkImage(
+                  imageUrl: attachment.url,
+                  height: 200,
+                  width: 250,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => _buildPlaceholder(),
+                  errorWidget: (context, url, error) =>
+                      _buildPlaceholder(isError: true),
+                )
+              else
+                _buildPlaceholder(),
+
+              // Upload progress overlay
+              if (attachment.isUploading)
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 50,
+                            height: 50,
+                            child: CircularProgressIndicator(
+                              value: attachment.uploadProgress,
+                              strokeWidth: 4,
+                              backgroundColor: Colors.white24,
+                              valueColor: const AlwaysStoppedAnimation<Color>(
+                                  Colors.white),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '${((attachment.uploadProgress ?? 0.0) * 100).toInt()}%',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlaceholder({bool isError = false}) {
+    return Container(
+      height: 200,
+      width: 250,
+      color: Colors.grey[200],
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            isError ? Icons.broken_image : Icons.image,
+            size: 48,
+            color: Colors.grey,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            isError ? 'Failed to load image' : 'Loading...',
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: Colors.grey[600],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVideoAttachment(
+      BuildContext context, MessageAttachment attachment, Color textColor) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: GestureDetector(
+          onTap: () => _openAttachment(attachment),
+          child: Stack(
+            children: [
+              Container(
+                height: 200,
+                width: 250,
+                color: Colors.black,
+                child: attachment.thumbnailUrl != null
+                    ? CachedNetworkImage(
+                        imageUrl: attachment.thumbnailUrl!,
+                        height: 200,
+                        width: 250,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => Container(
+                          height: 200,
+                          width: 250,
+                          color: Colors.grey[800],
+                          child: const Center(
+                            child:
+                                CircularProgressIndicator(color: Colors.white),
+                          ),
+                        ),
+                        errorWidget: (context, url, error) => Container(
+                          height: 200,
+                          width: 250,
+                          color: Colors.grey[800],
+                          child: const Center(
+                            child: Icon(Icons.videocam,
+                                size: 48, color: Colors.white70),
+                          ),
+                        ),
+                      )
+                    : Container(
+                        height: 200,
+                        width: 250,
+                        color: Colors.grey[800],
+                        child: const Center(
+                          child: Icon(Icons.videocam,
+                              size: 48, color: Colors.white70),
+                        ),
+                      ),
+              ),
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.3),
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.play_circle_fill,
+                      size: 64,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+              if (attachment.size != null)
+                Positioned(
+                  bottom: 8,
+                  right: 8,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      _formatFileSize(attachment.size!),
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDocumentAttachment(
       BuildContext context, MessageAttachment attachment, Color textColor) {
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Container(
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: textColor.withOpacity(0.1),
           borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: textColor.withOpacity(0.2)),
         ),
-        child: Row(
-          children: [
-            Icon(
-              _getAttachmentIcon(attachment.type),
-              size: 20,
-              color: textColor.withOpacity(0.7),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    attachment.filename ?? 'Attachment',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: textColor,
-                    ),
-                  ),
-                  if (attachment.size != null)
-                    Text(
-                      _formatFileSize(attachment.size!),
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
-                        color: textColor.withOpacity(0.7),
-                      ),
-                    ),
-                ],
+        child: GestureDetector(
+          onTap: () => _openAttachment(attachment),
+          child: Row(
+            children: [
+              Icon(
+                _getAttachmentIcon(attachment.type),
+                color: textColor.withOpacity(0.8),
+                size: 24,
               ),
-            ),
-          ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      attachment.filename ?? 'Attachment',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: textColor,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (attachment.size != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        _formatFileSize(attachment.size!),
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: textColor.withOpacity(0.7),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.open_in_new,
+                size: 16,
+                color: textColor.withOpacity(0.7),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -554,5 +802,16 @@ class MessageBubble extends StatelessWidget {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+
+  void _openAttachment(MessageAttachment attachment) async {
+    try {
+      final uri = Uri.parse(attachment.url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      // Handle error silently or show a snackbar
+    }
   }
 }
