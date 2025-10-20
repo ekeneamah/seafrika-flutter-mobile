@@ -43,5 +43,15 @@ service firebase.storage {
       allow delete: if isBusinessOwner() && 
         (businessId == firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.businessId);
     }
+
+    // ⚠️ SECURITY: Message attachments (images, videos, documents)
+    // All uploads MUST go through backend API - direct frontend uploads are BLOCKED
+    match /messages/{conversationId}/attachments/{allPaths=**} {
+      // Block ALL direct writes from frontend (uploads only via backend)
+      allow write: if false;
+      
+      // Allow authenticated users to read
+      allow read: if isAuthenticated();
+    }
   }
 } 

@@ -888,6 +888,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.2.1"
+  google_mlkit_smart_reply:
+    dependency: "direct main"
+    description:
+      name: google_mlkit_smart_reply
+      sha256: "0c3d737e46f20aa4d4953860ee5757e5250e58f90351f8e2afdeb1d609c7047e"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.13.0"
   graphs:
     dependency: transitive
     description:
@@ -1885,6 +1893,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.3.5"
+  video_thumbnail:
+    dependency: "direct main"
+    description:
+      name: video_thumbnail
+      sha256: "181a0c205b353918954a881f53a3441476b9e301641688a581e0c13f00dc588b"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.5.6"
   visibility_detector:
     dependency: transitive
     description:

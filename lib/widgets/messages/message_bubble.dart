@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/message.dart';
 import 'message_status_icon.dart';
+import 'video_attachment.dart';
 
 class MessageBubble extends StatelessWidget {
   final Message message;
@@ -276,13 +277,26 @@ class MessageBubble extends StatelessWidget {
 
   Widget _buildImageAttachment(
       BuildContext context, MessageAttachment attachment, Color textColor) {
+    // Get image URLs from variants (secure upload) or fallback to main URL
+    final String? thumbnailUrl = attachment.metadata?['variants']?['thumbnail'];
+    final String? mediumUrl = attachment.metadata?['variants']?['medium'];
+    final String? fullUrl = attachment.metadata?['variants']?['full'];
+
+    // Use variants if available, otherwise use main URL
+    final String displayUrl = mediumUrl ?? attachment.url;
+    final String placeholderUrl = thumbnailUrl ?? mediumUrl ?? attachment.url;
+
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: GestureDetector(
-          onTap:
-              attachment.isUploading ? null : () => _openAttachment(attachment),
+          onTap: attachment.isUploading
+              ? null
+              : () => _openAttachment(attachment.copyWith(
+                    // Open full-size image
+                    url: fullUrl ?? attachment.url,
+                  )),
           child: Stack(
             children: [
               // Show local file preview if uploading, otherwise show network image
@@ -295,13 +309,25 @@ class MessageBubble extends StatelessWidget {
                   errorBuilder: (context, error, stackTrace) =>
                       _buildPlaceholder(),
                 )
-              else if (attachment.url.isNotEmpty)
+              else if (displayUrl.isNotEmpty)
                 CachedNetworkImage(
-                  imageUrl: attachment.url,
+                  imageUrl: displayUrl,
                   height: 200,
                   width: 250,
                   fit: BoxFit.cover,
-                  placeholder: (context, url) => _buildPlaceholder(),
+                  // Use thumbnail as placeholder for progressive loading
+                  placeholder: (context, url) => placeholderUrl.isNotEmpty &&
+                          placeholderUrl != displayUrl
+                      ? CachedNetworkImage(
+                          imageUrl: placeholderUrl,
+                          height: 200,
+                          width: 250,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => _buildPlaceholder(),
+                          errorWidget: (context, url, error) =>
+                              _buildPlaceholder(),
+                        )
+                      : _buildPlaceholder(),
                   errorWidget: (context, url, error) =>
                       _buildPlaceholder(isError: true),
                 )
@@ -345,6 +371,40 @@ class MessageBubble extends StatelessWidget {
                     ),
                   ),
                 ),
+
+              // Show compression indicator for images with variants
+              if (!attachment.isUploading && thumbnailUrl != null)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.verified,
+                          size: 12,
+                          color: Colors.greenAccent,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Secure',
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -380,87 +440,153 @@ class MessageBubble extends StatelessWidget {
 
   Widget _buildVideoAttachment(
       BuildContext context, MessageAttachment attachment, Color textColor) {
+    // Use the new VideoAttachment widget (Task #15)
     return Padding(
       padding: const EdgeInsets.only(top: 8),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
+      child: VideoAttachment(
+        attachment: attachment,
+        width: 250,
+      ),
+    );
+  }
+
+  Widget _buildDocumentAttachment(
+      BuildContext context, MessageAttachment attachment, Color textColor) {
+    // Extract document metadata
+    final String fileName =
+        attachment.metadata?['fileName'] ?? attachment.filename ?? 'Document';
+    final int? fileSize = attachment.metadata?['fileSize'] ?? attachment.size;
+    final String? extension = attachment.metadata?['extension'];
+    final int? pages = attachment.metadata?['pages'];
+
+    // Get appropriate icon based on file type
+    IconData documentIcon = _getDocumentIcon(extension ?? attachment.type);
+    Color iconColor = _getDocumentColor(extension ?? attachment.type);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: textColor.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: textColor.withOpacity(0.2)),
+        ),
         child: GestureDetector(
           onTap: () => _openAttachment(attachment),
-          child: Stack(
+          child: Row(
             children: [
+              // Document icon with colored background
               Container(
-                height: 200,
-                width: 250,
-                color: Colors.black,
-                child: attachment.thumbnailUrl != null
-                    ? CachedNetworkImage(
-                        imageUrl: attachment.thumbnailUrl!,
-                        height: 200,
-                        width: 250,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Container(
-                          height: 200,
-                          width: 250,
-                          color: Colors.grey[800],
-                          child: const Center(
-                            child:
-                                CircularProgressIndicator(color: Colors.white),
-                          ),
-                        ),
-                        errorWidget: (context, url, error) => Container(
-                          height: 200,
-                          width: 250,
-                          color: Colors.grey[800],
-                          child: const Center(
-                            child: Icon(Icons.videocam,
-                                size: 48, color: Colors.white70),
-                          ),
-                        ),
-                      )
-                    : Container(
-                        height: 200,
-                        width: 250,
-                        color: Colors.grey[800],
-                        child: const Center(
-                          child: Icon(Icons.videocam,
-                              size: 48, color: Colors.white70),
-                        ),
-                      ),
-              ),
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.3),
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.play_circle_fill,
-                      size: 64,
-                      color: Colors.white,
-                    ),
-                  ),
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: iconColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  documentIcon,
+                  color: iconColor,
+                  size: 28,
                 ),
               ),
-              if (attachment.size != null)
-                Positioned(
-                  bottom: 8,
-                  right: 8,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.7),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      _formatFileSize(attachment.size!),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Filename
+                    Text(
+                      fileName,
                       style: GoogleFonts.inter(
-                        fontSize: 10,
-                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: textColor,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
+                    const SizedBox(height: 4),
+                    // File metadata (size, pages, type)
+                    Row(
+                      children: [
+                        if (fileSize != null) ...[
+                          Icon(
+                            Icons.storage,
+                            size: 12,
+                            color: textColor.withOpacity(0.6),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _formatFileSize(fileSize),
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: textColor.withOpacity(0.7),
+                            ),
+                          ),
+                        ],
+                        if (pages != null) ...[
+                          if (fileSize != null) ...[
+                            const SizedBox(width: 8),
+                            Text(
+                              '•',
+                              style:
+                                  TextStyle(color: textColor.withOpacity(0.5)),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                          Icon(
+                            Icons.description_outlined,
+                            size: 12,
+                            color: textColor.withOpacity(0.6),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '$pages ${pages == 1 ? 'page' : 'pages'}',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: textColor.withOpacity(0.7),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    if (extension != null) ...[
+                      const SizedBox(height: 2),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: iconColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          extension.toUpperCase().replaceAll('.', ''),
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: iconColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
+              ),
+              const SizedBox(width: 8),
+              // Download/Open icon
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: iconColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.download_rounded,
+                  size: 20,
+                  color: iconColor,
+                ),
+              ),
             ],
           ),
         ),
@@ -468,64 +594,28 @@ class MessageBubble extends StatelessWidget {
     );
   }
 
-  Widget _buildDocumentAttachment(
-      BuildContext context, MessageAttachment attachment, Color textColor) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: textColor.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: textColor.withOpacity(0.2)),
-        ),
-        child: GestureDetector(
-          onTap: () => _openAttachment(attachment),
-          child: Row(
-            children: [
-              Icon(
-                _getAttachmentIcon(attachment.type),
-                color: textColor.withOpacity(0.8),
-                size: 24,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      attachment.filename ?? 'Attachment',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: textColor,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (attachment.size != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        _formatFileSize(attachment.size!),
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: textColor.withOpacity(0.7),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.open_in_new,
-                size: 16,
-                color: textColor.withOpacity(0.7),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  IconData _getDocumentIcon(String type) {
+    final lowerType = type.toLowerCase();
+    if (lowerType.contains('pdf')) return Icons.picture_as_pdf;
+    if (lowerType.contains('doc')) return Icons.description;
+    if (lowerType.contains('xls') || lowerType.contains('sheet'))
+      return Icons.table_chart;
+    if (lowerType.contains('ppt') || lowerType.contains('presentation'))
+      return Icons.slideshow;
+    if (lowerType.contains('txt')) return Icons.text_snippet;
+    return Icons.insert_drive_file;
+  }
+
+  Color _getDocumentColor(String type) {
+    final lowerType = type.toLowerCase();
+    if (lowerType.contains('pdf')) return Colors.red;
+    if (lowerType.contains('doc')) return Colors.blue;
+    if (lowerType.contains('xls') || lowerType.contains('sheet'))
+      return Colors.green;
+    if (lowerType.contains('ppt') || lowerType.contains('presentation'))
+      return Colors.orange;
+    if (lowerType.contains('txt')) return Colors.grey;
+    return Colors.blueGrey;
   }
 
   Widget _buildLocation(

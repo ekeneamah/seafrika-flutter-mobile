@@ -1,13 +1,25 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:firebase_auth/firebase_auth.dart';
 import '../config/api_config.dart';
-import 'auth_service.dart';
 
 /// Service for calling backend queue API endpoints
 class QueueApiService {
   final String baseUrl = ApiConfig.baseUrl;
-  final AuthService _authService = AuthService();
+
+  /// Get the current user's ID token
+  Future<String> _getIdToken() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+    final idToken = await user.getIdToken();
+    if (idToken == null || idToken.isEmpty) {
+      throw Exception('Failed to obtain ID token');
+    }
+    return idToken;
+  }
 
   /// Queue a message via backend API
   Future<Map<String, dynamic>> queueMessage({
@@ -24,10 +36,7 @@ class QueueApiService {
     String? reason,
   }) async {
     try {
-      final token = await _authService.getToken();
-      if (token == null) {
-        throw Exception('Authentication required');
-      }
+      final token = await _getIdToken();
 
       final response = await http.post(
         Uri.parse('$baseUrl/messages/queue'),
@@ -67,10 +76,7 @@ class QueueApiService {
   /// Manually retry a queued message
   Future<Map<String, dynamic>> retryMessage(String queueId) async {
     try {
-      final token = await _authService.getToken();
-      if (token == null) {
-        throw Exception('Authentication required');
-      }
+      final token = await _getIdToken();
 
       final response = await http.post(
         Uri.parse('$baseUrl/messages/queue/$queueId/retry'),
@@ -97,10 +103,7 @@ class QueueApiService {
   /// Get all queued messages for a business
   Future<List<Map<String, dynamic>>> getBusinessQueue(String businessId) async {
     try {
-      final token = await _authService.getToken();
-      if (token == null) {
-        throw Exception('Authentication required');
-      }
+      final token = await _getIdToken();
 
       final response = await http.get(
         Uri.parse('$baseUrl/messages/queue/business/$businessId'),
@@ -128,10 +131,7 @@ class QueueApiService {
   Future<List<Map<String, dynamic>>> getConversationQueue(
       String conversationId) async {
     try {
-      final token = await _authService.getToken();
-      if (token == null) {
-        throw Exception('Authentication required');
-      }
+      final token = await _getIdToken();
 
       final response = await http.get(
         Uri.parse('$baseUrl/messages/queue/conversation/$conversationId'),

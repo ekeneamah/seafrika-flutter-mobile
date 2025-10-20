@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'dart:ui' as ui;
+import 'dart:io' show ProcessInfo;
 
 /// Performance monitor overlay for debugging message list performance
 ///
@@ -316,21 +316,19 @@ mixin ProfiledStateMixin<T extends StatefulWidget> on State<T> {
 
 /// Memory usage tracker
 class MemoryTracker {
-  static int _lastHeapSize = 0;
-  static int _lastRssSize = 0;
+  // No persistent fields required for memory tracking in this fallback implementation
 
   /// Get current memory usage
   static Future<Map<String, dynamic>> getMemoryUsage() async {
-    // Note: This requires dart:developer which may not be available in release mode
+    // Fallback: use ProcessInfo.currentRss when running on the Dart VM (native)
+    // On platforms where ProcessInfo.currentRss isn't available or throws,
+    // return 'N/A' so the caller can handle gracefully.
     try {
-      final info = await ui.MemoryAllocations.getMemoryUsage();
-
-      _lastHeapSize = info.heapUsage ?? 0;
-      _lastRssSize = info.rssSize ?? 0;
-
+      final rss = ProcessInfo.currentRss; // bytes
+      final rssMb = (rss / (1024 * 1024));
       return {
-        'heapMB': (_lastHeapSize / (1024 * 1024)).toStringAsFixed(2),
-        'rssMB': (_lastRssSize / (1024 * 1024)).toStringAsFixed(2),
+        'heapMB': 'N/A',
+        'rssMB': rssMb.toStringAsFixed(2),
       };
     } catch (e) {
       return {

@@ -1,13 +1,25 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:firebase_auth/firebase_auth.dart';
 import '../config/api_config.dart';
-import 'auth_service.dart';
 
 /// Service for managing message reactions via backend API
 class ReactionsApiService {
   final String baseUrl = ApiConfig.baseUrl;
-  final AuthService _authService = AuthService();
+
+  /// Get the current user's ID token
+  Future<String> _getIdToken() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
+    final idToken = await user.getIdToken();
+    if (idToken == null || idToken.isEmpty) {
+      throw Exception('Failed to obtain ID token');
+    }
+    return idToken;
+  }
 
   /// Add a reaction to a message
   Future<Map<String, dynamic>> addReaction({
@@ -19,10 +31,7 @@ class ReactionsApiService {
     String? platform,
   }) async {
     try {
-      final token = await _authService.getToken();
-      if (token == null) {
-        throw Exception('Authentication required');
-      }
+      final token = await _getIdToken();
 
       final response = await http.post(
         Uri.parse('$baseUrl/messages/$messageId/reactions'),
@@ -59,10 +68,7 @@ class ReactionsApiService {
     required String reactionId,
   }) async {
     try {
-      final token = await _authService.getToken();
-      if (token == null) {
-        throw Exception('Authentication required');
-      }
+      final token = await _getIdToken();
 
       final response = await http.delete(
         Uri.parse('$baseUrl/messages/$messageId/reactions/$reactionId'),
@@ -89,10 +95,7 @@ class ReactionsApiService {
     required String messageId,
   }) async {
     try {
-      final token = await _authService.getToken();
-      if (token == null) {
-        throw Exception('Authentication required');
-      }
+      final token = await _getIdToken();
 
       final response = await http.post(
         Uri.parse('$baseUrl/messages/$messageId/reactions/list'),

@@ -26,7 +26,9 @@
   "dependencies": {
     "@google-cloud/firestore": "^7.11.3",
     "@google-cloud/functions-framework": "^3.5.1",
+    "@google-cloud/language": "^7.2.1",
     "@google-cloud/storage": "^7.0.0",
+    "@google-cloud/vision": "^5.3.4",
     "@nestjs/cache-manager": "^3.0.1",
     "@nestjs/common": "^10.4.20",
     "@nestjs/config": "^3.0.0",
@@ -37,7 +39,9 @@
     "@nestjs/schedule": "^4.0.0",
     "@nestjs/swagger": "^7.4.2",
     "@types/multer": "^2.0.0",
+    "@types/sharp": "^0.31.1",
     "axios": "^1.11.0",
+    "bad-words": "^4.0.0",
     "bcrypt": "^5.1.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.0",
@@ -53,6 +57,7 @@
     "passport-local": "^1.0.0",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
+    "sharp": "^0.34.4",
     "uuid": "^9.0.1"
   },
   "devDependencies": {

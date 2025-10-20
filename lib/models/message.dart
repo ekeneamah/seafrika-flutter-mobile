@@ -623,6 +623,13 @@ class MessageMetadata {
   final String? externalId;
   final Map<String, dynamic>? rawPayload;
   final MessageStatus status; // NEW FIELD - message delivery status
+  
+  // Thread-related fields (Task #19)
+  final String? replyToId; // Parent message ID if this is a reply
+  final int? replyCount; // Number of direct replies to this message
+  final int? threadDepth; // 0 = root, 1 = reply, 2 = nested reply
+  final bool? isThreadReply; // Whether this message is a reply
+  final String? parentMessagePreview; // Preview text of parent message
 
   MessageMetadata({
     required this.timestamp,
@@ -635,6 +642,11 @@ class MessageMetadata {
     this.externalId,
     this.rawPayload,
     this.status = MessageStatus.sent, // Default to sent for existing messages
+    this.replyToId,
+    this.replyCount,
+    this.threadDepth,
+    this.isThreadReply,
+    this.parentMessagePreview,
   });
 
   factory MessageMetadata.fromMap(Map<String, dynamic> map) {
@@ -678,6 +690,11 @@ class MessageMetadata {
           map['platformMessageId'] as String?, // Backend uses platformMessageId
       rawPayload: rawPayload,
       status: MessageStatus.fromString(map['status'] as String? ?? 'sent'),
+      replyToId: map['replyToId'] as String?,
+      replyCount: map['replyCount'] as int?,
+      threadDepth: map['threadDepth'] as int?,
+      isThreadReply: map['isThreadReply'] as bool?,
+      parentMessagePreview: map['parentMessagePreview'] as String?,
     );
   }
 
@@ -693,6 +710,11 @@ class MessageMetadata {
       'tags': tags,
       'externalId': externalId,
       'rawPayload': rawPayload,
+      'replyToId': replyToId,
+      'replyCount': replyCount,
+      'threadDepth': threadDepth,
+      'isThreadReply': isThreadReply,
+      'parentMessagePreview': parentMessagePreview,
     };
   }
 
@@ -707,6 +729,11 @@ class MessageMetadata {
     String? externalId,
     Map<String, dynamic>? rawPayload,
     MessageStatus? status,
+    String? replyToId,
+    int? replyCount,
+    int? threadDepth,
+    bool? isThreadReply,
+    String? parentMessagePreview,
   }) {
     return MessageMetadata(
       timestamp: timestamp ?? this.timestamp,
@@ -719,6 +746,11 @@ class MessageMetadata {
       externalId: externalId ?? this.externalId,
       rawPayload: rawPayload ?? this.rawPayload,
       status: status ?? this.status,
+      replyToId: replyToId ?? this.replyToId,
+      replyCount: replyCount ?? this.replyCount,
+      threadDepth: threadDepth ?? this.threadDepth,
+      isThreadReply: isThreadReply ?? this.isThreadReply,
+      parentMessagePreview: parentMessagePreview ?? this.parentMessagePreview,
     );
   }
 }

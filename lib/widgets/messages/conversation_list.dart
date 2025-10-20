@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import '../../models/message.dart';
 import '../../config/theme.dart';
+import '../../services/drafts_api_service.dart';
 
 class ConversationList extends StatelessWidget {
   final List<Conversation> conversations;
@@ -230,22 +231,59 @@ class ConversationTile extends StatelessWidget {
 
                     const SizedBox(height: 8),
 
-                    // Last Message Preview
-                    if (conversation.lastMessagePreview != null)
-                      Text(
-                        conversation.lastMessagePreview!,
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          color: conversation.unreadCount > 0
-                              ? theme.colorScheme.onSurface
-                              : theme.colorScheme.onSurfaceVariant,
-                          fontWeight: conversation.unreadCount > 0
-                              ? FontWeight.w500
-                              : FontWeight.normal,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                    // Last Message Preview (with draft support - Task #17)
+                    FutureBuilder<DraftResult?>(
+                      future: DraftsApiService().getDraft(conversation.id),
+                      builder: (context, snapshot) {
+                        // Show draft if exists
+                        if (snapshot.hasData && snapshot.data != null) {
+                          final draft = snapshot.data!;
+                          return Row(
+                            children: [
+                              Icon(
+                                Icons.edit_note,
+                                size: 14,
+                                color: theme.colorScheme.primary,
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  'Draft: ${draft.text}',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    color: theme.colorScheme.primary,
+                                    fontStyle: FontStyle.italic,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          );
+                        }
+
+                        // Otherwise show last message preview
+                        if (conversation.lastMessagePreview != null) {
+                          return Text(
+                            conversation.lastMessagePreview!,
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              color: conversation.unreadCount > 0
+                                  ? theme.colorScheme.onSurface
+                                  : theme.colorScheme.onSurfaceVariant,
+                              fontWeight: conversation.unreadCount > 0
+                                  ? FontWeight.w500
+                                  : FontWeight.normal,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          );
+                        }
+
+                        return const SizedBox.shrink();
+                      },
+                    ),
 
                     // Tags
                     if (conversation.tags.isNotEmpty)

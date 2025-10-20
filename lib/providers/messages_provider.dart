@@ -296,10 +296,14 @@ class MessagesService {
     final integrationId = conversationData['integrationId'] as String?;
     final recipientId = conversationData['recipientId'] as String?;
     final platform = conversationData['platform'] as String?;
+    final businessId = conversationData['businessId'] as String?;
 
-    if (integrationId == null || recipientId == null || platform == null) {
+    if (integrationId == null ||
+        recipientId == null ||
+        platform == null ||
+        businessId == null) {
       throw Exception(
-          'Missing required conversation data: integrationId=$integrationId, recipientId=$recipientId, platform=$platform');
+          'Missing required conversation data: integrationId=$integrationId, recipientId=$recipientId, platform=$platform, businessId=$businessId');
     }
 
     // Create message document ID
@@ -352,6 +356,7 @@ class MessagesService {
         messageId: messageId,
         conversationId: message.conversationId,
         recipientId: recipientId,
+        businessId: businessId,
         message: message.content.text ?? '',
         attachmentUrl: attachmentUrl,
       );

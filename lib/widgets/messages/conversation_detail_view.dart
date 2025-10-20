@@ -6,6 +6,7 @@ import 'package:image_cropper/image_cropper.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:video_player/video_player.dart';
 import 'dart:io';
 import 'dart:async';
 import '../../config/theme.dart';
@@ -14,14 +15,16 @@ import '../../providers/message_provider.dart';
 import '../../providers/messages_provider.dart';
 import '../../providers/typing_indicator_provider.dart';
 import '../../providers/service_providers.dart';
-import '../../services/typing_indicator_service.dart';
-import '../../services/attachment_upload_service.dart';
+import '../../services/attachment_upload_service_secure.dart';
+import '../../services/attachments_api_service.dart';
+import '../../services/drafts_api_service.dart';
+import '../../screens/message_search_screen.dart';
 import 'message_input.dart';
 import 'attachment_preview.dart';
-import 'typing_indicator.dart';
 import 'date_divider.dart';
 import 'message_reaction_handler.dart';
 import 'optimized_message_list.dart';
+import 'smart_reply_chips.dart'; // Task #18
 
 class ConversationDetailView extends ConsumerStatefulWidget {
   final Conversation conversation;
@@ -45,6 +48,8 @@ class _ConversationDetailViewState
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _messageController = TextEditingController();
   final AttachmentUploadService _uploadService = AttachmentUploadService();
+  final AttachmentsApiService _attachmentsApi = AttachmentsApiService();
+  final DraftsApiService _draftsApi = DraftsApiService();
 
   // Attachment state
   final List<File> _attachments = [];
@@ -64,13 +69,17 @@ class _ConversationDetailViewState
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    _loadDraft(); // Load draft when opening conversation
+    _messageController.addListener(_onMessageTextChanged); // Auto-save draft
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
+    _messageController.removeListener(_onMessageTextChanged);
     _messageController.dispose();
     _typingTimer?.cancel();
+    _draftsApi.dispose(); // Cancel any pending draft saves
     super.dispose();
   }
 
@@ -240,6 +249,13 @@ class _ConversationDetailViewState
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              IconButton(
+                onPressed: () => _openSearch(),
+                icon: const Icon(Icons.search),
+                iconSize: 20,
+                color: AppTheme.textSecondary,
+                tooltip: 'Search messages',
+              ),
               IconButton(
                 onPressed: () => _togglePin(),
                 icon: Icon(
@@ -580,6 +596,19 @@ class _ConversationDetailViewState
                   ),
                 ],
               ),
+            ),
+
+          // Smart Reply Suggestions (Task #18)
+          if (!_isUploading && _attachments.isEmpty)
+            SmartReplyChips(
+              messages: ref
+                  .watch(paginatedMessagesProvider(widget.conversation.id))
+                  .messages,
+              userId: 'current_user', // TODO: Get actual user ID
+              onSuggestionTap: (text) {
+                _messageController.text = text;
+                // User can still edit before sending
+              },
             ),
 
           // Message input row
@@ -1006,6 +1035,41 @@ class _ConversationDetailViewState
     // TODO: Implement pin toggle
   }
 
+  Future<void> _openSearch() async {
+    final result = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => MessageSearchScreen(
+          conversationId: widget.conversation.id,
+        ),
+      ),
+    );
+
+    // Handle navigation to specific message
+    if (result != null && result is Map) {
+      final action = result['action'];
+      final messageId = result['messageId'];
+
+      if (action == 'navigate' && messageId != null) {
+        // Scroll to the message
+        _scrollToMessage(messageId);
+      }
+    }
+  }
+
+  void _scrollToMessage(String messageId) {
+    // Show a subtle highlight for the message
+    _showSnackBar('Scrolling to message...');
+
+    // Calculate scroll position based on message position in list
+    // Note: This is a simplified implementation
+    // In production, you'd want to find the exact widget position
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeInOut,
+    );
+  }
+
   void _showConversationOptions() {
     // TODO: Show conversation options bottom sheet
   }
@@ -1113,25 +1177,71 @@ class _ConversationDetailViewState
     final picker = ImagePicker();
     final video = await picker.pickVideo(
       source: ImageSource.gallery,
-      maxDuration: const Duration(minutes: 5),
+      maxDuration: const Duration(seconds: 10), // Enforce 10s max
     );
 
     if (video != null) {
-      _addAttachment(File(video.path), 'video');
-      _showSnackBar('🎥 Video selected!');
+      final videoFile = File(video.path);
+
+      // Validate file size (50MB max)
+      final fileSize = videoFile.lengthSync();
+      const maxSize = 50 * 1024 * 1024; // 50MB
+
+      if (fileSize > maxSize) {
+        _showSnackBar(
+            '❌ Video too large. Maximum size: 50MB (${(fileSize / (1024 * 1024)).toStringAsFixed(2)}MB)');
+        return;
+      }
+
+      // Quick validation of video duration using video_player
+      try {
+        final controller = VideoPlayerController.file(videoFile);
+        await controller.initialize();
+        final duration = controller.value.duration.inSeconds;
+        await controller.dispose();
+
+        if (duration > 10) {
+          _showSnackBar(
+              '❌ Video too long. Maximum duration: 10 seconds (${duration}s)');
+          return;
+        }
+
+        _addAttachment(videoFile, 'video');
+        _showSnackBar(
+            '🎥 Video selected! (${duration}s, ${(fileSize / (1024 * 1024)).toStringAsFixed(2)}MB)');
+      } catch (e) {
+        debugPrint('❌ Video validation error: $e');
+        _showSnackBar('❌ Invalid video file');
+      }
     }
   }
 
   Future<void> _handleDocumentAttachment() async {
     final result = await FilePicker.platform.pickFiles(
-      type: FileType.any,
+      type: FileType.custom,
       allowMultiple: false,
-      allowedExtensions: null,
+      allowedExtensions: [
+        'pdf',
+        'doc',
+        'docx',
+        'xls',
+        'xlsx',
+        'ppt',
+        'pptx',
+        'txt',
+        'rtf'
+      ],
     );
 
     if (result != null && result.files.isNotEmpty) {
       final file = result.files.first;
       if (file.path != null) {
+        // Validate file size (25MB max)
+        if (file.size > 25 * 1024 * 1024) {
+          _showSnackBar('❌ Document too large. Maximum size: 25MB');
+          return;
+        }
+
         _addAttachment(File(file.path!), 'document');
         _showSnackBar('📁 Document "${file.name}" selected!');
       }
@@ -1250,6 +1360,54 @@ class _ConversationDetailViewState
       ),
     );
   }
+
+  // ============================================
+  // DRAFT MANAGEMENT (Task #17)
+  // ============================================
+
+  /// Load draft when opening conversation
+  Future<void> _loadDraft() async {
+    try {
+      final draft = await _draftsApi.getDraft(widget.conversation.id);
+      if (draft != null && draft.text.trim().isNotEmpty && mounted) {
+        _messageController.text = draft.text;
+        debugPrint('📖 Draft loaded: "${draft.text}"');
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading draft: $e');
+    }
+  }
+
+  /// Auto-save draft when text changes (debounced 2s)
+  void _onMessageTextChanged() {
+    final text = _messageController.text;
+
+    // Save draft if text is not empty
+    if (text.trim().isNotEmpty) {
+      _draftsApi.saveDraftDebounced(
+        conversationId: widget.conversation.id,
+        text: text,
+        attachments: [], // TODO: Add attachment support if needed
+      );
+    } else {
+      // Delete draft if text is empty
+      _deleteDraft();
+    }
+  }
+
+  /// Delete draft (after message sent or text cleared)
+  Future<void> _deleteDraft() async {
+    try {
+      await _draftsApi.deleteDraft(widget.conversation.id);
+      debugPrint('🗑️ Draft deleted');
+    } catch (e) {
+      debugPrint('❌ Error deleting draft: $e');
+    }
+  }
+
+  // ============================================
+  // END DRAFT MANAGEMENT
+  // ============================================
 
   // Optimistic UI: Send message and show immediately
   /// Handle typing indicator when user types
@@ -1382,6 +1540,9 @@ class _ConversationDetailViewState
     // Clear input immediately for better UX
     final messageText = text;
 
+    // Delete draft after message is sent (Task #17)
+    _deleteDraft();
+
     _messageController.clear();
     setState(() {
       _attachments.clear();
@@ -1399,34 +1560,155 @@ class _ConversationDetailViewState
         });
 
         for (int i = 0; i < pendingAttachments.length; i++) {
-          final attachment = await _uploadService.uploadAttachment(
-            file: pendingAttachments[i],
-            attachmentType: pendingTypes[i],
-            conversationId: widget.conversation.id,
-            onProgress: (progress) {
-              // Update the message with current upload progress
-              final updatedAttachments = List<MessageAttachment>.from(
-                optimisticMessage.content.attachments,
+          MessageAttachment attachment;
+
+          // Upload based on attachment type
+          if (pendingTypes[i] == 'image') {
+            // Use secure image upload service
+            final uploadResult = await _uploadService.uploadAttachment(
+              file: pendingAttachments[i],
+              attachmentType: 'image',
+              conversationId: widget.conversation.id,
+              onProgress: (progress) {
+                // Update the message with current upload progress
+                final updatedAttachments = List<MessageAttachment>.from(
+                  optimisticMessage.content.attachments,
+                );
+                if (i < updatedAttachments.length) {
+                  updatedAttachments[i] = updatedAttachments[i].copyWith(
+                    uploadProgress: progress,
+                  );
+
+                  final updatedMessage = optimisticMessage.copyWith(
+                    content: optimisticMessage.content.copyWith(
+                      attachments: updatedAttachments,
+                    ),
+                  );
+
+                  // Update message in provider with new progress
+                  ref
+                      .read(paginatedMessagesProvider(widget.conversation.id)
+                          .notifier)
+                      .updateMessage(tempId, updatedMessage);
+                }
+              },
+            );
+            attachment = uploadResult;
+          } else if (pendingTypes[i] == 'document') {
+            // Use secure document upload via API
+            try {
+              final documentResult = await _attachmentsApi.uploadDocument(
+                file: pendingAttachments[i],
+                conversationId: widget.conversation.id,
+                onProgress: (progress) {
+                  // Update progress (simplified for documents)
+                  final updatedAttachments = List<MessageAttachment>.from(
+                    optimisticMessage.content.attachments,
+                  );
+                  if (i < updatedAttachments.length) {
+                    updatedAttachments[i] = updatedAttachments[i].copyWith(
+                      uploadProgress: progress,
+                    );
+
+                    final updatedMessage = optimisticMessage.copyWith(
+                      content: optimisticMessage.content.copyWith(
+                        attachments: updatedAttachments,
+                      ),
+                    );
+
+                    ref
+                        .read(paginatedMessagesProvider(widget.conversation.id)
+                            .notifier)
+                        .updateMessage(tempId, updatedMessage);
+                  }
+                },
               );
-              if (i < updatedAttachments.length) {
-                updatedAttachments[i] = updatedAttachments[i].copyWith(
-                  uploadProgress: progress,
-                );
 
-                final updatedMessage = optimisticMessage.copyWith(
-                  content: optimisticMessage.content.copyWith(
-                    attachments: updatedAttachments,
-                  ),
-                );
+              // Convert DocumentUploadResult to MessageAttachment
+              attachment = MessageAttachment(
+                type: 'document',
+                url: documentResult.url,
+                metadata: {
+                  'fileName': documentResult.metadata.fileName,
+                  'fileSize': documentResult.metadata.fileSize,
+                  'mimeType': documentResult.metadata.mimeType,
+                  'extension': documentResult.metadata.extension,
+                  if (documentResult.metadata.pages != null)
+                    'pages': documentResult.metadata.pages,
+                },
+              );
+            } catch (e) {
+              debugPrint('❌ Document upload error: $e');
+              _showSnackBar('Failed to upload document: $e');
+              continue; // Skip this attachment
+            }
+          } else if (pendingTypes[i] == 'video') {
+            // Use secure video upload via API (Task #15)
+            try {
+              final videoResult = await _attachmentsApi.uploadVideo(
+                file: pendingAttachments[i],
+                conversationId: widget.conversation.id,
+                onProgress: (progress) {
+                  // Update progress
+                  final updatedAttachments = List<MessageAttachment>.from(
+                    optimisticMessage.content.attachments,
+                  );
+                  if (i < updatedAttachments.length) {
+                    updatedAttachments[i] = updatedAttachments[i].copyWith(
+                      uploadProgress: progress,
+                    );
 
-                // Update message in provider with new progress
-                ref
-                    .read(paginatedMessagesProvider(widget.conversation.id)
-                        .notifier)
-                    .updateMessage(tempId, updatedMessage);
-              }
-            },
-          );
+                    final updatedMessage = optimisticMessage.copyWith(
+                      content: optimisticMessage.content.copyWith(
+                        attachments: updatedAttachments,
+                      ),
+                    );
+
+                    ref
+                        .read(paginatedMessagesProvider(widget.conversation.id)
+                            .notifier)
+                        .updateMessage(tempId, updatedMessage);
+                  }
+                },
+              );
+
+              // Convert VideoUploadResult to MessageAttachment
+              attachment = videoResult.toMessageAttachment();
+            } catch (e) {
+              debugPrint('❌ Video upload error: $e');
+              _showSnackBar('Failed to upload video: $e');
+              continue; // Skip this attachment
+            }
+          } else {
+            // For other types, use existing service
+            attachment = await _uploadService.uploadAttachment(
+              file: pendingAttachments[i],
+              attachmentType: pendingTypes[i],
+              conversationId: widget.conversation.id,
+              onProgress: (progress) {
+                final updatedAttachments = List<MessageAttachment>.from(
+                  optimisticMessage.content.attachments,
+                );
+                if (i < updatedAttachments.length) {
+                  updatedAttachments[i] = updatedAttachments[i].copyWith(
+                    uploadProgress: progress,
+                  );
+
+                  final updatedMessage = optimisticMessage.copyWith(
+                    content: optimisticMessage.content.copyWith(
+                      attachments: updatedAttachments,
+                    ),
+                  );
+
+                  ref
+                      .read(paginatedMessagesProvider(widget.conversation.id)
+                          .notifier)
+                      .updateMessage(tempId, updatedMessage);
+                }
+              },
+            );
+          }
+
           uploadedAttachments.add(attachment);
 
           // Update message to show completed upload for this attachment
