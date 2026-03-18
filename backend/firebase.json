@@ -1,8 +1,10 @@
 {
   "functions": [
     {
-      "source": "dist",
+      "source": ".",
       "codebase": "default",
+      "memory": "1GB",
+      "timeoutSeconds": 60,
       "ignore": [
         "node_modules",
         ".git",
